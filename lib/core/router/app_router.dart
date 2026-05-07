@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// アプリ全体のルーティング定義（Phase 0 のスケルトン）。
+import '../../features/dev_console/presentation/screens/dev_console_screen.dart';
+
+/// アプリ全体のルーティング定義。
 ///
-/// Phase 4 で各画面を実装する際に分岐ロジック（ShopID未設定→ShopIdScreen、
-/// Role未選択→RoleSelection、Role別ホーム）を組み込む。
+/// Figma デザイン待ちのため、ホームは開発者用 DevConsole を表示している。
+/// 本番UIが揃ったら `/` をロール別ホームに差し替え、`/dev` を本画面に移す。
 final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref<GoRouter> ref) {
   return GoRouter(
     initialLocation: '/',
@@ -13,22 +15,8 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref<GoRouter> r
       GoRoute(
         path: '/',
         builder: (BuildContext context, GoRouterState state) =>
-            const _PlaceholderHome(),
+            const DevConsoleScreen(),
       ),
     ],
   );
 });
-
-class _PlaceholderHome extends StatelessWidget {
-  const _PlaceholderHome();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Tofu POS')),
-      body: const Center(
-        child: Text('セットアップ中（Phase 0 完了）'),
-      ),
-    );
-  }
-}
