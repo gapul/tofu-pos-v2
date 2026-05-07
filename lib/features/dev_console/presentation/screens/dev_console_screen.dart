@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/config/env.dart';
 import '../../../../core/error/app_exceptions.dart';
 import '../../../../core/export/csv_export_service.dart';
+import '../../../../core/sync/sync_service.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/entities/order_item.dart';
 import '../../../../domain/entities/product.dart';
@@ -15,6 +16,7 @@ import '../../../../domain/value_objects/money.dart';
 import '../../../../domain/value_objects/shop_id.dart';
 import '../../../../providers/repository_providers.dart';
 import '../../../../providers/settings_providers.dart';
+import '../../../../providers/sync_providers.dart';
 import '../../../../providers/usecase_providers.dart';
 
 /// 開発者用コンソール画面（Figma デザイン待ちの間の検証用）。
@@ -72,6 +74,8 @@ class _DevConsoleScreenState extends ConsumerState<DevConsoleScreen> {
             _OrdersSection(onResult: _show),
             const SizedBox(height: 8),
             _ExportSection(onResult: _show),
+            const SizedBox(height: 8),
+            _SyncSection(onResult: _show),
             const SizedBox(height: 32),
           ],
         ),
@@ -439,6 +443,42 @@ class _OrdersSection extends ConsumerWidget {
 }
 
 // ============== Export ==============
+
+// ============== Sync ==============
+
+class _SyncSection extends ConsumerWidget {
+  const _SyncSection({required this.onResult});
+  final void Function(String) onResult;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return _Section(
+      title: '7. クラウド同期',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (!Env.hasSupabaseCredentials)
+            Text(
+              'Supabase 接続情報が未設定です（.env を埋めてください）',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          FilledButton(
+            onPressed: () async {
+              try {
+                final SyncResult r =
+                    await ref.read(syncServiceProvider).runOnce();
+                onResult('同期 OK=${r.successCount} NG=${r.failureCount}');
+              } catch (e) {
+                onResult('エラー: $e');
+              }
+            },
+            child: const Text('未同期注文を一括送信'),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _ExportSection extends ConsumerWidget {
   const _ExportSection({required this.onResult});
