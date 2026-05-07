@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/config/env.dart';
 import '../../../../core/error/app_exceptions.dart';
 import '../../../../core/export/csv_export_service.dart';
 import '../../../../domain/entities/order.dart';
@@ -125,6 +126,11 @@ class _SetupSection extends ConsumerStatefulWidget {
   ConsumerState<_SetupSection> createState() => _SetupSectionState();
 }
 
+String _maskUrl(String url) {
+  if (url.length <= 30) return url;
+  return '${url.substring(0, 30)}…';
+}
+
 class _SetupSectionState extends ConsumerState<_SetupSection> {
   final TextEditingController _shopIdCtrl = TextEditingController();
   String? _currentShopId;
@@ -151,6 +157,14 @@ class _SetupSectionState extends ConsumerState<_SetupSection> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text('現在の店舗ID: ${_currentShopId ?? '(未設定)'}'),
+          Text(
+            'Supabase: ${Env.hasSupabaseCredentials ? "接続情報あり (${_maskUrl(Env.supabaseUrl)})" : "未設定"}',
+            style: TextStyle(
+              color: Env.hasSupabaseCredentials
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.error,
+            ),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: _shopIdCtrl,

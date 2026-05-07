@@ -51,7 +51,6 @@ app.*.map.json
 # Local environment / secrets
 .env
 .env.local
-lib/core/config/env.dart
 
 # pubspec.lock
 # (アプリは含める、ライブラリは無視するのが慣例。アプリなので含める)
