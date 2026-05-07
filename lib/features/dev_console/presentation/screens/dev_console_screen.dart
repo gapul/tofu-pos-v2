@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/config/env.dart';
 import '../../../../core/error/app_exceptions.dart';
+import '../../../../core/export/csv_export_file_service.dart';
 import '../../../../core/export/csv_export_service.dart';
 import '../../../../core/sync/supabase_realtime_listener.dart';
 import '../../../../core/sync/sync_service.dart';
@@ -569,22 +570,46 @@ class _ExportSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return _Section(
-      title: '6. CSV 出力（標準出力相当）',
-      child: FilledButton(
-        onPressed: () async {
-          final List<Order> orders =
-              await ref.read(orderRepositoryProvider).findAll();
-          final ShopId? shopId =
-              await ref.read(settingsRepositoryProvider).getShopId();
-          final String csv = const CsvExportService().serialize(
-            orders: orders,
-            shopId: shopId?.value ?? '(unset)',
-          );
-          final List<String> lines = csv.split('\r\n');
-          final String preview = lines.take(5).join('\n');
-          onResult('CSV ${lines.length}行\n$preview');
-        },
-        child: const Text('CSV を組み立ててプレビュー'),
+      title: '6. CSV 出力',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          OutlinedButton(
+            onPressed: () async {
+              final List<Order> orders =
+                  await ref.read(orderRepositoryProvider).findAll();
+              final ShopId? shopId =
+                  await ref.read(settingsRepositoryProvider).getShopId();
+              final String csv = const CsvExportService().serialize(
+                orders: orders,
+                shopId: shopId?.value ?? '(unset)',
+              );
+              final List<String> lines = csv.split('\r\n');
+              final String preview = lines.take(5).join('\n');
+              onResult('CSV ${lines.length}行\n$preview');
+            },
+            child: const Text('プレビュー（画面表示）'),
+          ),
+          const SizedBox(height: 4),
+          FilledButton(
+            onPressed: () async {
+              final List<Order> orders =
+                  await ref.read(orderRepositoryProvider).findAll();
+              final ShopId? shopId =
+                  await ref.read(settingsRepositoryProvider).getShopId();
+              try {
+                final String path = await CsvExportFileService().writeAndShare(
+                  orders: orders,
+                  shopId: shopId?.value ?? 'unset',
+                );
+                onResult('保存して共有: $path');
+              } catch (e) {
+                onResult('エラー: $e');
+              }
+            },
+            child: const Text('ファイルに保存して共有シートを開く'),
+          ),
+        ],
       ),
     );
   }

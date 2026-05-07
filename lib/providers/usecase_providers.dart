@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/transport/noop_transport.dart';
 import '../core/transport/transport.dart';
 import '../domain/usecases/cancel_order_usecase.dart';
+import '../domain/usecases/cash_close_usecase.dart';
 import '../domain/usecases/checkout_usecase.dart';
 import '../domain/usecases/daily_reset_usecase.dart';
 import '../domain/value_objects/shop_id.dart';
@@ -29,6 +30,14 @@ final Provider<CancelOrderUseCase> cancelOrderUseCaseProvider =
     cashDrawerRepository: ref.watch(cashDrawerRepositoryProvider),
     ticketPoolRepository: ref.watch(ticketNumberPoolRepositoryProvider),
     operationLogRepository: ref.watch(operationLogRepositoryProvider),
+  ),
+);
+
+final Provider<CashCloseUseCase> cashCloseUseCaseProvider =
+    Provider<CashCloseUseCase>(
+  (Ref<CashCloseUseCase> ref) => CashCloseUseCase(
+    orderRepository: ref.watch(orderRepositoryProvider),
+    cashDrawerRepository: ref.watch(cashDrawerRepositoryProvider),
   ),
 );
 

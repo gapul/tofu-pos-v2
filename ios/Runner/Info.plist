@@ -45,5 +45,26 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- Bluetooth (BLE Central / Peripheral) — 端末間連携の最後の砦として使用 -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>店舗内のキッチン・呼び出し端末と連携するため、Bluetoothを使用します。</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>キッチン・呼び出し端末として動作するため、Bluetoothを使用します。</string>
+
+	<!-- Local Network — ローカルLANでの端末間連携（mDNS/WebSocket）に必要 -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>同一ネットワーク上のキッチン・呼び出し端末を発見して連携するために使用します。</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_tofu-pos._tcp</string>
+	</array>
+
+	<!-- バックグラウンド実行モード -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+		<string>bluetooth-peripheral</string>
+	</array>
 </dict>
 </plist>
