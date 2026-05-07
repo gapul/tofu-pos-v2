@@ -15,7 +15,7 @@ dependencies:
 
   # 状態管理
   flutter_riverpod: ^2.5.1
-  riverpod_annotation: ^2.3.5
+  # riverpod_annotation も同上の理由で外す（手書きで Notifier を書く）
 
   # ルーティング
   go_router: ^14.2.7
@@ -26,6 +26,7 @@ dependencies:
 
   # ローカルDB
   drift: ^2.20.2
+  sqlite3: ^2.4.0
   sqlite3_flutter_libs: ^0.5.24
   path_provider: ^2.1.4
   path: ^1.9.0
@@ -69,9 +70,8 @@ dev_dependencies:
   freezed: ^2.5.7
   json_serializable: ^6.8.0
   drift_dev: ^2.20.3
-  riverpod_generator: ^2.4.3
-  custom_lint: ^0.7.3
-  riverpod_lint: ^2.6.3
+  # riverpod_generator / custom_lint / riverpod_lint は analyzer の transitive
+  # 依存衝突で build_runner を壊すため一旦外す（手書き Notifier で進める）。
 
   # テスト
   mocktail: ^1.0.4

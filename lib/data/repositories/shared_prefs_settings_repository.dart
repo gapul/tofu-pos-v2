@@ -1,0 +1,105 @@
+import 'dart:async';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../domain/enums/device_role.dart';
+import '../../domain/enums/transport_mode.dart';
+import '../../domain/repositories/settings_repository.dart';
+import '../../domain/value_objects/feature_flags.dart';
+import '../../domain/value_objects/shop_id.dart';
+
+/// SharedPreferences ベースの SettingsRepository（仕様書 §3, §4）。
+class SharedPrefsSettingsRepository implements SettingsRepository {
+  SharedPrefsSettingsRepository(this._prefs);
+
+  final SharedPreferences _prefs;
+
+  static const String _kShopId = 'shopId';
+  static const String _kDeviceRole = 'deviceRole';
+  static const String _kTransportMode = 'transportMode';
+  static const String _kFlagStock = 'flag.stockManagement';
+  static const String _kFlagCash = 'flag.cashManagement';
+  static const String _kFlagAttr = 'flag.customerAttributes';
+  static const String _kFlagKitchen = 'flag.kitchenLink';
+  static const String _kFlagCalling = 'flag.callingLink';
+
+  final StreamController<FeatureFlags> _flagsController =
+      StreamController<FeatureFlags>.broadcast();
+  final StreamController<TransportMode> _modeController =
+      StreamController<TransportMode>.broadcast();
+
+  @override
+  Future<ShopId?> getShopId() async {
+    final String? raw = _prefs.getString(_kShopId);
+    return raw == null ? null : ShopId(raw);
+  }
+
+  @override
+  Future<void> setShopId(ShopId shopId) async {
+    await _prefs.setString(_kShopId, shopId.value);
+  }
+
+  @override
+  Future<DeviceRole?> getDeviceRole() async {
+    final String? raw = _prefs.getString(_kDeviceRole);
+    if (raw == null) {
+      return null;
+    }
+    return DeviceRole.values.byName(raw);
+  }
+
+  @override
+  Future<void> setDeviceRole(DeviceRole role) async {
+    await _prefs.setString(_kDeviceRole, role.name);
+  }
+
+  @override
+  Future<FeatureFlags> getFeatureFlags() async {
+    return FeatureFlags(
+      stockManagement: _prefs.getBool(_kFlagStock) ?? false,
+      cashManagement: _prefs.getBool(_kFlagCash) ?? false,
+      customerAttributes: _prefs.getBool(_kFlagAttr) ?? false,
+      kitchenLink: _prefs.getBool(_kFlagKitchen) ?? false,
+      callingLink: _prefs.getBool(_kFlagCalling) ?? false,
+    );
+  }
+
+  @override
+  Future<void> setFeatureFlags(FeatureFlags flags) async {
+    await Future.wait(<Future<void>>[
+      _prefs.setBool(_kFlagStock, flags.stockManagement),
+      _prefs.setBool(_kFlagCash, flags.cashManagement),
+      _prefs.setBool(_kFlagAttr, flags.customerAttributes),
+      _prefs.setBool(_kFlagKitchen, flags.kitchenLink),
+      _prefs.setBool(_kFlagCalling, flags.callingLink),
+    ]);
+    _flagsController.add(flags);
+  }
+
+  @override
+  Stream<FeatureFlags> watchFeatureFlags() async* {
+    yield await getFeatureFlags();
+    yield* _flagsController.stream;
+  }
+
+  @override
+  Future<TransportMode> getTransportMode() async {
+    final String? raw = _prefs.getString(_kTransportMode);
+    if (raw == null) {
+      return TransportMode.online;
+    }
+    return TransportMode.values.byName(raw);
+  }
+
+  @override
+  Future<void> setTransportMode(TransportMode mode) async {
+    await _prefs.setString(_kTransportMode, mode.name);
+    _modeController.add(mode);
+  }
+
+  @override
+  Stream<TransportMode> watchTransportMode() async* {
+    yield await getTransportMode();
+    yield* _modeController.stream;
+  }
+}
