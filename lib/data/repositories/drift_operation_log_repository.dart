@@ -42,6 +42,9 @@ class DriftOperationLogRepository implements OperationLogRepository {
           ..orderBy(<OrderClauseGenerator<$OperationLogsTable>>[
             ($OperationLogsTable t) =>
                 OrderingTerm(expression: t.occurredAt, mode: OrderingMode.desc),
+            // 同時刻のときは id 降順（後から記録した方が新しい）。
+            ($OperationLogsTable t) =>
+                OrderingTerm(expression: t.id, mode: OrderingMode.desc),
           ])
           ..limit(limit))
         .get();

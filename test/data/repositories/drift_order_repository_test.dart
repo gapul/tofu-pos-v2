@@ -98,6 +98,27 @@ void main() {
     expect((loaded.discount as PercentDiscount).percent, -10);
   });
 
+  test('findAll respects limit/offset and orders desc', () async {
+    for (int i = 0; i < 5; i++) {
+      await repo.create(makeOrder(
+        ticketValue: i + 1,
+      ).copyWith(createdAt: DateTime(2026, 5, 7, 10 + i)));
+    }
+    final List<Order> page1 = await repo.findAll(limit: 2);
+    expect(page1, hasLength(2));
+    // newest first
+    expect(page1[0].createdAt.hour, 14);
+    expect(page1[1].createdAt.hour, 13);
+
+    final List<Order> page2 = await repo.findAll(limit: 2, offset: 2);
+    expect(page2, hasLength(2));
+    expect(page2[0].createdAt.hour, 12);
+    expect(page2[1].createdAt.hour, 11);
+
+    final List<Order> page3 = await repo.findAll(limit: 2, offset: 4);
+    expect(page3, hasLength(1));
+  });
+
   test('round-trips AmountDiscount', () async {
     final Order placed = await repo.create(
       makeOrder(discount: const AmountDiscount(Money(-150))),

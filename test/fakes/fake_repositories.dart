@@ -83,12 +83,23 @@ class InMemoryOrderRepository implements OrderRepository {
   Future<Order?> findById(int id) async => _orders[id];
 
   @override
-  Future<List<Order>> findAll({DateTime? from, DateTime? to}) async {
-    return _orders.values.where((Order o) {
+  Future<List<Order>> findAll({
+    DateTime? from,
+    DateTime? to,
+    int? limit,
+    int offset = 0,
+  }) async {
+    final List<Order> filtered = _orders.values.where((Order o) {
       if (from != null && o.createdAt.isBefore(from)) return false;
       if (to != null && o.createdAt.isAfter(to)) return false;
       return true;
-    }).toList();
+    }).toList()
+      ..sort((Order a, Order b) => b.createdAt.compareTo(a.createdAt));
+    final List<Order> sliced = filtered.skip(offset).toList();
+    if (limit != null) {
+      return sliced.take(limit).toList();
+    }
+    return sliced;
   }
 
   @override

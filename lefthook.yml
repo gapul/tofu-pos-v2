@@ -1,0 +1,23 @@
+# Pre-commit / pre-push フック定義
+#
+# インストール:
+#   brew install lefthook
+#   lefthook install
+#
+# 一時的にスキップ:
+#   LEFTHOOK=0 git commit ...
+
+pre-commit:
+  parallel: true
+  commands:
+    analyze:
+      run: flutter analyze
+      stage_fixed: false
+    format:
+      glob: "*.dart"
+      run: dart format --set-exit-if-changed {staged_files}
+
+pre-push:
+  commands:
+    test:
+      run: flutter test

@@ -81,7 +81,12 @@ class DriftOrderRepository implements OrderRepository {
   }
 
   @override
-  Future<List<Order>> findAll({DateTime? from, DateTime? to}) async {
+  Future<List<Order>> findAll({
+    DateTime? from,
+    DateTime? to,
+    int? limit,
+    int offset = 0,
+  }) async {
     final SimpleSelectStatement<$OrdersTable, OrderRow> q =
         _db.select(_db.orders);
     if (from != null) {
@@ -89,6 +94,16 @@ class DriftOrderRepository implements OrderRepository {
     }
     if (to != null) {
       q.where(($OrdersTable t) => t.createdAt.isSmallerOrEqualValue(to));
+    }
+    q.orderBy(<OrderClauseGenerator<$OrdersTable>>[
+      ($OrdersTable t) =>
+          OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
+    ]);
+    if (limit != null) {
+      q.limit(limit, offset: offset);
+    } else if (offset > 0) {
+      // limit なしで offset だけ指定するケース対応（drift は limit 必須）
+      q.limit(0x7fffffff, offset: offset);
     }
     final List<OrderRow> rows = await q.get();
     return Future.wait(rows.map(_hydrate));

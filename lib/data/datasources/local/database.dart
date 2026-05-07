@@ -140,6 +140,11 @@ class AppDatabase extends _$AppDatabase {
         onCreate: (Migrator m) async {
           await m.createAll();
         },
+        beforeOpen: (OpeningDetails details) async {
+          // 外部キー制約を有効化（SQLite はデフォルト無効）。
+          // OrderItems → Orders の cascade delete 等が機能するように。
+          await customStatement('PRAGMA foreign_keys = ON');
+        },
       );
 }
 

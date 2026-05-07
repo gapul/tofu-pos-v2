@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/config/env.dart';
@@ -88,6 +89,8 @@ class _DevConsoleScreenState extends ConsumerState<DevConsoleScreen> {
             const _RealtimeSection(),
             const SizedBox(height: 8),
             const _OperationLogSection(),
+            const SizedBox(height: 8),
+            const _AboutSection(),
             const SizedBox(height: 32),
           ],
         ),
@@ -696,6 +699,49 @@ class _ExportSection extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ============== About / Version ==============
+
+class _AboutSection extends StatefulWidget {
+  const _AboutSection();
+
+  @override
+  State<_AboutSection> createState() => _AboutSectionState();
+}
+
+class _AboutSectionState extends State<_AboutSection> {
+  PackageInfo? _info;
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((PackageInfo i) {
+      if (!mounted) return;
+      setState(() => _info = i);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _Section(
+      title: '11. About',
+      child: _info == null
+          ? const Text('読込中...')
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('App: ${_info!.appName}'),
+                Text(
+                  'Version: ${_info!.version}+${_info!.buildNumber}',
+                  style: const TextStyle(fontFamily: 'monospace'),
+                ),
+                Text('Package: ${_info!.packageName}',
+                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              ],
+            ),
     );
   }
 }
