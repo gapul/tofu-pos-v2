@@ -67,3 +67,42 @@ final Provider<SyncService> syncServiceProvider =
   ref.onDispose(service.stop);
   return service;
 });
+
+/// 同期警告のしきい値（仕様書 §8.2 「1時間継続したら通知」）。
+const Duration kSyncFailureWarningThreshold = Duration(hours: 1);
+
+/// 同期警告状態。
+enum SyncWarningLevel {
+  /// 失敗なし、または失敗継続が短時間。
+  ok,
+
+  /// 失敗が長時間継続している（既定: 1時間以上）。
+  prolongedFailure,
+}
+
+/// 同期失敗が長時間続いているかを定期判定する Stream Provider。
+///
+/// 1分間隔で SyncService.lastFailureSince を確認し、
+/// しきい値（デフォルト1時間）を超えたら prolongedFailure を emit する。
+final StreamProvider<SyncWarningLevel> syncWarningProvider =
+    StreamProvider<SyncWarningLevel>((Ref<AsyncValue<SyncWarningLevel>> ref) {
+  final SyncService service = ref.watch(syncServiceProvider);
+  return Stream<SyncWarningLevel>.periodic(
+    const Duration(minutes: 1),
+    (_) => _evaluate(service.lastFailureSince),
+  ).distinct();
+});
+
+SyncWarningLevel _evaluate(DateTime? since) {
+  if (since == null) {
+    return SyncWarningLevel.ok;
+  }
+  if (DateTime.now().difference(since) >= kSyncFailureWarningThreshold) {
+    return SyncWarningLevel.prolongedFailure;
+  }
+  return SyncWarningLevel.ok;
+}
+
+/// 直接呼び出して即時判定する関数（UIの初回チェック用）。
+SyncWarningLevel evaluateSyncWarningNow(SyncService service) =>
+    _evaluate(service.lastFailureSince);

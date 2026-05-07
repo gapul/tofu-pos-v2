@@ -1,3 +1,4 @@
+import '../../core/logging/app_logger.dart';
 import '../repositories/daily_reset_repository.dart';
 import '../repositories/ticket_number_pool_repository.dart';
 
@@ -34,6 +35,7 @@ class DailyResetUseCase {
     final pool = await _poolRepo.load();
     await _poolRepo.save(pool.reset());
     await _dailyResetRepo.setLastResetDate(today);
+    AppLogger.i('Daily reset performed for $today (was: $last)');
     return true;
   }
 

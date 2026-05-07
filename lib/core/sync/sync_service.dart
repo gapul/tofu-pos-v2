@@ -6,6 +6,7 @@ import '../../domain/repositories/order_repository.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../connectivity/connectivity_monitor.dart';
 import '../connectivity/connectivity_status.dart';
+import '../logging/app_logger.dart';
 import 'cloud_sync_client.dart';
 
 /// 未同期注文をクラウドに送る同期サービス（仕様書 §8.1 / §8.2）。
@@ -94,15 +95,24 @@ class SyncService {
           await _client.push(order, shopId: shopId.value);
           await _orderRepo.updateSyncStatus(order.id, SyncStatus.synced);
           success++;
-        } catch (_) {
+        } catch (e, st) {
           failure++;
+          AppLogger.w(
+            'Sync failed for order #${order.id}',
+            error: e,
+            stackTrace: st,
+          );
         }
       }
       if (failure == 0) {
+        if (_firstFailureAt != null) {
+          AppLogger.i('Sync recovered after previous failures');
+        }
         _firstFailureAt = null;
       } else {
         _firstFailureAt ??= DateTime.now();
       }
+      AppLogger.d('Sync runOnce: success=$success failure=$failure');
       return SyncResult(successCount: success, failureCount: failure);
     } finally {
       _running = false;

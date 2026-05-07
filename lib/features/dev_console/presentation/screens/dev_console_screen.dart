@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -8,6 +10,7 @@ import '../../../../core/export/csv_export_file_service.dart';
 import '../../../../core/export/csv_export_service.dart';
 import '../../../../core/sync/supabase_realtime_listener.dart';
 import '../../../../core/sync/sync_service.dart';
+import '../../../../domain/entities/operation_log.dart';
 import '../../../../domain/enums/transport_mode.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/entities/order_item.dart';
@@ -83,6 +86,8 @@ class _DevConsoleScreenState extends ConsumerState<DevConsoleScreen> {
             _TransportModeSection(onResult: _show),
             const SizedBox(height: 8),
             const _RealtimeSection(),
+            const SizedBox(height: 8),
+            const _OperationLogSection(),
             const SizedBox(height: 32),
           ],
         ),
@@ -527,6 +532,69 @@ class _RealtimeSection extends ConsumerWidget {
   }
 }
 
+// ============== OperationLog 閲覧 ==============
+
+class _OperationLogSection extends ConsumerStatefulWidget {
+  const _OperationLogSection();
+
+  @override
+  ConsumerState<_OperationLogSection> createState() =>
+      _OperationLogSectionState();
+}
+
+class _OperationLogSectionState extends ConsumerState<_OperationLogSection> {
+  List<OperationLog> _logs = <OperationLog>[];
+  bool _loading = false;
+
+  Future<void> _refresh() async {
+    setState(() => _loading = true);
+    final List<OperationLog> logs =
+        await ref.read(operationLogRepositoryProvider).findRecent(limit: 50);
+    if (!mounted) return;
+    setState(() {
+      _logs = logs;
+      _loading = false;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => unawaited(_refresh()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _Section(
+      title: '10. 操作ログ（直近50件）',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          OutlinedButton.icon(
+            onPressed: _loading ? null : _refresh,
+            icon: const Icon(Icons.refresh),
+            label: const Text('再読み込み'),
+          ),
+          const SizedBox(height: 8),
+          if (_logs.isEmpty)
+            const Text('（ログなし）')
+          else
+            for (final OperationLog log in _logs)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(
+                  '#${log.id} ${log.kind} target=${log.targetId ?? "-"} '
+                  '@${log.occurredAt.toIso8601String()}',
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
 // ============== Sync ==============
 
 class _SyncSection extends ConsumerWidget {
@@ -535,6 +603,8 @@ class _SyncSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<SyncWarningLevel> warning =
+        ref.watch(syncWarningProvider);
     return _Section(
       title: '7. クラウド同期',
       child: Column(
@@ -544,6 +614,21 @@ class _SyncSection extends ConsumerWidget {
             Text(
               'Supabase 接続情報が未設定です（.env を埋めてください）',
               style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          if (warning.value == SyncWarningLevel.prolongedFailure)
+            Container(
+              padding: const EdgeInsets.all(8),
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '同期失敗が1時間以上続いています（§8.2）。回線と Supabase 接続を確認してください。',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onErrorContainer,
+                ),
+              ),
             ),
           FilledButton(
             onPressed: () async {
