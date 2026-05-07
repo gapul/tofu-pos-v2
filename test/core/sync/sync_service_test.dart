@@ -67,6 +67,14 @@ class _FakeSettings implements SettingsRepository {
   Future<void> setTransportMode(TransportMode mode) async {}
   @override
   Stream<TransportMode> watchTransportMode() => const Stream<TransportMode>.empty();
+  @override
+  Future<Duration> getLanSendTimeout() async => const Duration(seconds: 5);
+  @override
+  Future<void> setLanSendTimeout(Duration value) async {}
+  @override
+  Future<Duration> getBleSendTimeout() async => const Duration(seconds: 10);
+  @override
+  Future<void> setBleSendTimeout(Duration value) async {}
 }
 
 class _RecordingClient implements CloudSyncClient {

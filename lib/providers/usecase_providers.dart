@@ -87,10 +87,15 @@ final FutureProvider<Transport> transportProvider = FutureProvider<Transport>(
       return t;
     }
 
+    final Duration lanTimeout = await settings.getLanSendTimeout();
+    final Duration bleTimeout = await settings.getBleSendTimeout();
+
     final Transport t = await _buildTransport(
       mode: mode,
       shopId: shopId.value,
       role: role,
+      lanTimeout: lanTimeout,
+      bleTimeout: bleTimeout,
     );
     ref.onDispose(t.disconnect);
     return t;
@@ -101,13 +106,13 @@ Future<Transport> _buildTransport({
   required TransportMode mode,
   required String shopId,
   required DeviceRole role,
+  required Duration lanTimeout,
+  required Duration bleTimeout,
 }) async {
   switch (mode) {
     case TransportMode.online:
       // オンライン経路は SyncService（送信）+ SupabaseRealtimeListener（受信）が
       // それぞれ担うため、Transport 抽象としては Noop を返す。
-      // CheckoutFlowUseCase の transport.send は no-op になるが、
-      // SyncService が未同期注文を Supabase に押し出すので問題ない。
       final NoopTransport t = NoopTransport();
       await t.connect();
       return t;
@@ -116,27 +121,18 @@ Future<Transport> _buildTransport({
         final LanClient client = LanClient(shopId: shopId);
         final LanTransport inner = LanTransport.client(client);
         await inner.connect();
-        return TimeoutTransport(
-          inner: inner,
-          timeout: const Duration(seconds: 5),
-        );
+        return TimeoutTransport(inner: inner, timeout: lanTimeout);
       }
       final LanServer server = LanServer(shopId: shopId, role: role.name);
       final LanTransport inner = LanTransport.server(server);
       await inner.connect();
-      return TimeoutTransport(
-        inner: inner,
-        timeout: const Duration(seconds: 5),
-      );
+      return TimeoutTransport(inner: inner, timeout: lanTimeout);
     case TransportMode.bluetooth:
       if (role == DeviceRole.register) {
         final BleCentralService central = BleCentralService(shopId: shopId);
         final BleTransport inner = BleTransport.central(central);
         await inner.connect();
-        return TimeoutTransport(
-          inner: inner,
-          timeout: const Duration(seconds: 10),
-        );
+        return TimeoutTransport(inner: inner, timeout: bleTimeout);
       }
       final BlePeripheralService peripheral = BlePeripheralService(
         shopId: shopId,
@@ -144,10 +140,7 @@ Future<Transport> _buildTransport({
       );
       final BleTransport inner = BleTransport.peripheral(peripheral);
       await inner.connect();
-      return TimeoutTransport(
-        inner: inner,
-        timeout: const Duration(seconds: 10),
-      );
+      return TimeoutTransport(inner: inner, timeout: bleTimeout);
   }
 }
 

@@ -22,6 +22,11 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   static const String _kFlagAttr = 'flag.customerAttributes';
   static const String _kFlagKitchen = 'flag.kitchenLink';
   static const String _kFlagCalling = 'flag.callingLink';
+  static const String _kLanSendTimeoutMs = 'lanSendTimeoutMs';
+  static const String _kBleSendTimeoutMs = 'bleSendTimeoutMs';
+
+  static const Duration _defaultLanTimeout = Duration(seconds: 5);
+  static const Duration _defaultBleTimeout = Duration(seconds: 10);
 
   final StreamController<FeatureFlags> _flagsController =
       StreamController<FeatureFlags>.broadcast();
@@ -101,5 +106,27 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   Stream<TransportMode> watchTransportMode() async* {
     yield await getTransportMode();
     yield* _modeController.stream;
+  }
+
+  @override
+  Future<Duration> getLanSendTimeout() async {
+    final int? ms = _prefs.getInt(_kLanSendTimeoutMs);
+    return ms == null ? _defaultLanTimeout : Duration(milliseconds: ms);
+  }
+
+  @override
+  Future<void> setLanSendTimeout(Duration value) async {
+    await _prefs.setInt(_kLanSendTimeoutMs, value.inMilliseconds);
+  }
+
+  @override
+  Future<Duration> getBleSendTimeout() async {
+    final int? ms = _prefs.getInt(_kBleSendTimeoutMs);
+    return ms == null ? _defaultBleTimeout : Duration(milliseconds: ms);
+  }
+
+  @override
+  Future<void> setBleSendTimeout(Duration value) async {
+    await _prefs.setInt(_kBleSendTimeoutMs, value.inMilliseconds);
   }
 }

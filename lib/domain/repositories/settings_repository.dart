@@ -21,4 +21,12 @@ abstract interface class SettingsRepository {
   Future<TransportMode> getTransportMode();
   Future<void> setTransportMode(TransportMode mode);
   Stream<TransportMode> watchTransportMode();
+
+  /// LAN Transport の高緊急 send タイムアウト（仕様書 §7.2、既定: 5秒）。
+  Future<Duration> getLanSendTimeout();
+  Future<void> setLanSendTimeout(Duration value);
+
+  /// BLE Transport の高緊急 send タイムアウト（既定: 10秒）。
+  Future<Duration> getBleSendTimeout();
+  Future<void> setBleSendTimeout(Duration value);
 }

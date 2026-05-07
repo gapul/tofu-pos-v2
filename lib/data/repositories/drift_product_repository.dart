@@ -93,4 +93,28 @@ class DriftProductRepository implements ProductRepository {
           .write(ProductsCompanion(stock: Value<int>(next)));
     });
   }
+
+  @override
+  Future<void> replaceAll(List<Product> products) async {
+    final Set<String> incomingIds = <String>{
+      for (final Product p in products) p.id,
+    };
+
+    await _db.transaction(() async {
+      // 1. 受信に含まれない既存商品を論理削除（履歴保護のため物理削除はしない）。
+      final List<ProductRow> existing = await _db.select(_db.products).get();
+      for (final ProductRow row in existing) {
+        if (!incomingIds.contains(row.id) && !row.isDeleted) {
+          await (_db.update(_db.products)
+                ..where(($ProductsTable t) => t.id.equals(row.id)))
+              .write(const ProductsCompanion(isDeleted: Value<bool>(true)));
+        }
+      }
+
+      // 2. 受信した商品をすべて upsert（isDeleted は entity の値そのまま）。
+      for (final Product p in products) {
+        await _db.into(_db.products).insertOnConflictUpdate(_toCompanion(p));
+      }
+    });
+  }
 }

@@ -76,6 +76,20 @@ class InMemoryProductRepository implements ProductRepository {
     _controller.add(_snapshot());
   }
 
+  @override
+  Future<void> replaceAll(List<Product> products) async {
+    final Set<String> incoming = <String>{for (final Product p in products) p.id};
+    for (final Product existing in _products.values.toList()) {
+      if (!incoming.contains(existing.id) && !existing.isDeleted) {
+        _products[existing.id] = existing.copyWith(isDeleted: true);
+      }
+    }
+    for (final Product p in products) {
+      _products[p.id] = p;
+    }
+    _controller.add(_snapshot());
+  }
+
   List<Product> _snapshot() => _products.values.toList();
 }
 
