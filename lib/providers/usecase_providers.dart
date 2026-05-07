@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/transport/ble_transport.dart';
 import '../core/transport/lan_transport.dart';
 import '../core/transport/noop_transport.dart';
+import '../core/transport/timeout_transport.dart';
 import '../core/transport/transport.dart';
 import '../data/datasources/ble/ble_central_service.dart';
 import '../data/datasources/ble/ble_peripheral_service.dart';
@@ -113,28 +114,40 @@ Future<Transport> _buildTransport({
     case TransportMode.localLan:
       if (role == DeviceRole.register) {
         final LanClient client = LanClient(shopId: shopId);
-        final LanTransport t = LanTransport.client(client);
-        await t.connect();
-        return t;
+        final LanTransport inner = LanTransport.client(client);
+        await inner.connect();
+        return TimeoutTransport(
+          inner: inner,
+          timeout: const Duration(seconds: 5),
+        );
       }
       final LanServer server = LanServer(shopId: shopId, role: role.name);
-      final LanTransport t = LanTransport.server(server);
-      await t.connect();
-      return t;
+      final LanTransport inner = LanTransport.server(server);
+      await inner.connect();
+      return TimeoutTransport(
+        inner: inner,
+        timeout: const Duration(seconds: 5),
+      );
     case TransportMode.bluetooth:
       if (role == DeviceRole.register) {
         final BleCentralService central = BleCentralService(shopId: shopId);
-        final BleTransport t = BleTransport.central(central);
-        await t.connect();
-        return t;
+        final BleTransport inner = BleTransport.central(central);
+        await inner.connect();
+        return TimeoutTransport(
+          inner: inner,
+          timeout: const Duration(seconds: 10),
+        );
       }
       final BlePeripheralService peripheral = BlePeripheralService(
         shopId: shopId,
         role: role.name,
       );
-      final BleTransport t = BleTransport.peripheral(peripheral);
-      await t.connect();
-      return t;
+      final BleTransport inner = BleTransport.peripheral(peripheral);
+      await inner.connect();
+      return TimeoutTransport(
+        inner: inner,
+        timeout: const Duration(seconds: 10),
+      );
   }
 }
 

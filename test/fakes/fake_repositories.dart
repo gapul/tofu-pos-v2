@@ -1,12 +1,18 @@
 import 'dart:async';
 
+import 'package:tofu_pos/domain/entities/calling_order.dart';
 import 'package:tofu_pos/domain/entities/cash_drawer.dart';
+import 'package:tofu_pos/domain/entities/kitchen_order.dart';
 import 'package:tofu_pos/domain/entities/operation_log.dart';
 import 'package:tofu_pos/domain/entities/order.dart';
 import 'package:tofu_pos/domain/entities/product.dart';
+import 'package:tofu_pos/domain/enums/calling_status.dart';
+import 'package:tofu_pos/domain/enums/kitchen_status.dart';
 import 'package:tofu_pos/domain/enums/order_status.dart';
 import 'package:tofu_pos/domain/enums/sync_status.dart';
+import 'package:tofu_pos/domain/repositories/calling_order_repository.dart';
 import 'package:tofu_pos/domain/repositories/cash_drawer_repository.dart';
+import 'package:tofu_pos/domain/repositories/kitchen_order_repository.dart';
 import 'package:tofu_pos/domain/repositories/operation_log_repository.dart';
 import 'package:tofu_pos/domain/repositories/order_repository.dart';
 import 'package:tofu_pos/domain/repositories/product_repository.dart';
@@ -177,6 +183,76 @@ class InMemoryTicketPoolRepository implements TicketNumberPoolRepository {
   @override
   Future<void> save(TicketNumberPool pool) async {
     _pool = pool;
+  }
+}
+
+class InMemoryKitchenOrderRepository implements KitchenOrderRepository {
+  final Map<int, KitchenOrder> _orders = <int, KitchenOrder>{};
+  final StreamController<List<KitchenOrder>> _controller =
+      StreamController<List<KitchenOrder>>.broadcast();
+
+  @override
+  Future<KitchenOrder?> findByOrderId(int orderId) async => _orders[orderId];
+
+  @override
+  Future<List<KitchenOrder>> findAll() async {
+    final List<KitchenOrder> all = _orders.values.toList()
+      ..sort((KitchenOrder a, KitchenOrder b) =>
+          a.receivedAt.compareTo(b.receivedAt));
+    return all;
+  }
+
+  @override
+  Stream<List<KitchenOrder>> watchAll() => _controller.stream;
+
+  @override
+  Future<void> upsert(KitchenOrder order) async {
+    _orders[order.orderId] = order;
+    _controller.add(_orders.values.toList());
+  }
+
+  @override
+  Future<void> updateStatus(int orderId, KitchenStatus status) async {
+    final KitchenOrder? o = _orders[orderId];
+    if (o != null) {
+      _orders[orderId] = o.copyWith(status: status);
+      _controller.add(_orders.values.toList());
+    }
+  }
+}
+
+class InMemoryCallingOrderRepository implements CallingOrderRepository {
+  final Map<int, CallingOrder> _orders = <int, CallingOrder>{};
+  final StreamController<List<CallingOrder>> _controller =
+      StreamController<List<CallingOrder>>.broadcast();
+
+  @override
+  Future<CallingOrder?> findByOrderId(int orderId) async => _orders[orderId];
+
+  @override
+  Future<List<CallingOrder>> findAll() async {
+    final List<CallingOrder> all = _orders.values.toList()
+      ..sort((CallingOrder a, CallingOrder b) =>
+          a.receivedAt.compareTo(b.receivedAt));
+    return all;
+  }
+
+  @override
+  Stream<List<CallingOrder>> watchAll() => _controller.stream;
+
+  @override
+  Future<void> upsert(CallingOrder order) async {
+    _orders[order.orderId] = order;
+    _controller.add(_orders.values.toList());
+  }
+
+  @override
+  Future<void> updateStatus(int orderId, CallingStatus status) async {
+    final CallingOrder? o = _orders[orderId];
+    if (o != null) {
+      _orders[orderId] = o.copyWith(status: status);
+      _controller.add(_orders.values.toList());
+    }
   }
 }
 
