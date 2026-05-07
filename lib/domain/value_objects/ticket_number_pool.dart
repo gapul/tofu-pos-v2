@@ -13,8 +13,8 @@ class TicketNumberPool {
     required this.bufferSize,
     required Set<int> inUse,
     required List<int> recentlyReleased,
-  })  : _inUse = inUse,
-        _recentlyReleased = recentlyReleased;
+  }) : _inUse = inUse,
+       _recentlyReleased = recentlyReleased;
 
   /// 新規プールを生成。
   factory TicketNumberPool.empty({int maxNumber = 99, int bufferSize = 10}) {
@@ -111,10 +111,7 @@ class TicketNumberPool {
 
   /// 営業日切替などでプールを完全リセット。
   TicketNumberPool reset() {
-    return TicketNumberPool.empty(
-      maxNumber: maxNumber,
-      bufferSize: bufferSize,
-    );
+    return TicketNumberPool.empty(maxNumber: maxNumber, bufferSize: bufferSize);
   }
 
   @override

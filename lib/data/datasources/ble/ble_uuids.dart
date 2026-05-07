@@ -8,7 +8,8 @@ class BleUuids {
   static const String kitchenService = '6E400001-B5A3-F393-E0A9-E50E24DCCA9E';
 
   /// 商品マスタ書き込み（レジ → キッチン、低緊急、§7.3）。
-  static const String productMasterWrite = '00000002-B5A3-F393-E0A9-E50E24DCCA9E';
+  static const String productMasterWrite =
+      '00000002-B5A3-F393-E0A9-E50E24DCCA9E';
 
   /// 注文書き込み（レジ → キッチン、高緊急）。
   static const String orderWrite = '00000003-B5A3-F393-E0A9-E50E24DCCA9E';

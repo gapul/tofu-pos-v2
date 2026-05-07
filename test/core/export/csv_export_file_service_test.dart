@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:tofu_pos/core/export/csv_export_file_service.dart';
-import 'package:tofu_pos/domain/entities/customer_attributes.dart';
 import 'package:tofu_pos/domain/entities/order.dart';
 import 'package:tofu_pos/domain/entities/order_item.dart';
 import 'package:tofu_pos/domain/enums/order_status.dart';
@@ -29,7 +28,6 @@ Order _order() {
     createdAt: DateTime.utc(2026, 5, 7, 12),
     orderStatus: OrderStatus.served,
     syncStatus: SyncStatus.synced,
-    customerAttributes: CustomerAttributes.empty,
   );
 }
 

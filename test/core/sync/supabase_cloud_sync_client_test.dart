@@ -47,14 +47,18 @@ Order _makeOrder({
 void main() {
   group('SupabaseCloudSyncClient.buildRows', () {
     test('produces one row per item', () {
-      final List<Map<String, Object?>> rows =
-          SupabaseCloudSyncClient.buildRows(_makeOrder(), shopId: 'shop_a');
+      final List<Map<String, Object?>> rows = SupabaseCloudSyncClient.buildRows(
+        _makeOrder(),
+        shopId: 'shop_a',
+      );
       expect(rows, hasLength(2));
     });
 
     test('all rows share order-level fields', () {
-      final List<Map<String, Object?>> rows =
-          SupabaseCloudSyncClient.buildRows(_makeOrder(), shopId: 'shop_a');
+      final List<Map<String, Object?>> rows = SupabaseCloudSyncClient.buildRows(
+        _makeOrder(),
+        shopId: 'shop_a',
+      );
       for (final Map<String, Object?> r in rows) {
         expect(r['shop_id'], 'shop_a');
         expect(r['local_order_id'], 42);
@@ -68,8 +72,10 @@ void main() {
     });
 
     test('line_no is 1-based and sequential', () {
-      final List<Map<String, Object?>> rows =
-          SupabaseCloudSyncClient.buildRows(_makeOrder(), shopId: 'shop_a');
+      final List<Map<String, Object?>> rows = SupabaseCloudSyncClient.buildRows(
+        _makeOrder(),
+        shopId: 'shop_a',
+      );
       expect(rows[0]['line_no'], 1);
       expect(rows[1]['line_no'], 2);
     });
@@ -97,8 +103,10 @@ void main() {
     });
 
     test('line-level fields copy item data', () {
-      final List<Map<String, Object?>> rows =
-          SupabaseCloudSyncClient.buildRows(_makeOrder(), shopId: 'shop_a');
+      final List<Map<String, Object?>> rows = SupabaseCloudSyncClient.buildRows(
+        _makeOrder(),
+        shopId: 'shop_a',
+      );
       expect(rows[0]['product_id'], 'p1');
       expect(rows[0]['product_name'], 'Yakisoba');
       expect(rows[0]['quantity'], 2);
@@ -107,8 +115,10 @@ void main() {
     });
 
     test('createdAt is serialized as UTC ISO8601', () {
-      final List<Map<String, Object?>> rows =
-          SupabaseCloudSyncClient.buildRows(_makeOrder(), shopId: 'shop_a');
+      final List<Map<String, Object?>> rows = SupabaseCloudSyncClient.buildRows(
+        _makeOrder(),
+        shopId: 'shop_a',
+      );
       final String iso = rows[0]['order_created_at']! as String;
       expect(iso.endsWith('Z'), isTrue);
     });
@@ -131,8 +141,10 @@ void main() {
         orderStatus: OrderStatus.served,
         syncStatus: SyncStatus.notSynced,
       );
-      final List<Map<String, Object?>> rows =
-          SupabaseCloudSyncClient.buildRows(order, shopId: 'shop_a');
+      final List<Map<String, Object?>> rows = SupabaseCloudSyncClient.buildRows(
+        order,
+        shopId: 'shop_a',
+      );
       expect(rows.single['discount_per_item_yen'], 0);
     });
   });

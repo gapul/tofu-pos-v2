@@ -7,6 +7,7 @@ import 'package:tofu_pos/core/sync/cloud_sync_client.dart';
 import 'package:tofu_pos/core/sync/sync_service.dart';
 import 'package:tofu_pos/domain/entities/order.dart';
 import 'package:tofu_pos/domain/entities/order_item.dart';
+import 'package:tofu_pos/domain/enums/device_role.dart';
 import 'package:tofu_pos/domain/enums/order_status.dart';
 import 'package:tofu_pos/domain/enums/sync_status.dart';
 import 'package:tofu_pos/domain/enums/transport_mode.dart';
@@ -16,7 +17,6 @@ import 'package:tofu_pos/domain/value_objects/feature_flags.dart';
 import 'package:tofu_pos/domain/value_objects/money.dart';
 import 'package:tofu_pos/domain/value_objects/shop_id.dart';
 import 'package:tofu_pos/domain/value_objects/ticket_number.dart';
-import 'package:tofu_pos/domain/enums/device_role.dart';
 
 import '../../fakes/fake_repositories.dart';
 
@@ -60,13 +60,15 @@ class _FakeSettings implements SettingsRepository {
   @override
   Future<void> setFeatureFlags(FeatureFlags flags) async {}
   @override
-  Stream<FeatureFlags> watchFeatureFlags() => const Stream<FeatureFlags>.empty();
+  Stream<FeatureFlags> watchFeatureFlags() =>
+      const Stream<FeatureFlags>.empty();
   @override
   Future<TransportMode> getTransportMode() async => TransportMode.online;
   @override
   Future<void> setTransportMode(TransportMode mode) async {}
   @override
-  Stream<TransportMode> watchTransportMode() => const Stream<TransportMode>.empty();
+  Stream<TransportMode> watchTransportMode() =>
+      const Stream<TransportMode>.empty();
   @override
   Future<Duration> getLanSendTimeout() async => const Duration(seconds: 5);
   @override
@@ -90,10 +92,7 @@ class _RecordingClient implements CloudSyncClient {
   }
 }
 
-Order _makeOrder({
-  int id = 0,
-  SyncStatus sync = SyncStatus.notSynced,
-}) {
+Order _makeOrder({int id = 0, SyncStatus sync = SyncStatus.notSynced}) {
   return Order(
     id: id,
     ticketNumber: const TicketNumber(1),

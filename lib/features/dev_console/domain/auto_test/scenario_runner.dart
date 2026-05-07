@@ -16,10 +16,7 @@ class ScenarioReport {
 /// 各シナリオの前に状態をリセット（DB全削除 + SharedPreferences の関連キー削除）
 /// するため、シナリオは独立に書ける。
 class ScenarioRunner {
-  ScenarioRunner({
-    required this.scenarios,
-    required this.context,
-  });
+  ScenarioRunner({required this.scenarios, required this.context});
 
   final List<TestScenario> scenarios;
   final ScenarioContext context;
@@ -40,13 +37,14 @@ class ScenarioRunner {
       await _resetState();
       final ScenarioResult result = await s.run(context);
       sw.stop();
-      AppLogger.i('Scenario "${s.name}": ${result.passed ? "PASS" : "FAIL"} '
-          '— ${result.message} (${sw.elapsed.inMilliseconds}ms)');
+      AppLogger.i(
+        'Scenario "${s.name}": ${result.passed ? "PASS" : "FAIL"} '
+        '— ${result.message} (${sw.elapsed.inMilliseconds}ms)',
+      );
       return ScenarioReport(s, result.withDuration(sw.elapsed));
     } catch (e, st) {
       sw.stop();
-      AppLogger.e('Scenario "${s.name}" threw: $e',
-          error: e, stackTrace: st);
+      AppLogger.e('Scenario "${s.name}" threw: $e', error: e, stackTrace: st);
       return ScenarioReport(
         s,
         ScenarioResult.fail('uncaught: $e').withDuration(sw.elapsed),

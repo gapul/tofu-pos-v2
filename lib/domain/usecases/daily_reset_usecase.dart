@@ -13,9 +13,9 @@ class DailyResetUseCase {
     required DailyResetRepository dailyResetRepository,
     required TicketNumberPoolRepository ticketPoolRepository,
     DateTime Function() now = DateTime.now,
-  })  : _dailyResetRepo = dailyResetRepository,
-        _poolRepo = ticketPoolRepository,
-        _now = now;
+  }) : _dailyResetRepo = dailyResetRepository,
+       _poolRepo = ticketPoolRepository,
+       _now = now;
 
   final DailyResetRepository _dailyResetRepo;
   final TicketNumberPoolRepository _poolRepo;

@@ -20,10 +20,10 @@ class KitchenIngestRouter {
     required KitchenIngestUseCase ingest,
     required ProductMasterIngestUseCase productIngest,
     required String shopId,
-  })  : _transport = transport,
-        _ingest = ingest,
-        _productIngest = productIngest,
-        _shopId = shopId;
+  }) : _transport = transport,
+       _ingest = ingest,
+       _productIngest = productIngest,
+       _shopId = shopId;
 
   final Transport _transport;
   final KitchenIngestUseCase _ingest;

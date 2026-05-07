@@ -73,7 +73,7 @@ void main() {
   });
 
   test('findUnsynced returns only NOT_SYNCED orders', () async {
-    final Order a = await repo.create(makeOrder(ticketValue: 1));
+    final Order a = await repo.create(makeOrder());
     final Order b = await repo.create(makeOrder(ticketValue: 2));
     await repo.updateSyncStatus(a.id, SyncStatus.synced);
 
@@ -100,9 +100,11 @@ void main() {
 
   test('findAll respects limit/offset and orders desc', () async {
     for (int i = 0; i < 5; i++) {
-      await repo.create(makeOrder(
-        ticketValue: i + 1,
-      ).copyWith(createdAt: DateTime(2026, 5, 7, 10 + i)));
+      await repo.create(
+        makeOrder(
+          ticketValue: i + 1,
+        ).copyWith(createdAt: DateTime(2026, 5, 7, 10 + i)),
+      );
     }
     final List<Order> page1 = await repo.findAll(limit: 2);
     expect(page1, hasLength(2));

@@ -26,7 +26,9 @@ class DriftOperationLogRepository implements OperationLogRepository {
     String? detailJson,
     DateTime? at,
   }) async {
-    await _db.into(_db.operationLogs).insert(
+    await _db
+        .into(_db.operationLogs)
+        .insert(
           OperationLogsCompanion(
             kind: Value<String>(kind),
             targetId: Value<String?>(targetId),
@@ -38,16 +40,19 @@ class DriftOperationLogRepository implements OperationLogRepository {
 
   @override
   Future<List<OperationLog>> findRecent({int limit = 100}) async {
-    final List<OperationLogRow> rows = await (_db.select(_db.operationLogs)
-          ..orderBy(<OrderClauseGenerator<$OperationLogsTable>>[
-            ($OperationLogsTable t) =>
-                OrderingTerm(expression: t.occurredAt, mode: OrderingMode.desc),
-            // 同時刻のときは id 降順（後から記録した方が新しい）。
-            ($OperationLogsTable t) =>
-                OrderingTerm(expression: t.id, mode: OrderingMode.desc),
-          ])
-          ..limit(limit))
-        .get();
+    final List<OperationLogRow> rows =
+        await (_db.select(_db.operationLogs)
+              ..orderBy(<OrderClauseGenerator<$OperationLogsTable>>[
+                ($OperationLogsTable t) => OrderingTerm(
+                  expression: t.occurredAt,
+                  mode: OrderingMode.desc,
+                ),
+                // 同時刻のときは id 降順（後から記録した方が新しい）。
+                ($OperationLogsTable t) =>
+                    OrderingTerm(expression: t.id, mode: OrderingMode.desc),
+              ])
+              ..limit(limit))
+            .get();
     return rows.map(_toEntity).toList();
   }
 }

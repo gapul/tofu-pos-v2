@@ -54,7 +54,8 @@ void main() {
       orders: <Order>[makeOrder()],
       shopId: 'yakisoba_A',
     );
-    final List<String> lines = csv.split('\r\n')..removeWhere((String l) => l.isEmpty);
+    final List<String> lines = csv.split('\r\n')
+      ..removeWhere((String l) => l.isEmpty);
     expect(lines.first, startsWith('order_id,shop_id,'));
     // ヘッダ + 2明細行
     expect(lines.length, 3);
@@ -66,13 +67,13 @@ void main() {
     // total = 400*2 + 150*1 = 950
     // -100円割引 → Yakisoba(800/950)*-100 ≒ -84, Juice(150/950)*-100 ≒ -16
     final String csv = service.serialize(
-      orders: <Order>[
-        makeOrder(discount: const AmountDiscount(Money(-100))),
-      ],
+      orders: <Order>[makeOrder(discount: const AmountDiscount(Money(-100)))],
       shopId: 'shop',
     );
-    final List<String> rows =
-        csv.split('\r\n').where((String l) => l.isNotEmpty).toList();
+    final List<String> rows = csv
+        .split('\r\n')
+        .where((String l) => l.isNotEmpty)
+        .toList();
     final List<String> yakisobaCols = rows[1].split(',');
     final List<String> juiceCols = rows[2].split(',');
     final int yakisobaShare = int.parse(yakisobaCols[11]);
@@ -88,8 +89,10 @@ void main() {
       orders: <Order>[makeOrder(status: OrderStatus.cancelled)],
       shopId: 'shop',
     );
-    final List<String> rows =
-        csv.split('\r\n').where((String l) => l.isNotEmpty).toList();
+    final List<String> rows = csv
+        .split('\r\n')
+        .where((String l) => l.isNotEmpty)
+        .toList();
     expect(rows[1], endsWith(',cancelled,true'));
   });
 
@@ -98,8 +101,10 @@ void main() {
       orders: <Order>[makeOrder(), makeOrder(id: 2, ticket: 8)],
       shopId: 'yakisoba_A',
     );
-    final List<String> rows =
-        csv.split('\r\n').where((String l) => l.isNotEmpty).toList();
+    final List<String> rows = csv
+        .split('\r\n')
+        .where((String l) => l.isNotEmpty)
+        .toList();
     for (int i = 1; i < rows.length; i++) {
       expect(rows[i].split(',')[1], 'yakisoba_A');
     }

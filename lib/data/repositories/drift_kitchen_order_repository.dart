@@ -23,20 +23,22 @@ class DriftKitchenOrderRepository implements KitchenOrderRepository {
 
   @override
   Future<KitchenOrder?> findByOrderId(int orderId) async {
-    final KitchenOrderRow? row = await (_db.select(_db.kitchenOrders)
-          ..where(($KitchenOrdersTable t) => t.orderId.equals(orderId)))
-        .getSingleOrNull();
+    final KitchenOrderRow? row =
+        await (_db.select(_db.kitchenOrders)
+              ..where(($KitchenOrdersTable t) => t.orderId.equals(orderId)))
+            .getSingleOrNull();
     return row == null ? null : _toEntity(row);
   }
 
   @override
   Future<List<KitchenOrder>> findAll() async {
-    final List<KitchenOrderRow> rows = await (_db.select(_db.kitchenOrders)
-          ..orderBy(<OrderClauseGenerator<$KitchenOrdersTable>>[
-            ($KitchenOrdersTable t) =>
-                OrderingTerm(expression: t.receivedAt),
-          ]))
-        .get();
+    final List<KitchenOrderRow> rows =
+        await (_db.select(_db.kitchenOrders)
+              ..orderBy(<OrderClauseGenerator<$KitchenOrdersTable>>[
+                ($KitchenOrdersTable t) =>
+                    OrderingTerm(expression: t.receivedAt),
+              ]))
+            .get();
     return rows.map(_toEntity).toList();
   }
 
@@ -44,8 +46,7 @@ class DriftKitchenOrderRepository implements KitchenOrderRepository {
   Stream<List<KitchenOrder>> watchAll() {
     return (_db.select(_db.kitchenOrders)
           ..orderBy(<OrderClauseGenerator<$KitchenOrdersTable>>[
-            ($KitchenOrdersTable t) =>
-                OrderingTerm(expression: t.receivedAt),
+            ($KitchenOrdersTable t) => OrderingTerm(expression: t.receivedAt),
           ]))
         .watch()
         .map((List<KitchenOrderRow> rows) => rows.map(_toEntity).toList());
@@ -53,7 +54,9 @@ class DriftKitchenOrderRepository implements KitchenOrderRepository {
 
   @override
   Future<void> upsert(KitchenOrder order) async {
-    await _db.into(_db.kitchenOrders).insertOnConflictUpdate(
+    await _db
+        .into(_db.kitchenOrders)
+        .insertOnConflictUpdate(
           KitchenOrdersCompanion(
             orderId: Value<int>(order.orderId),
             ticketNumber: Value<int>(order.ticketNumber.value),

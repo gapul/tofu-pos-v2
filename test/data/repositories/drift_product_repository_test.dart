@@ -33,18 +33,12 @@ void main() {
   });
 
   test('findAll excludes deleted by default', () async {
-    await repo.upsert(const Product(
-      id: 'a',
-      name: 'A',
-      price: Money(100),
-      stock: 0,
-    ));
-    await repo.upsert(const Product(
-      id: 'b',
-      name: 'B',
-      price: Money(200),
-      stock: 0,
-    ));
+    await repo.upsert(
+      const Product(id: 'a', name: 'A', price: Money(100), stock: 0),
+    );
+    await repo.upsert(
+      const Product(id: 'b', name: 'B', price: Money(200), stock: 0),
+    );
     await repo.markDeleted('b');
 
     final List<Product> active = await repo.findAll();
@@ -56,12 +50,9 @@ void main() {
   });
 
   test('adjustStock changes stock by delta', () async {
-    await repo.upsert(const Product(
-      id: 'p',
-      name: 'P',
-      price: Money(100),
-      stock: 5,
-    ));
+    await repo.upsert(
+      const Product(id: 'p', name: 'P', price: Money(100), stock: 5),
+    );
     await repo.adjustStock('p', -2);
     expect((await repo.findById('p'))!.stock, 3);
     await repo.adjustStock('p', 5);
@@ -69,16 +60,10 @@ void main() {
   });
 
   test('adjustStock throws if it would go negative', () async {
-    await repo.upsert(const Product(
-      id: 'p',
-      name: 'P',
-      price: Money(100),
-      stock: 1,
-    ));
-    expect(
-      () => repo.adjustStock('p', -5),
-      throwsStateError,
+    await repo.upsert(
+      const Product(id: 'p', name: 'P', price: Money(100), stock: 1),
     );
+    expect(() => repo.adjustStock('p', -5), throwsStateError);
   });
 
   test('watchAll emits on changes', () async {
@@ -87,12 +72,9 @@ void main() {
     final sub = stream.listen(emissions.add);
 
     await Future<void>.delayed(const Duration(milliseconds: 10));
-    await repo.upsert(const Product(
-      id: 'x',
-      name: 'X',
-      price: Money(100),
-      stock: 0,
-    ));
+    await repo.upsert(
+      const Product(id: 'x', name: 'X', price: Money(100), stock: 0),
+    );
     await Future<void>.delayed(const Duration(milliseconds: 50));
 
     expect(emissions, isNotEmpty);

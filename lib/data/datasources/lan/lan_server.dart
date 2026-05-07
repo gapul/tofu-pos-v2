@@ -15,11 +15,8 @@ import 'lan_protocol.dart';
 ///
 /// 仕様書 §7.1 ローカルLAN副経路。
 class LanServer {
-  LanServer({
-    required this.shopId,
-    required this.role,
-    int port = 0,
-  }) : _port = port;
+  LanServer({required this.shopId, required this.role, int port = 0})
+    : _port = port;
 
   /// 同一店舗フィルタ用の shop_id。mDNS の TXT レコードに含める。
   final String shopId;
@@ -55,10 +52,7 @@ class LanServer {
       name: 'tofu-pos-$role-$shopId',
       type: '_tofu-pos._tcp',
       port: _port,
-      attributes: <String, String>{
-        'shopId': shopId,
-        'role': role,
-      },
+      attributes: <String, String>{'shopId': shopId, 'role': role},
     );
     final BonsoirBroadcast broadcast = BonsoirBroadcast(service: service);
     await broadcast.ready;
@@ -106,13 +100,18 @@ class LanServer {
         try {
           final TransportEvent ev = LanProtocol.decode(message);
           if (ev.shopId != shopId) {
-            AppLogger.w('LanServer: ignored event for foreign shopId ${ev.shopId}');
+            AppLogger.w(
+              'LanServer: ignored event for foreign shopId ${ev.shopId}',
+            );
             return;
           }
           _events.add(ev);
         } catch (e, st) {
-          AppLogger.w('LanServer: failed to decode message',
-              error: e, stackTrace: st);
+          AppLogger.w(
+            'LanServer: failed to decode message',
+            error: e,
+            stackTrace: st,
+          );
         }
       },
       onDone: () {

@@ -17,17 +17,17 @@ import 'scenario_context.dart';
 
 /// すべての標準シナリオ。
 List<TestScenario> defaultScenarios() => <TestScenario>[
-      _smokeCheckoutScenario,
-      _stockDecrementsScenario,
-      _stockInsufficientScenario,
-      _cancelRollbackScenario,
-      _cashDrawerScenario,
-      _ticketSequenceScenario,
-      _ticketPoolExhaustionScenario,
-      _operationLogScenario,
-      _hourlyAggregationScenario,
-      _csvExportScenario,
-    ];
+  _smokeCheckoutScenario,
+  _stockDecrementsScenario,
+  _stockInsufficientScenario,
+  _cancelRollbackScenario,
+  _cashDrawerScenario,
+  _ticketSequenceScenario,
+  _ticketPoolExhaustionScenario,
+  _operationLogScenario,
+  _hourlyAggregationScenario,
+  _csvExportScenario,
+];
 
 // === 共通ヘルパ ===
 
@@ -90,7 +90,8 @@ Future<ScenarioResult> _runSmokeCheckout(ScenarioContext ctx) async {
   }
   if (saved.ticketNumber.value != 1) {
     return ScenarioResult.fail(
-        'expected ticket=1, got ${saved.ticketNumber.value}');
+      'expected ticket=1, got ${saved.ticketNumber.value}',
+    );
   }
   if (saved.totalPrice != const Money(400)) {
     return ScenarioResult.fail('totalPrice mismatch: ${saved.totalPrice}');
@@ -152,18 +153,17 @@ const TestScenario _cancelRollbackScenario = TestScenario(
 );
 
 Future<ScenarioResult> _runCancelRollback(ScenarioContext ctx) async {
-  final Product p = await _seedProduct(ctx, stock: 10);
-  await ctx.cashRepo.replace(CashDrawer(<Denomination, int>{
-    const Denomination(100): 5,
-  }));
+  final Product p = await _seedProduct(ctx);
+  await ctx.cashRepo.replace(
+    CashDrawer(<Denomination, int>{const Denomination(100): 5}),
+  );
   const FeatureFlags flags = FeatureFlags(
     stockManagement: true,
     cashManagement: true,
   );
   const Map<int, int> delta = <int, int>{1000: 1, 100: -2};
   final Order saved = await ctx.checkout.execute(
-    draft: _draft(p,
-        qty: 2, cashDelta: delta, receivedCash: const Money(1000)),
+    draft: _draft(p, qty: 2, cashDelta: delta, receivedCash: const Money(1000)),
     flags: flags,
   );
   await ctx.cancel.execute(
@@ -179,7 +179,8 @@ Future<ScenarioResult> _runCancelRollback(ScenarioContext ctx) async {
   final CashDrawer drawerAfter = await ctx.cashRepo.get();
   if (drawerAfter.totalAmount != const Money(500)) {
     return ScenarioResult.fail(
-        'drawer not restored: ${drawerAfter.totalAmount}');
+      'drawer not restored: ${drawerAfter.totalAmount}',
+    );
   }
   final TicketNumberPool pool = await ctx.poolRepo.load();
   if (pool.inUseNumbers.contains(saved.ticketNumber.value)) {
@@ -197,9 +198,9 @@ const TestScenario _cashDrawerScenario = TestScenario(
 
 Future<ScenarioResult> _runCashDrawer(ScenarioContext ctx) async {
   final Product p = await _seedProduct(ctx, priceYen: 800);
-  await ctx.cashRepo.replace(CashDrawer(<Denomination, int>{
-    const Denomination(100): 5,
-  }));
+  await ctx.cashRepo.replace(
+    CashDrawer(<Denomination, int>{const Denomination(100): 5}),
+  );
   await ctx.checkout.execute(
     draft: _draft(
       p,
@@ -246,10 +247,8 @@ const TestScenario _ticketPoolExhaustionScenario = TestScenario(
 );
 
 Future<ScenarioResult> _runTicketPoolExhaustion(ScenarioContext ctx) async {
-  final Product p = await _seedProduct(ctx, stock: 10);
-  await ctx.poolRepo.save(
-    TicketNumberPool.empty(maxNumber: 2, bufferSize: 0),
-  );
+  final Product p = await _seedProduct(ctx);
+  await ctx.poolRepo.save(TicketNumberPool.empty(maxNumber: 2, bufferSize: 0));
   await ctx.checkout.execute(draft: _draft(p), flags: FeatureFlags.allOff);
   await ctx.checkout.execute(draft: _draft(p), flags: FeatureFlags.allOff);
   try {
@@ -281,8 +280,7 @@ Future<ScenarioResult> _runOperationLog(ScenarioContext ctx) async {
     originalCashDelta: const <int, int>{},
   );
   final logs = await ctx.logRepo.findRecent();
-  final cancelLog =
-      logs.where((e) => e.kind == 'cancel_order').toList();
+  final cancelLog = logs.where((e) => e.kind == 'cancel_order').toList();
   if (cancelLog.isEmpty) {
     return ScenarioResult.fail('no cancel_order log');
   }
@@ -307,31 +305,29 @@ Future<ScenarioResult> _runHourlyAggregation(ScenarioContext ctx) async {
   final Product p = await _seedProduct(ctx, priceYen: 500, stock: 100);
   final DateTime today = DateTime.now();
   Order orderAt(int ticket, DateTime at) => Order(
-        id: 0,
-        ticketNumber: TicketNumber(ticket),
-        items: <OrderItem>[
-          OrderItem(
-            productId: p.id,
-            productName: p.name,
-            priceAtTime: p.price,
-            quantity: 1,
-          ),
-        ],
-        discount: Discount.none,
-        receivedCash: p.price,
-        createdAt: at,
-        orderStatus: OrderStatus.served,
-        syncStatus: SyncStatus.synced,
-      );
+    id: 0,
+    ticketNumber: TicketNumber(ticket),
+    items: <OrderItem>[
+      OrderItem(
+        productId: p.id,
+        productName: p.name,
+        priceAtTime: p.price,
+        quantity: 1,
+      ),
+    ],
+    discount: Discount.none,
+    receivedCash: p.price,
+    createdAt: at,
+    orderStatus: OrderStatus.served,
+    syncStatus: SyncStatus.synced,
+  );
 
-  await ctx.orderRepo.create(orderAt(
-    1,
-    DateTime(today.year, today.month, today.day, 10, 30),
-  ));
-  await ctx.orderRepo.create(orderAt(
-    2,
-    DateTime(today.year, today.month, today.day, 14, 0),
-  ));
+  await ctx.orderRepo.create(
+    orderAt(1, DateTime(today.year, today.month, today.day, 10, 30)),
+  );
+  await ctx.orderRepo.create(
+    orderAt(2, DateTime(today.year, today.month, today.day, 14)),
+  );
 
   final buckets = await ctx.hourly.getActiveHourly();
   if (buckets.length != 2) {

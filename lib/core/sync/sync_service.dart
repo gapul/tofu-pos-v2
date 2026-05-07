@@ -33,11 +33,11 @@ class SyncService {
     required ConnectivityMonitor connectivityMonitor,
     required CloudSyncClient client,
     Duration retryInterval = const Duration(minutes: 5),
-  })  : _orderRepo = orderRepository,
-        _settingsRepo = settingsRepository,
-        _connectivity = connectivityMonitor,
-        _client = client,
-        _retryInterval = retryInterval;
+  }) : _orderRepo = orderRepository,
+       _settingsRepo = settingsRepository,
+       _connectivity = connectivityMonitor,
+       _client = client,
+       _retryInterval = retryInterval;
 
   final OrderRepository _orderRepo;
   final SettingsRepository _settingsRepo;

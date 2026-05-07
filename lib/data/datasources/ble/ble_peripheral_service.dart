@@ -26,6 +26,9 @@ class BlePeripheralService {
 
   final PeripheralManager _manager = PeripheralManager();
 
+  // role により kitchen 用 / calling 用で生成する characteristic が変わるため
+  // nullable のまま保持する（late final は使えない）。
+  // ignore_for_file: use_late_for_private_fields_and_variables
   GATTService? _service;
   GATTCharacteristic? _orderWriteChar;
   GATTCharacteristic? _productMasterWriteChar;
@@ -78,8 +81,9 @@ class BlePeripheralService {
     await _manager.addService(_service!);
 
     _writeSub = _manager.characteristicWriteRequested.listen(_onWriteRequest);
-    _notifySub = _manager.characteristicNotifyStateChanged
-        .listen(_onNotifyStateChanged);
+    _notifySub = _manager.characteristicNotifyStateChanged.listen(
+      _onNotifyStateChanged,
+    );
 
     final UUID serviceUuid = _service!.uuid;
     await _manager.startAdvertising(
@@ -102,8 +106,11 @@ class BlePeripheralService {
     try {
       await _manager.stopAdvertising();
     } catch (e, st) {
-      AppLogger.w('BlePeripheral: stopAdvertising failed',
-          error: e, stackTrace: st);
+      AppLogger.w(
+        'BlePeripheral: stopAdvertising failed',
+        error: e,
+        stackTrace: st,
+      );
     }
     try {
       await _manager.removeAllServices();
@@ -137,14 +144,9 @@ class BlePeripheralService {
     for (final Central c in subs) {
       for (final Uint8List frame in frames) {
         try {
-          await _manager.notifyCharacteristic(
-            c,
-            notifyChar,
-            value: frame,
-          );
+          await _manager.notifyCharacteristic(c, notifyChar, value: frame);
         } catch (e, st) {
-          AppLogger.w('BlePeripheral: notify failed',
-              error: e, stackTrace: st);
+          AppLogger.w('BlePeripheral: notify failed', error: e, stackTrace: st);
         }
       }
     }
@@ -219,15 +221,19 @@ class BlePeripheralService {
     GATTCharacteristicWriteRequestedEventArgs args,
   ) async {
     try {
-      final TransportEvent? ev =
-          _assembler.feed(Uint8List.fromList(args.request.value));
+      final TransportEvent? ev = _assembler.feed(
+        Uint8List.fromList(args.request.value),
+      );
       if (ev != null && ev.shopId == shopId) {
         _events.add(ev);
       }
       await _manager.respondWriteRequest(args.request);
     } catch (e, st) {
-      AppLogger.w('BlePeripheral: write handling failed',
-          error: e, stackTrace: st);
+      AppLogger.w(
+        'BlePeripheral: write handling failed',
+        error: e,
+        stackTrace: st,
+      );
       try {
         await _manager.respondWriteRequestWithError(
           args.request,
@@ -240,8 +246,10 @@ class BlePeripheralService {
   void _onNotifyStateChanged(
     GATTCharacteristicNotifyStateChangedEventArgs args,
   ) {
-    final Set<Central> subs =
-        _subscribers.putIfAbsent(args.characteristic, () => <Central>{});
+    final Set<Central> subs = _subscribers.putIfAbsent(
+      args.characteristic,
+      () => <Central>{},
+    );
     if (args.state) {
       subs.add(args.central);
       AppLogger.d('BlePeripheral: central ${args.central} subscribed');

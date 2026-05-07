@@ -29,9 +29,7 @@ class InMemoryUnitOfWork implements UnitOfWork {
 
 class InMemoryProductRepository implements ProductRepository {
   InMemoryProductRepository(List<Product> initial)
-      : _products = <String, Product>{
-          for (final Product p in initial) p.id: p,
-        };
+    : _products = <String, Product>{for (final Product p in initial) p.id: p};
 
   final Map<String, Product> _products;
   final StreamController<List<Product>> _controller =
@@ -78,7 +76,9 @@ class InMemoryProductRepository implements ProductRepository {
 
   @override
   Future<void> replaceAll(List<Product> products) async {
-    final Set<String> incoming = <String>{for (final Product p in products) p.id};
+    final Set<String> incoming = <String>{
+      for (final Product p in products) p.id,
+    };
     for (final Product existing in _products.values.toList()) {
       if (!incoming.contains(existing.id) && !existing.isDeleted) {
         _products[existing.id] = existing.copyWith(isDeleted: true);
@@ -113,8 +113,7 @@ class InMemoryOrderRepository implements OrderRepository {
       if (from != null && o.createdAt.isBefore(from)) return false;
       if (to != null && o.createdAt.isAfter(to)) return false;
       return true;
-    }).toList()
-      ..sort((Order a, Order b) => b.createdAt.compareTo(a.createdAt));
+    }).toList()..sort((Order a, Order b) => b.createdAt.compareTo(a.createdAt));
     final List<Order> sliced = filtered.skip(offset).toList();
     if (limit != null) {
       return sliced.take(limit).toList();
@@ -187,7 +186,7 @@ class InMemoryCashDrawerRepository implements CashDrawerRepository {
 
 class InMemoryTicketPoolRepository implements TicketNumberPoolRepository {
   InMemoryTicketPoolRepository([TicketNumberPool? initial])
-      : _pool = initial ?? TicketNumberPool.empty();
+    : _pool = initial ?? TicketNumberPool.empty();
 
   TicketNumberPool _pool;
 
@@ -211,8 +210,10 @@ class InMemoryKitchenOrderRepository implements KitchenOrderRepository {
   @override
   Future<List<KitchenOrder>> findAll() async {
     final List<KitchenOrder> all = _orders.values.toList()
-      ..sort((KitchenOrder a, KitchenOrder b) =>
-          a.receivedAt.compareTo(b.receivedAt));
+      ..sort(
+        (KitchenOrder a, KitchenOrder b) =>
+            a.receivedAt.compareTo(b.receivedAt),
+      );
     return all;
   }
 
@@ -246,8 +247,10 @@ class InMemoryCallingOrderRepository implements CallingOrderRepository {
   @override
   Future<List<CallingOrder>> findAll() async {
     final List<CallingOrder> all = _orders.values.toList()
-      ..sort((CallingOrder a, CallingOrder b) =>
-          a.receivedAt.compareTo(b.receivedAt));
+      ..sort(
+        (CallingOrder a, CallingOrder b) =>
+            a.receivedAt.compareTo(b.receivedAt),
+      );
     return all;
   }
 
@@ -281,20 +284,24 @@ class InMemoryOperationLogRepository implements OperationLogRepository {
     String? detailJson,
     DateTime? at,
   }) async {
-    records.add(OperationLog(
-      id: _nextId++,
-      kind: kind,
-      targetId: targetId,
-      detailJson: detailJson,
-      occurredAt: at ?? DateTime.now(),
-    ));
+    records.add(
+      OperationLog(
+        id: _nextId++,
+        kind: kind,
+        targetId: targetId,
+        detailJson: detailJson,
+        occurredAt: at ?? DateTime.now(),
+      ),
+    );
   }
 
   @override
   Future<List<OperationLog>> findRecent({int limit = 100}) async {
     final List<OperationLog> sorted = <OperationLog>[...records]
-      ..sort((OperationLog a, OperationLog b) =>
-          b.occurredAt.compareTo(a.occurredAt));
+      ..sort(
+        (OperationLog a, OperationLog b) =>
+            b.occurredAt.compareTo(a.occurredAt),
+      );
     return sorted.take(limit).toList();
   }
 }

@@ -1,4 +1,6 @@
-include: package:flutter_lints/flutter.yaml
+# Very Good Ventures の厳しめルールセットをベースに採用。
+# 既存の flutter_lints の上位互換的な位置づけ。
+include: package:very_good_analysis/analysis_options.yaml
 
 analyzer:
   exclude:
@@ -15,6 +17,8 @@ analyzer:
 
 linter:
   rules:
+    # 本プロジェクトで明示的に有効化したいルール（very_good_analysis に
+    # 既に含まれているものも多いが、意図を明示するため列挙）
     prefer_single_quotes: true
     prefer_const_constructors: true
     prefer_const_literals_to_create_immutables: true
@@ -22,3 +26,29 @@ linter:
     avoid_unnecessary_containers: true
     use_key_in_widget_constructors: true
     require_trailing_commas: true
+
+    # 本プロジェクトで意図的に無効化するルール
+    # public_member_api_docs: アプリケーションコードでは過剰
+    public_member_api_docs: false
+    # lines_longer_than_80_chars: 80列は厳しすぎる場面が多い（120まで許容）
+    lines_longer_than_80_chars: false
+    # one_member_abstracts: Repository パターンで abstract interface class を多用するため不要
+    one_member_abstracts: false
+    # omit_local_variable_types: ローカル変数も明示型を好むコーディング規約
+    omit_local_variable_types: false
+    # cascade_invocations: 連続呼び出しを cascade(..) で書くと可読性が落ちる場面が多い
+    cascade_invocations: false
+    # avoid_positional_boolean_parameters: bool フラグ関数を許容（テスト等で多用）
+    avoid_positional_boolean_parameters: false
+    # use_setters_to_change_properties: setter 強制は過剰
+    use_setters_to_change_properties: false
+    # diagnostic_describe_all_properties: アプリコードでは過剰
+    diagnostic_describe_all_properties: false
+    # always_use_package_imports: feature 内では相対インポートを採用（Clean Arch lite 規約）
+    always_use_package_imports: false
+    # avoid_catches_without_on_clauses: 最上位エラーログでは意図的に catch (e) を使う
+    avoid_catches_without_on_clauses: false
+    # sort_pub_dependencies: pubspec はカテゴリ別コメントで整理しているため alphabetic 順は強制しない
+    sort_pub_dependencies: false
+    # missing_whitespace_between_adjacent_strings: 日本語の連結に対して誤検知する
+    missing_whitespace_between_adjacent_strings: false

@@ -57,14 +57,12 @@ class SupabaseCloudSyncClient implements CloudSyncClient {
 
   @override
   Future<void> push(Order order, {required String shopId}) async {
-    final List<Map<String, Object?>> rows =
-        buildRows(order, shopId: shopId);
+    final List<Map<String, Object?>> rows = buildRows(order, shopId: shopId);
     if (rows.isEmpty) {
       return;
     }
-    await _client.from(_table).upsert(
-          rows,
-          onConflict: 'shop_id,local_order_id,line_no',
-        );
+    await _client
+        .from(_table)
+        .upsert(rows, onConflict: 'shop_id,local_order_id,line_no');
   }
 }

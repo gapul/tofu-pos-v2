@@ -23,11 +23,11 @@ class CancelOrderFlowUseCase {
     required String shopId,
     Uuid uuid = const Uuid(),
     DateTime Function() now = DateTime.now,
-  })  : _cancel = cancelOrderUseCase,
-        _transport = transport,
-        _shopId = shopId,
-        _uuid = uuid,
-        _now = now;
+  }) : _cancel = cancelOrderUseCase,
+       _transport = transport,
+       _shopId = shopId,
+       _uuid = uuid,
+       _now = now;
 
   final CancelOrderUseCase _cancel;
   final Transport _transport;
@@ -68,9 +68,7 @@ class CancelOrderFlowUseCase {
         error: e,
         stackTrace: st,
       );
-      throw TransportDeliveryException(
-        '取消通知の送信に失敗しました（ローカルの取消は完了しています）: $e',
-      );
+      throw TransportDeliveryException('取消通知の送信に失敗しました（ローカルの取消は完了しています）: $e');
     }
 
     return cancelled;

@@ -24,8 +24,10 @@ void main() {
 
     test('released number is buffered, then reusable', () {
       // バッファ2、最大10で運用
-      TicketNumberPool pool =
-          TicketNumberPool.empty(maxNumber: 10, bufferSize: 2);
+      TicketNumberPool pool = TicketNumberPool.empty(
+        maxNumber: 10,
+        bufferSize: 2,
+      );
 
       // 番号1を払い出して解放
       final ({TicketNumberPool pool, TicketNumber number}) r1 = pool.issue();
@@ -55,8 +57,10 @@ void main() {
     });
 
     test('hasAvailable becomes false when exhausted', () {
-      TicketNumberPool pool =
-          TicketNumberPool.empty(maxNumber: 3, bufferSize: 0);
+      TicketNumberPool pool = TicketNumberPool.empty(
+        maxNumber: 3,
+        bufferSize: 0,
+      );
       pool = pool.issue().pool;
       pool = pool.issue().pool;
       pool = pool.issue().pool;
@@ -65,7 +69,7 @@ void main() {
     });
 
     test('release of unknown number is idempotent', () {
-      TicketNumberPool pool = TicketNumberPool.empty();
+      final TicketNumberPool pool = TicketNumberPool.empty();
       final TicketNumberPool same = pool.release(const TicketNumber(99));
       expect(same.inUseNumbers, isEmpty);
       expect(same.recentlyReleasedNumbers, isEmpty);

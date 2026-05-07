@@ -73,11 +73,13 @@ void main() {
 
   test('cancelled orders are excluded', () async {
     await orderRepo.create(_o(id: 1, at: DateTime(2026, 5, 7, 10)));
-    await orderRepo.create(_o(
-      id: 2,
-      at: DateTime(2026, 5, 7, 10, 30),
-      status: OrderStatus.cancelled,
-    ));
+    await orderRepo.create(
+      _o(
+        id: 2,
+        at: DateTime(2026, 5, 7, 10, 30),
+        status: OrderStatus.cancelled,
+      ),
+    );
 
     final List<HourlySalesBucket> r = await usecase.getHourly();
     expect(r[10].orderCount, 1);
@@ -90,8 +92,10 @@ void main() {
     await orderRepo.create(_o(id: 3, at: DateTime(2026, 5, 7, 10)));
 
     final List<HourlySalesBucket> r = await usecase.getHourly();
-    final int totalForDay = r.fold(0,
-        (int sum, HourlySalesBucket b) => sum + b.orderCount);
+    final int totalForDay = r.fold(
+      0,
+      (int sum, HourlySalesBucket b) => sum + b.orderCount,
+    );
     expect(totalForDay, 1);
   });
 

@@ -7,7 +7,7 @@ import 'package:meta/meta.dart';
 @immutable
 class TicketNumber implements Comparable<TicketNumber> {
   const TicketNumber(this.value)
-      : assert(value > 0, 'TicketNumber must be positive');
+    : assert(value > 0, 'TicketNumber must be positive');
 
   final int value;
 

@@ -46,8 +46,9 @@ class Product {
       name: name ?? this.name,
       price: price ?? this.price,
       stock: stock ?? this.stock,
-      displayColor:
-          clearDisplayColor ? null : (displayColor ?? this.displayColor),
+      displayColor: clearDisplayColor
+          ? null
+          : (displayColor ?? this.displayColor),
       isDeleted: isDeleted ?? this.isDeleted,
     );
   }

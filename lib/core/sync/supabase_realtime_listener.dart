@@ -12,10 +12,7 @@ import '../../domain/value_objects/ticket_number.dart';
 /// このサービスはそれをそのまま [RealtimeOrderLineEvent] として公開し、
 /// 上位層（Notifier 等）で重複排除や再フェッチを判断する。
 class SupabaseRealtimeListener {
-  SupabaseRealtimeListener(
-    this._client, {
-    required this.shopId,
-  });
+  SupabaseRealtimeListener(this._client, {required this.shopId});
 
   final SupabaseClient _client;
   final String shopId;
@@ -71,8 +68,8 @@ class SupabaseRealtimeListener {
 
   /// 純粋関数化したペイロード変換（テスト用に切り出し）。
   static RealtimeOrderLineEvent? parsePayload(PostgresChangePayload payload) {
-    final Map<String, dynamic> row = payload.eventType ==
-            PostgresChangeEvent.delete
+    final Map<String, dynamic> row =
+        payload.eventType == PostgresChangeEvent.delete
         ? payload.oldRecord
         : payload.newRecord;
     if (row.isEmpty) {
@@ -83,9 +80,7 @@ class SupabaseRealtimeListener {
       shopId: row['shop_id'] as String? ?? '',
       localOrderId: (row['local_order_id'] as num?)?.toInt() ?? 0,
       lineNo: (row['line_no'] as num?)?.toInt() ?? 0,
-      ticketNumber: TicketNumber(
-        (row['ticket_number'] as num?)?.toInt() ?? 1,
-      ),
+      ticketNumber: TicketNumber((row['ticket_number'] as num?)?.toInt() ?? 1),
       productName: row['product_name'] as String? ?? '',
       quantity: (row['quantity'] as num?)?.toInt() ?? 0,
       isCancelled: row['is_cancelled'] as bool? ?? false,

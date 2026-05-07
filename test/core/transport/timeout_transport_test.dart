@@ -22,13 +22,13 @@ class _SlowTransport implements Transport {
 }
 
 OrderSubmittedEvent _ev() => OrderSubmittedEvent(
-      shopId: 'shop',
-      eventId: 'e1',
-      occurredAt: DateTime(2026, 5, 7),
-      orderId: 1,
-      ticketNumber: const TicketNumber(1),
-      itemsJson: '[]',
-    );
+  shopId: 'shop',
+  eventId: 'e1',
+  occurredAt: DateTime(2026, 5, 7),
+  orderId: 1,
+  ticketNumber: const TicketNumber(1),
+  itemsJson: '[]',
+);
 
 void main() {
   test('passes through send when within timeout', () async {
@@ -46,10 +46,7 @@ void main() {
       inner: _SlowTransport(const Duration(seconds: 5)),
       timeout: const Duration(milliseconds: 50),
     );
-    expect(
-      () => t.send(_ev()),
-      throwsA(isA<TransportDeliveryException>()),
-    );
+    expect(() => t.send(_ev()), throwsA(isA<TransportDeliveryException>()));
   });
 
   test('wraps inner exception as TransportDeliveryException', () async {
@@ -57,10 +54,7 @@ void main() {
       inner: _ThrowingTransport(),
       timeout: const Duration(seconds: 1),
     );
-    expect(
-      () => t.send(_ev()),
-      throwsA(isA<TransportDeliveryException>()),
-    );
+    expect(() => t.send(_ev()), throwsA(isA<TransportDeliveryException>()));
   });
 }
 

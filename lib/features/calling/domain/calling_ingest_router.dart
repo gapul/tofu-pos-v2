@@ -17,9 +17,9 @@ class CallingIngestRouter {
     required Transport transport,
     required CallingIngestUseCase ingest,
     required String shopId,
-  })  : _transport = transport,
-        _ingest = ingest,
-        _shopId = shopId;
+  }) : _transport = transport,
+       _ingest = ingest,
+       _shopId = shopId;
 
   final Transport _transport;
   final CallingIngestUseCase _ingest;

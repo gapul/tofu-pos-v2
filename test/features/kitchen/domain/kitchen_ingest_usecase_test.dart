@@ -61,32 +61,38 @@ void main() {
   });
 
   test('ingestCancelled flips existing order to cancelled', () async {
-    await repo.upsert(KitchenOrder(
-      orderId: 1,
-      ticketNumber: const TicketNumber(7),
-      itemsJson: '[]',
-      status: KitchenStatus.pending,
-      receivedAt: DateTime(2026, 5, 7, 12),
-    ));
-    await usecase.ingestCancelled(OrderCancelledEvent(
-      shopId: 'shop',
-      eventId: 'c1',
-      occurredAt: DateTime(2026, 5, 7, 12, 30),
-      orderId: 1,
-      ticketNumber: const TicketNumber(7),
-    ));
+    await repo.upsert(
+      KitchenOrder(
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+        itemsJson: '[]',
+        status: KitchenStatus.pending,
+        receivedAt: DateTime(2026, 5, 7, 12),
+      ),
+    );
+    await usecase.ingestCancelled(
+      OrderCancelledEvent(
+        shopId: 'shop',
+        eventId: 'c1',
+        occurredAt: DateTime(2026, 5, 7, 12, 30),
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+      ),
+    );
     final KitchenOrder? after = await repo.findByOrderId(1);
     expect(after!.status, KitchenStatus.cancelled);
   });
 
   test('ingestCancelled is no-op when order is unknown', () async {
-    await usecase.ingestCancelled(OrderCancelledEvent(
-      shopId: 'shop',
-      eventId: 'c1',
-      occurredAt: DateTime(2026, 5, 7, 12, 30),
-      orderId: 999,
-      ticketNumber: const TicketNumber(99),
-    ));
+    await usecase.ingestCancelled(
+      OrderCancelledEvent(
+        shopId: 'shop',
+        eventId: 'c1',
+        occurredAt: DateTime(2026, 5, 7, 12, 30),
+        orderId: 999,
+        ticketNumber: const TicketNumber(99),
+      ),
+    );
     expect(await repo.findAll(), isEmpty);
   });
 }

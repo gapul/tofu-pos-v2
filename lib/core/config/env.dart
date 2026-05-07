@@ -15,10 +15,12 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class Env {
   Env._();
 
-  static const String _supabaseUrlDefine =
-      String.fromEnvironment('SUPABASE_URL');
-  static const String _supabaseAnonKeyDefine =
-      String.fromEnvironment('SUPABASE_ANON_KEY');
+  static const String _supabaseUrlDefine = String.fromEnvironment(
+    'SUPABASE_URL',
+  );
+  static const String _supabaseAnonKeyDefine = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+  );
 
   /// `.env` を読み込む。アプリ起動時 `runApp` の前に1回だけ呼ぶ。
   ///
@@ -42,8 +44,7 @@ class Env {
     return '';
   }
 
-  static String get supabaseUrl =>
-      _read(_supabaseUrlDefine, 'SUPABASE_URL');
+  static String get supabaseUrl => _read(_supabaseUrlDefine, 'SUPABASE_URL');
 
   static String get supabaseAnonKey =>
       _read(_supabaseAnonKeyDefine, 'SUPABASE_ANON_KEY');

@@ -17,28 +17,27 @@ import 'usecase_providers.dart';
 // ============== レジ役のサービス ==============
 
 final FutureProvider<ServedToCallRouter?> servedToCallRouterProvider =
-    FutureProvider<ServedToCallRouter?>(
-  (Ref<AsyncValue<ServedToCallRouter?>> ref) async {
-    final ShopId? shopId =
-        await ref.watch(settingsRepositoryProvider).getShopId();
-    if (shopId == null) {
-      return null;
-    }
-    final Transport transport =
-        await ref.watch(transportProvider.future);
-    final ServedToCallRouter router = ServedToCallRouter(
-      transport: transport,
-      settingsRepository: ref.watch(settingsRepositoryProvider),
-      shopId: shopId.value,
-    );
-    ref.onDispose(router.stop);
-    return router;
-  },
-);
+    FutureProvider<ServedToCallRouter?>((
+      Ref<AsyncValue<ServedToCallRouter?>> ref,
+    ) async {
+      final ShopId? shopId = await ref
+          .watch(settingsRepositoryProvider)
+          .getShopId();
+      if (shopId == null) {
+        return null;
+      }
+      final Transport transport = await ref.watch(transportProvider.future);
+      final ServedToCallRouter router = ServedToCallRouter(
+        transport: transport,
+        settingsRepository: ref.watch(settingsRepositoryProvider),
+        shopId: shopId.value,
+      );
+      ref.onDispose(router.stop);
+      return router;
+    });
 
 final Provider<ProductMasterBroadcastUseCase>
-    productMasterBroadcastUseCaseProvider =
-    Provider<ProductMasterBroadcastUseCase>(
+productMasterBroadcastUseCaseProvider = Provider<ProductMasterBroadcastUseCase>(
   (Ref<ProductMasterBroadcastUseCase> ref) {
     throw UnimplementedError(
       'productMasterBroadcastUseCaseProvider must be overridden in '
@@ -48,112 +47,110 @@ final Provider<ProductMasterBroadcastUseCase>
 );
 
 final FutureProvider<ProductMasterBroadcastUseCase?>
-    productMasterBroadcastUseCaseFutureProvider =
-    FutureProvider<ProductMasterBroadcastUseCase?>(
-  (Ref<AsyncValue<ProductMasterBroadcastUseCase?>> ref) async {
-    final ShopId? shopId =
-        await ref.watch(settingsRepositoryProvider).getShopId();
-    if (shopId == null) {
-      return null;
-    }
-    final Transport transport =
-        await ref.watch(transportProvider.future);
-    return ProductMasterBroadcastUseCase(
-      productRepository: ref.watch(productRepositoryProvider),
-      transport: transport,
-      shopId: shopId.value,
-    );
-  },
-);
+productMasterBroadcastUseCaseFutureProvider =
+    FutureProvider<ProductMasterBroadcastUseCase?>((
+      Ref<AsyncValue<ProductMasterBroadcastUseCase?>> ref,
+    ) async {
+      final ShopId? shopId = await ref
+          .watch(settingsRepositoryProvider)
+          .getShopId();
+      if (shopId == null) {
+        return null;
+      }
+      final Transport transport = await ref.watch(transportProvider.future);
+      return ProductMasterBroadcastUseCase(
+        productRepository: ref.watch(productRepositoryProvider),
+        transport: transport,
+        shopId: shopId.value,
+      );
+    });
 
 final FutureProvider<ProductMasterAutoBroadcaster?>
-    productMasterAutoBroadcasterProvider =
-    FutureProvider<ProductMasterAutoBroadcaster?>(
-  (Ref<AsyncValue<ProductMasterAutoBroadcaster?>> ref) async {
-    final ProductMasterBroadcastUseCase? broadcast =
-        await ref.watch(productMasterBroadcastUseCaseFutureProvider.future);
-    if (broadcast == null) {
-      return null;
-    }
-    final ProductMasterAutoBroadcaster b = ProductMasterAutoBroadcaster(
-      productRepository: ref.watch(productRepositoryProvider),
-      broadcast: broadcast,
-    );
-    ref.onDispose(b.stop);
-    return b;
-  },
-);
+productMasterAutoBroadcasterProvider =
+    FutureProvider<ProductMasterAutoBroadcaster?>((
+      Ref<AsyncValue<ProductMasterAutoBroadcaster?>> ref,
+    ) async {
+      final ProductMasterBroadcastUseCase? broadcast = await ref.watch(
+        productMasterBroadcastUseCaseFutureProvider.future,
+      );
+      if (broadcast == null) {
+        return null;
+      }
+      final ProductMasterAutoBroadcaster b = ProductMasterAutoBroadcaster(
+        productRepository: ref.watch(productRepositoryProvider),
+        broadcast: broadcast,
+      );
+      ref.onDispose(b.stop);
+      return b;
+    });
 
 // ============== キッチン役のサービス ==============
 
 final Provider<KitchenIngestUseCase> kitchenIngestUseCaseProvider =
-    Provider<KitchenIngestUseCase>(
-  (Ref<KitchenIngestUseCase> ref) {
-    final KitchenIngestUseCase u = KitchenIngestUseCase(
-      repository: ref.watch(kitchenOrderRepositoryProvider),
-    );
-    ref.onDispose(u.dispose);
-    return u;
-  },
-);
+    Provider<KitchenIngestUseCase>((Ref<KitchenIngestUseCase> ref) {
+      final KitchenIngestUseCase u = KitchenIngestUseCase(
+        repository: ref.watch(kitchenOrderRepositoryProvider),
+      );
+      ref.onDispose(u.dispose);
+      return u;
+    });
 
-final Provider<ProductMasterIngestUseCase>
-    productMasterIngestUseCaseProvider =
+final Provider<ProductMasterIngestUseCase> productMasterIngestUseCaseProvider =
     Provider<ProductMasterIngestUseCase>(
-  (Ref<ProductMasterIngestUseCase> ref) => ProductMasterIngestUseCase(
-    productRepository: ref.watch(productRepositoryProvider),
-  ),
-);
+      (Ref<ProductMasterIngestUseCase> ref) => ProductMasterIngestUseCase(
+        productRepository: ref.watch(productRepositoryProvider),
+      ),
+    );
 
 final FutureProvider<KitchenIngestRouter?> kitchenIngestRouterProvider =
-    FutureProvider<KitchenIngestRouter?>(
-  (Ref<AsyncValue<KitchenIngestRouter?>> ref) async {
-    final ShopId? shopId =
-        await ref.watch(settingsRepositoryProvider).getShopId();
-    if (shopId == null) {
-      return null;
-    }
-    final Transport transport =
-        await ref.watch(transportProvider.future);
-    final KitchenIngestRouter router = KitchenIngestRouter(
-      transport: transport,
-      ingest: ref.watch(kitchenIngestUseCaseProvider),
-      productIngest: ref.watch(productMasterIngestUseCaseProvider),
-      shopId: shopId.value,
-    );
-    ref.onDispose(router.stop);
-    return router;
-  },
-);
+    FutureProvider<KitchenIngestRouter?>((
+      Ref<AsyncValue<KitchenIngestRouter?>> ref,
+    ) async {
+      final ShopId? shopId = await ref
+          .watch(settingsRepositoryProvider)
+          .getShopId();
+      if (shopId == null) {
+        return null;
+      }
+      final Transport transport = await ref.watch(transportProvider.future);
+      final KitchenIngestRouter router = KitchenIngestRouter(
+        transport: transport,
+        ingest: ref.watch(kitchenIngestUseCaseProvider),
+        productIngest: ref.watch(productMasterIngestUseCaseProvider),
+        shopId: shopId.value,
+      );
+      ref.onDispose(router.stop);
+      return router;
+    });
 
 // ============== 呼び出し役のサービス ==============
 
 final Provider<CallingIngestUseCase> callingIngestUseCaseProvider =
     Provider<CallingIngestUseCase>(
-  (Ref<CallingIngestUseCase> ref) => CallingIngestUseCase(
-    repository: ref.watch(callingOrderRepositoryProvider),
-  ),
-);
+      (Ref<CallingIngestUseCase> ref) => CallingIngestUseCase(
+        repository: ref.watch(callingOrderRepositoryProvider),
+      ),
+    );
 
 final FutureProvider<CallingIngestRouter?> callingIngestRouterProvider =
-    FutureProvider<CallingIngestRouter?>(
-  (Ref<AsyncValue<CallingIngestRouter?>> ref) async {
-    final ShopId? shopId =
-        await ref.watch(settingsRepositoryProvider).getShopId();
-    if (shopId == null) {
-      return null;
-    }
-    final Transport transport =
-        await ref.watch(transportProvider.future);
-    final CallingIngestRouter router = CallingIngestRouter(
-      transport: transport,
-      ingest: ref.watch(callingIngestUseCaseProvider),
-      shopId: shopId.value,
-    );
-    ref.onDispose(router.stop);
-    return router;
-  },
-);
+    FutureProvider<CallingIngestRouter?>((
+      Ref<AsyncValue<CallingIngestRouter?>> ref,
+    ) async {
+      final ShopId? shopId = await ref
+          .watch(settingsRepositoryProvider)
+          .getShopId();
+      if (shopId == null) {
+        return null;
+      }
+      final Transport transport = await ref.watch(transportProvider.future);
+      final CallingIngestRouter router = CallingIngestRouter(
+        transport: transport,
+        ingest: ref.watch(callingIngestUseCaseProvider),
+        shopId: shopId.value,
+      );
+      ref.onDispose(router.stop);
+      return router;
+    });
 
 // ============== 役割別の起動エントリポイント ==============
 
@@ -164,34 +161,36 @@ class RoleStarter {
 
   /// 起動時に呼ぶ。役割が未設定なら何もしない。
   Future<void> start() async {
-    final DeviceRole? role =
-        await ref.read(settingsRepositoryProvider).getDeviceRole();
+    final DeviceRole? role = await ref
+        .read(settingsRepositoryProvider)
+        .getDeviceRole();
     if (role == null) {
       return;
     }
     switch (role) {
       case DeviceRole.register:
-        final ServedToCallRouter? r =
-            await ref.read(servedToCallRouterProvider.future);
+        final ServedToCallRouter? r = await ref.read(
+          servedToCallRouterProvider.future,
+        );
         r?.start();
-        final ProductMasterAutoBroadcaster? b =
-            await ref.read(productMasterAutoBroadcasterProvider.future);
+        final ProductMasterAutoBroadcaster? b = await ref.read(
+          productMasterAutoBroadcasterProvider.future,
+        );
         b?.start();
-        break;
       case DeviceRole.kitchen:
-        final KitchenIngestRouter? r =
-            await ref.read(kitchenIngestRouterProvider.future);
+        final KitchenIngestRouter? r = await ref.read(
+          kitchenIngestRouterProvider.future,
+        );
         r?.start();
-        break;
       case DeviceRole.calling:
-        final CallingIngestRouter? r =
-            await ref.read(callingIngestRouterProvider.future);
+        final CallingIngestRouter? r = await ref.read(
+          callingIngestRouterProvider.future,
+        );
         r?.start();
-        break;
     }
   }
 }
 
 final Provider<RoleStarter> roleStarterProvider = Provider<RoleStarter>(
-  (Ref<RoleStarter> ref) => RoleStarter(ref),
+  RoleStarter.new,
 );

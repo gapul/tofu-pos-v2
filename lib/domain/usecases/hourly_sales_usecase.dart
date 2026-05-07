@@ -11,8 +11,8 @@ class HourlySalesUseCase {
   HourlySalesUseCase({
     required OrderRepository orderRepository,
     DateTime Function() now = DateTime.now,
-  })  : _orderRepo = orderRepository,
-        _now = now;
+  }) : _orderRepo = orderRepository,
+       _now = now;
 
   final OrderRepository _orderRepo;
   final DateTime Function() _now;

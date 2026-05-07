@@ -26,6 +26,7 @@ class _FakeTransport implements Transport {
   Future<void> disconnect() async {
     await incoming.close();
   }
+
   @override
   Stream<TransportEvent> events() => incoming.stream;
   @override
@@ -46,8 +47,7 @@ void main() {
     kitchenRepo = InMemoryKitchenOrderRepository();
     productRepo = InMemoryProductRepository(<Product>[]);
     ingest = KitchenIngestUseCase(repository: kitchenRepo);
-    productIngest =
-        ProductMasterIngestUseCase(productRepository: productRepo);
+    productIngest = ProductMasterIngestUseCase(productRepository: productRepo);
     transport = _FakeTransport();
     router = KitchenIngestRouter(
       transport: transport,
@@ -64,14 +64,16 @@ void main() {
 
   test('OrderSubmitted ingested into kitchen repo', () async {
     router.start();
-    transport.incoming.add(OrderSubmittedEvent(
-      shopId: 'shop',
-      eventId: 'e1',
-      occurredAt: DateTime(2026, 5, 7, 12),
-      orderId: 1,
-      ticketNumber: const TicketNumber(7),
-      itemsJson: '[{"name":"a","qty":1}]',
-    ));
+    transport.incoming.add(
+      OrderSubmittedEvent(
+        shopId: 'shop',
+        eventId: 'e1',
+        occurredAt: DateTime(2026, 5, 7, 12),
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+        itemsJson: '[{"name":"a","qty":1}]',
+      ),
+    );
     await Future<void>.delayed(const Duration(milliseconds: 20));
     final saved = await kitchenRepo.findByOrderId(1);
     expect(saved, isNotNull);
@@ -79,24 +81,28 @@ void main() {
   });
 
   test('OrderCancelled flips status and emits alert if mid-process', () async {
-    await kitchenRepo.upsert(KitchenOrder(
-      orderId: 1,
-      ticketNumber: const TicketNumber(7),
-      itemsJson: '[]',
-      status: KitchenStatus.done,
-      receivedAt: DateTime(2026, 5, 7, 12),
-    ));
+    await kitchenRepo.upsert(
+      KitchenOrder(
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+        itemsJson: '[]',
+        status: KitchenStatus.done,
+        receivedAt: DateTime(2026, 5, 7, 12),
+      ),
+    );
     final List<KitchenAlert> alerts = <KitchenAlert>[];
     final sub = ingest.alerts.listen(alerts.add);
 
     router.start();
-    transport.incoming.add(OrderCancelledEvent(
-      shopId: 'shop',
-      eventId: 'c1',
-      occurredAt: DateTime(2026, 5, 7, 12, 30),
-      orderId: 1,
-      ticketNumber: const TicketNumber(7),
-    ));
+    transport.incoming.add(
+      OrderCancelledEvent(
+        shopId: 'shop',
+        eventId: 'c1',
+        occurredAt: DateTime(2026, 5, 7, 12, 30),
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+      ),
+    );
     await Future<void>.delayed(const Duration(milliseconds: 20));
 
     expect(
@@ -109,24 +115,28 @@ void main() {
   });
 
   test('OrderCancelled does NOT alert if was pending', () async {
-    await kitchenRepo.upsert(KitchenOrder(
-      orderId: 1,
-      ticketNumber: const TicketNumber(7),
-      itemsJson: '[]',
-      status: KitchenStatus.pending,
-      receivedAt: DateTime(2026, 5, 7, 12),
-    ));
+    await kitchenRepo.upsert(
+      KitchenOrder(
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+        itemsJson: '[]',
+        status: KitchenStatus.pending,
+        receivedAt: DateTime(2026, 5, 7, 12),
+      ),
+    );
     final List<KitchenAlert> alerts = <KitchenAlert>[];
     final sub = ingest.alerts.listen(alerts.add);
 
     router.start();
-    transport.incoming.add(OrderCancelledEvent(
-      shopId: 'shop',
-      eventId: 'c1',
-      occurredAt: DateTime(2026, 5, 7, 12, 30),
-      orderId: 1,
-      ticketNumber: const TicketNumber(7),
-    ));
+    transport.incoming.add(
+      OrderCancelledEvent(
+        shopId: 'shop',
+        eventId: 'c1',
+        occurredAt: DateTime(2026, 5, 7, 12, 30),
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+      ),
+    );
     await Future<void>.delayed(const Duration(milliseconds: 20));
     expect(alerts, isEmpty);
     await sub.cancel();
@@ -134,13 +144,15 @@ void main() {
 
   test('ProductMasterUpdate ingested into product repo', () async {
     router.start();
-    transport.incoming.add(ProductMasterUpdateEvent(
-      shopId: 'shop',
-      eventId: 'p1',
-      occurredAt: DateTime(2026, 5, 7, 12),
-      productsJson:
-          '[{"id":"p1","name":"Yakisoba","price_yen":400,"stock":10}]',
-    ));
+    transport.incoming.add(
+      ProductMasterUpdateEvent(
+        shopId: 'shop',
+        eventId: 'p1',
+        occurredAt: DateTime(2026, 5, 7, 12),
+        productsJson:
+            '[{"id":"p1","name":"Yakisoba","price_yen":400,"stock":10}]',
+      ),
+    );
     await Future<void>.delayed(const Duration(milliseconds: 20));
     final products = await productRepo.findAll();
     expect(products, hasLength(1));
@@ -150,14 +162,16 @@ void main() {
 
   test('foreign shop_id events are ignored', () async {
     router.start();
-    transport.incoming.add(OrderSubmittedEvent(
-      shopId: 'OTHER',
-      eventId: 'e1',
-      occurredAt: DateTime(2026, 5, 7, 12),
-      orderId: 1,
-      ticketNumber: const TicketNumber(7),
-      itemsJson: '[]',
-    ));
+    transport.incoming.add(
+      OrderSubmittedEvent(
+        shopId: 'OTHER',
+        eventId: 'e1',
+        occurredAt: DateTime(2026, 5, 7, 12),
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+        itemsJson: '[]',
+      ),
+    );
     await Future<void>.delayed(const Duration(milliseconds: 20));
     expect(await kitchenRepo.findByOrderId(1), isNull);
   });

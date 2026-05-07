@@ -7,13 +7,13 @@ import 'package:tofu_pos/domain/value_objects/ticket_number.dart';
 
 void main() {
   TransportEvent makeOrder({String items = '[]'}) => OrderSubmittedEvent(
-        shopId: 'shop_a',
-        eventId: 'e1',
-        occurredAt: DateTime.utc(2026, 5, 7, 12),
-        orderId: 1,
-        ticketNumber: const TicketNumber(7),
-        itemsJson: items,
-      );
+    shopId: 'shop_a',
+    eventId: 'e1',
+    occurredAt: DateTime.utc(2026, 5, 7, 12),
+    orderId: 1,
+    ticketNumber: const TicketNumber(7),
+    itemsJson: items,
+  );
 
   TransportEvent makeProductMaster(int approxBytes) {
     // 文字列を膨らませて指定バイト数あたりのペイロードにする
@@ -28,14 +28,15 @@ void main() {
 
   group('BleProtocol.encode', () {
     test('small message fits in one frame', () {
-      final List<Uint8List> frames =
-          BleProtocol.encode(makeOrder(), seq: 0);
+      final List<Uint8List> frames = BleProtocol.encode(makeOrder(), seq: 0);
       expect(frames, hasLength(1));
       expect(frames.first[0], 0); // seq
       expect(frames.first[1], 1); // total
       expect(frames.first[2], 0); // index
-      expect(frames.first.length,
-          lessThanOrEqualTo(BleProtocol.defaultChunkSize));
+      expect(
+        frames.first.length,
+        lessThanOrEqualTo(BleProtocol.defaultChunkSize),
+      );
     });
 
     test('large message splits into multiple frames', () {
@@ -75,8 +76,10 @@ void main() {
   group('BleFrameAssembler', () {
     test('reassembles single frame', () {
       final BleFrameAssembler ass = BleFrameAssembler();
-      final List<Uint8List> frames =
-          BleProtocol.encode(makeOrder(items: '[{"name":"a"}]'), seq: 1);
+      final List<Uint8List> frames = BleProtocol.encode(
+        makeOrder(items: '[{"name":"a"}]'),
+        seq: 1,
+      );
       final TransportEvent? r = ass.feed(frames.single);
       expect(r, isA<OrderSubmittedEvent>());
       expect((r! as OrderSubmittedEvent).itemsJson, '[{"name":"a"}]');
@@ -96,7 +99,10 @@ void main() {
       }
       expect(result, isA<ProductMasterUpdateEvent>());
       final ProductMasterUpdateEvent r = result! as ProductMasterUpdateEvent;
-      expect(r.productsJson, (original as ProductMasterUpdateEvent).productsJson);
+      expect(
+        r.productsJson,
+        (original as ProductMasterUpdateEvent).productsJson,
+      );
     });
 
     test('reassembles multi-frame out of order', () {
@@ -146,8 +152,11 @@ void main() {
 
     test('reset clears in-flight buckets', () {
       final BleFrameAssembler ass = BleFrameAssembler();
-      final List<Uint8List> frames =
-          BleProtocol.encode(makeProductMaster(500), seq: 1, chunkSize: 80);
+      final List<Uint8List> frames = BleProtocol.encode(
+        makeProductMaster(500),
+        seq: 1,
+        chunkSize: 80,
+      );
       ass.feed(frames.first);
       expect(ass.pendingSeqCount, 1);
       ass.reset();

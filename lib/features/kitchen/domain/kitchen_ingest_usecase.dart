@@ -18,8 +18,8 @@ class KitchenIngestUseCase {
   KitchenIngestUseCase({
     required KitchenOrderRepository repository,
     DateTime Function() now = DateTime.now,
-  })  : _repo = repository,
-        _now = now;
+  }) : _repo = repository,
+       _now = now;
 
   final KitchenOrderRepository _repo;
   final DateTime Function() _now;
@@ -36,14 +36,18 @@ class KitchenIngestUseCase {
 
   /// OrderSubmittedEvent を取り込んで未調理状態で永続化。
   Future<void> ingestSubmitted(OrderSubmittedEvent ev) async {
-    await _repo.upsert(KitchenOrder(
-      orderId: ev.orderId,
-      ticketNumber: ev.ticketNumber,
-      itemsJson: ev.itemsJson,
-      status: KitchenStatus.pending,
-      receivedAt: _now(),
-    ));
-    AppLogger.i('Kitchen ingested order #${ev.orderId} ticket=${ev.ticketNumber}');
+    await _repo.upsert(
+      KitchenOrder(
+        orderId: ev.orderId,
+        ticketNumber: ev.ticketNumber,
+        itemsJson: ev.itemsJson,
+        status: KitchenStatus.pending,
+        receivedAt: _now(),
+      ),
+    );
+    AppLogger.i(
+      'Kitchen ingested order #${ev.orderId} ticket=${ev.ticketNumber}',
+    );
   }
 
   /// OrderCancelledEvent を取り込んでステータスを cancelled にする。
@@ -63,11 +67,13 @@ class KitchenIngestUseCase {
     AppLogger.w('Kitchen: order #${ev.orderId} cancelled (was $prev)');
 
     if (prev != KitchenStatus.pending && prev != KitchenStatus.cancelled) {
-      _alerts.add(KitchenAlert.cancelledMidProcess(
-        orderId: ev.orderId,
-        ticketNumber: ev.ticketNumber,
-        previousStatus: prev,
-      ));
+      _alerts.add(
+        KitchenAlert.cancelledMidProcess(
+          orderId: ev.orderId,
+          ticketNumber: ev.ticketNumber,
+          previousStatus: prev,
+        ),
+      );
     }
   }
 }

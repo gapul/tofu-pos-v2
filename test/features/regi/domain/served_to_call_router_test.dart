@@ -75,12 +75,12 @@ class _FakeTransport implements Transport {
 }
 
 OrderServedEvent _served() => OrderServedEvent(
-      shopId: 'shop',
-      eventId: 'e1',
-      occurredAt: DateTime(2026, 5, 7, 12),
-      orderId: 1,
-      ticketNumber: const TicketNumber(7),
-    );
+  shopId: 'shop',
+  eventId: 'e1',
+  occurredAt: DateTime(2026, 5, 7, 12),
+  orderId: 1,
+  ticketNumber: const TicketNumber(7),
+);
 
 void main() {
   test('forwards CallNumberEvent when both flags on', () async {
@@ -144,13 +144,15 @@ void main() {
       shopId: 'shop',
     );
     router.start();
-    transport.incoming.add(OrderServedEvent(
-      shopId: 'OTHER',
-      eventId: 'e1',
-      occurredAt: DateTime(2026, 5, 7, 12),
-      orderId: 1,
-      ticketNumber: const TicketNumber(7),
-    ));
+    transport.incoming.add(
+      OrderServedEvent(
+        shopId: 'OTHER',
+        eventId: 'e1',
+        occurredAt: DateTime(2026, 5, 7, 12),
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+      ),
+    );
     await Future<void>.delayed(const Duration(milliseconds: 20));
     expect(transport.sent, isEmpty);
     await router.stop();
@@ -166,14 +168,16 @@ void main() {
       shopId: 'shop',
     );
     router.start();
-    transport.incoming.add(OrderSubmittedEvent(
-      shopId: 'shop',
-      eventId: 'e1',
-      occurredAt: DateTime(2026, 5, 7, 12),
-      orderId: 1,
-      ticketNumber: const TicketNumber(7),
-      itemsJson: '[]',
-    ));
+    transport.incoming.add(
+      OrderSubmittedEvent(
+        shopId: 'shop',
+        eventId: 'e1',
+        occurredAt: DateTime(2026, 5, 7, 12),
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+        itemsJson: '[]',
+      ),
+    );
     await Future<void>.delayed(const Duration(milliseconds: 20));
     expect(transport.sent, isEmpty);
     await router.stop();

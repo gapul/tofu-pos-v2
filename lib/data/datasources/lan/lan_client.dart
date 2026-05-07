@@ -30,8 +30,7 @@ class LanClient {
   int get peerCount => _peers.length;
 
   Future<void> start() async {
-    final BonsoirDiscovery discovery =
-        BonsoirDiscovery(type: '_tofu-pos._tcp');
+    final BonsoirDiscovery discovery = BonsoirDiscovery(type: '_tofu-pos._tcp');
     await discovery.ready;
     await discovery.start();
     _discovery = discovery;
@@ -67,11 +66,9 @@ class LanClient {
     if (svc == null) {
       return;
     }
-    if (event.type ==
-        BonsoirDiscoveryEventType.discoveryServiceResolved) {
+    if (event.type == BonsoirDiscoveryEventType.discoveryServiceResolved) {
       await _connectToPeer(svc);
-    } else if (event.type ==
-        BonsoirDiscoveryEventType.discoveryServiceLost) {
+    } else if (event.type == BonsoirDiscoveryEventType.discoveryServiceLost) {
       _peers.remove(svc.name);
       AppLogger.d('LanClient: peer lost ${svc.name}');
     }
@@ -88,8 +85,9 @@ class LanClient {
       return;
     }
 
-    final ResolvedBonsoirService? resolved =
-        service is ResolvedBonsoirService ? service : null;
+    final ResolvedBonsoirService? resolved = service is ResolvedBonsoirService
+        ? service
+        : null;
     final String? host = resolved?.host;
     if (host == null) {
       AppLogger.w('LanClient: no host on resolved service ${service.name}');
@@ -112,8 +110,7 @@ class LanClient {
             }
             _events.add(ev);
           } catch (e, st) {
-            AppLogger.w('LanClient: decode failed',
-                error: e, stackTrace: st);
+            AppLogger.w('LanClient: decode failed', error: e, stackTrace: st);
           }
         },
         onDone: () {
@@ -122,14 +119,16 @@ class LanClient {
         },
         onError: (Object e, StackTrace st) {
           _peers.remove(service.name);
-          AppLogger.w('LanClient: peer error',
-              error: e, stackTrace: st);
+          AppLogger.w('LanClient: peer error', error: e, stackTrace: st);
         },
         cancelOnError: true,
       );
     } catch (e, st) {
-      AppLogger.w('LanClient: failed to connect to $uri',
-          error: e, stackTrace: st);
+      AppLogger.w(
+        'LanClient: failed to connect to $uri',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 }

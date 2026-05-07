@@ -65,14 +65,16 @@ class BleCentralService {
   /// 全接続中 peripheral へブロードキャスト送信。
   Future<void> broadcast(TransportEvent event) async {
     final int seq = _nextSeq();
-    final List<Uint8List> frames =
-        BleProtocol.encode(event, seq: seq);
+    final List<Uint8List> frames = BleProtocol.encode(event, seq: seq);
     for (final _ConnectedPeer peer in _peers.values) {
       try {
         await peer.write(event, frames);
       } catch (e, st) {
-        AppLogger.w('BleCentral: write failed to ${peer.remoteId}',
-            error: e, stackTrace: st);
+        AppLogger.w(
+          'BleCentral: write failed to ${peer.remoteId}',
+          error: e,
+          stackTrace: st,
+        );
       }
     }
   }
@@ -116,7 +118,7 @@ class _ConnectedPeer {
 
   Future<void> connect() async {
     try {
-      await _device.connect(autoConnect: false);
+      await _device.connect();
       _connSub = _device.connectionState.listen((BluetoothConnectionState s) {
         if (s == BluetoothConnectionState.disconnected) {
           AppLogger.d('BleCentral: $remoteId disconnected');
@@ -146,8 +148,11 @@ class _ConnectedPeer {
       }
       AppLogger.i('BleCentral: connected & discovered $remoteId');
     } catch (e, st) {
-      AppLogger.w('BleCentral: connect failed $remoteId',
-          error: e, stackTrace: st);
+      AppLogger.w(
+        'BleCentral: connect failed $remoteId',
+        error: e,
+        stackTrace: st,
+      );
       _owner._peers.remove(remoteId);
     }
   }
@@ -169,7 +174,7 @@ class _ConnectedPeer {
       return;
     }
     for (final Uint8List frame in frames) {
-      await target.write(frame, withoutResponse: false);
+      await target.write(frame);
     }
   }
 
@@ -187,8 +192,9 @@ class _ConnectedPeer {
   }
 
   void _onNotify(List<int> value) {
-    final TransportEvent? ev =
-        _owner._assembler.feed(Uint8List.fromList(value));
+    final TransportEvent? ev = _owner._assembler.feed(
+      Uint8List.fromList(value),
+    );
     if (ev != null) {
       _owner._events.add(ev);
     }

@@ -28,12 +28,12 @@ class CheckoutFlowUseCase {
     required String shopId,
     Uuid uuid = const Uuid(),
     DateTime Function() now = DateTime.now,
-  })  : _checkout = checkoutUseCase,
-        _transport = transport,
-        _orderRepo = orderRepository,
-        _shopId = shopId,
-        _uuid = uuid,
-        _now = now;
+  }) : _checkout = checkoutUseCase,
+       _transport = transport,
+       _orderRepo = orderRepository,
+       _shopId = shopId,
+       _uuid = uuid,
+       _now = now;
 
   final CheckoutUseCase _checkout;
   final Transport _transport;
@@ -71,10 +71,7 @@ class CheckoutFlowUseCase {
   OrderSubmittedEvent _buildEvent(Order order) {
     final List<Map<String, Object>> items = <Map<String, Object>>[
       for (final OrderItem item in order.items)
-        <String, Object>{
-          'name': item.productName,
-          'quantity': item.quantity,
-        },
+        <String, Object>{'name': item.productName, 'quantity': item.quantity},
     ];
     return OrderSubmittedEvent(
       shopId: _shopId,

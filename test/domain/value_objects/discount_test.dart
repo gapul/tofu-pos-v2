@@ -20,8 +20,10 @@ void main() {
     });
 
     test('equality', () {
-      expect(const AmountDiscount(Money(-100)),
-          const AmountDiscount(Money(-100)));
+      expect(
+        const AmountDiscount(Money(-100)),
+        const AmountDiscount(Money(-100)),
+      );
     });
   });
 

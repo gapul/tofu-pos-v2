@@ -60,8 +60,9 @@ void main() {
 
   group('getDailySummary', () {
     test('empty day returns zero counts', () async {
-      final DailySummary s =
-          await usecase.getDailySummary(flags: FeatureFlags.allOff);
+      final DailySummary s = await usecase.getDailySummary(
+        flags: FeatureFlags.allOff,
+      );
       expect(s.totalSales, Money.zero);
       expect(s.orderCount, 0);
       expect(s.cancelledCount, 0);
@@ -70,62 +71,69 @@ void main() {
     });
 
     test('sums final prices of non-cancelled orders', () async {
-      await orderRepo.create(_order(
-        id: 1,
-        createdAt: DateTime(2026, 5, 7, 10),
-        price: const Money(400),
-      ));
-      await orderRepo.create(_order(
-        id: 2,
-        createdAt: DateTime(2026, 5, 7, 14),
-        price: const Money(300),
-      ));
-      final DailySummary s =
-          await usecase.getDailySummary(flags: FeatureFlags.allOff);
+      await orderRepo.create(
+        _order(
+          id: 1,
+          createdAt: DateTime(2026, 5, 7, 10),
+          price: const Money(400),
+        ),
+      );
+      await orderRepo.create(
+        _order(
+          id: 2,
+          createdAt: DateTime(2026, 5, 7, 14),
+          price: const Money(300),
+        ),
+      );
+      final DailySummary s = await usecase.getDailySummary(
+        flags: FeatureFlags.allOff,
+      );
       expect(s.totalSales, const Money(700));
       expect(s.orderCount, 2);
     });
 
     test('excludes cancelled orders from sales but counts them', () async {
-      await orderRepo.create(_order(
-        id: 1,
-        createdAt: DateTime(2026, 5, 7, 10),
-        price: const Money(500),
-      ));
-      await orderRepo.create(_order(
-        id: 2,
-        createdAt: DateTime(2026, 5, 7, 11),
-        price: const Money(800),
-        status: OrderStatus.cancelled,
-      ));
-      final DailySummary s =
-          await usecase.getDailySummary(flags: FeatureFlags.allOff);
+      await orderRepo.create(
+        _order(id: 1, createdAt: DateTime(2026, 5, 7, 10)),
+      );
+      await orderRepo.create(
+        _order(
+          id: 2,
+          createdAt: DateTime(2026, 5, 7, 11),
+          price: const Money(800),
+          status: OrderStatus.cancelled,
+        ),
+      );
+      final DailySummary s = await usecase.getDailySummary(
+        flags: FeatureFlags.allOff,
+      );
       expect(s.totalSales, const Money(500));
       expect(s.orderCount, 1);
       expect(s.cancelledCount, 1);
     });
 
     test('counts unsynced orders', () async {
-      await orderRepo.create(_order(
-        id: 1,
-        createdAt: DateTime(2026, 5, 7, 10),
-        sync: SyncStatus.notSynced,
-      ));
-      await orderRepo.create(_order(
-        id: 2,
-        createdAt: DateTime(2026, 5, 7, 11),
-        sync: SyncStatus.synced,
-      ));
-      final DailySummary s =
-          await usecase.getDailySummary(flags: FeatureFlags.allOff);
+      await orderRepo.create(
+        _order(
+          id: 1,
+          createdAt: DateTime(2026, 5, 7, 10),
+          sync: SyncStatus.notSynced,
+        ),
+      );
+      await orderRepo.create(
+        _order(id: 2, createdAt: DateTime(2026, 5, 7, 11)),
+      );
+      final DailySummary s = await usecase.getDailySummary(
+        flags: FeatureFlags.allOff,
+      );
       expect(s.unsyncedCount, 1);
       expect(s.hasUnsynced, isTrue);
     });
 
     test('includes theoreticalDrawer when cashManagement is on', () async {
-      await cashRepo.replace(CashDrawer(<Denomination, int>{
-        const Denomination(1000): 3,
-      }));
+      await cashRepo.replace(
+        CashDrawer(<Denomination, int>{const Denomination(1000): 3}),
+      );
       final DailySummary s = await usecase.getDailySummary(
         flags: const FeatureFlags(cashManagement: true),
       );
@@ -134,11 +142,12 @@ void main() {
     });
 
     test('omits theoreticalDrawer when cashManagement is off', () async {
-      await cashRepo.replace(CashDrawer(<Denomination, int>{
-        const Denomination(1000): 3,
-      }));
-      final DailySummary s =
-          await usecase.getDailySummary(flags: FeatureFlags.allOff);
+      await cashRepo.replace(
+        CashDrawer(<Denomination, int>{const Denomination(1000): 3}),
+      );
+      final DailySummary s = await usecase.getDailySummary(
+        flags: FeatureFlags.allOff,
+      );
       expect(s.theoreticalDrawer, isNull);
     });
   });
@@ -149,8 +158,10 @@ void main() {
         const Denomination(1000): 5,
         const Denomination(100): 10,
       });
-      final CashCloseDifference d =
-          usecase.computeDifference(theoretical: th, actual: th);
+      final CashCloseDifference d = usecase.computeDifference(
+        theoretical: th,
+        actual: th,
+      );
       expect(d.isZero, isTrue);
       expect(d.amountDiff, Money.zero);
     });
@@ -162,8 +173,10 @@ void main() {
       final CashDrawer ac = CashDrawer(<Denomination, int>{
         const Denomination(1000): 3,
       });
-      final CashCloseDifference d =
-          usecase.computeDifference(theoretical: th, actual: ac);
+      final CashCloseDifference d = usecase.computeDifference(
+        theoretical: th,
+        actual: ac,
+      );
       expect(d.isShort, isTrue);
       expect(d.amountDiff, const Money(-2000));
       expect(d.countDiff[const Denomination(1000)], -2);
@@ -176,8 +189,10 @@ void main() {
       final CashDrawer ac = CashDrawer(<Denomination, int>{
         const Denomination(100): 12,
       });
-      final CashCloseDifference d =
-          usecase.computeDifference(theoretical: th, actual: ac);
+      final CashCloseDifference d = usecase.computeDifference(
+        theoretical: th,
+        actual: ac,
+      );
       expect(d.isOver, isTrue);
       expect(d.amountDiff, const Money(200));
     });

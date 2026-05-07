@@ -34,10 +34,7 @@ class CsvExportService {
   /// 注文リストを CSV 文字列にシリアライズする。
   ///
   /// [shopId] は付加情報として全行に埋め込む。
-  String serialize({
-    required Iterable<Order> orders,
-    required String shopId,
-  }) {
+  String serialize({required Iterable<Order> orders, required String shopId}) {
     final List<List<String>> rows = <List<String>>[headers];
 
     for (final Order order in orders) {
@@ -48,8 +45,7 @@ class CsvExportService {
       for (final OrderItem item in order.items) {
         final int perItemDiscount = totalPrice.isZero
             ? 0
-            : (discountAmount.yen * item.subtotal.yen / totalPrice.yen)
-                .round();
+            : (discountAmount.yen * item.subtotal.yen / totalPrice.yen).round();
 
         rows.add(<String>[
           order.id.toString(),
@@ -65,7 +61,7 @@ class CsvExportService {
           item.subtotal.yen.toString(),
           perItemDiscount.toString(),
           order.orderStatus.name,
-          cancelled ? 'true' : 'false',
+          if (cancelled) 'true' else 'false',
         ]);
       }
     }

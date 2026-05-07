@@ -13,51 +13,54 @@ import 'repository_providers.dart';
 /// CloudSyncClient: Supabase接続情報があれば本実装、無ければ Noop。
 final Provider<CloudSyncClient> cloudSyncClientProvider =
     Provider<CloudSyncClient>((Ref<CloudSyncClient> ref) {
-  if (Env.hasSupabaseCredentials) {
-    return SupabaseCloudSyncClient(Supabase.instance.client);
-  }
-  return NoopCloudSyncClient();
-});
+      if (Env.hasSupabaseCredentials) {
+        return SupabaseCloudSyncClient(Supabase.instance.client);
+      }
+      return NoopCloudSyncClient();
+    });
 
 /// SupabaseRealtimeListener: 店舗ID と Supabase 接続情報が揃っていれば購読、無ければ null。
-final FutureProvider<SupabaseRealtimeListener?> supabaseRealtimeListenerProvider =
-    FutureProvider<SupabaseRealtimeListener?>(
-  (Ref<AsyncValue<SupabaseRealtimeListener?>> ref) async {
-    if (!Env.hasSupabaseCredentials) {
-      return null;
-    }
-    final ShopId? shopId =
-        await ref.watch(settingsRepositoryProvider).getShopId();
-    if (shopId == null) {
-      return null;
-    }
-    final SupabaseRealtimeListener listener = SupabaseRealtimeListener(
-      Supabase.instance.client,
-      shopId: shopId.value,
-    );
-    await listener.connect();
-    ref.onDispose(listener.dispose);
-    return listener;
-  },
-);
+final FutureProvider<SupabaseRealtimeListener?>
+supabaseRealtimeListenerProvider = FutureProvider<SupabaseRealtimeListener?>((
+  Ref<AsyncValue<SupabaseRealtimeListener?>> ref,
+) async {
+  if (!Env.hasSupabaseCredentials) {
+    return null;
+  }
+  final ShopId? shopId = await ref
+      .watch(settingsRepositoryProvider)
+      .getShopId();
+  if (shopId == null) {
+    return null;
+  }
+  final SupabaseRealtimeListener listener = SupabaseRealtimeListener(
+    Supabase.instance.client,
+    shopId: shopId.value,
+  );
+  await listener.connect();
+  ref.onDispose(listener.dispose);
+  return listener;
+});
 
 /// 受信した Realtime イベントを Stream で公開。
 final StreamProvider<RealtimeOrderLineEvent> realtimeOrderLineEventsProvider =
-    StreamProvider<RealtimeOrderLineEvent>(
-  (Ref<AsyncValue<RealtimeOrderLineEvent>> ref) async* {
-    final SupabaseRealtimeListener? listener =
-        await ref.watch(supabaseRealtimeListenerProvider.future);
-    if (listener == null) {
-      return;
-    }
-    yield* listener.events();
-  },
-);
+    StreamProvider<RealtimeOrderLineEvent>((
+      Ref<AsyncValue<RealtimeOrderLineEvent>> ref,
+    ) async* {
+      final SupabaseRealtimeListener? listener = await ref.watch(
+        supabaseRealtimeListenerProvider.future,
+      );
+      if (listener == null) {
+        return;
+      }
+      yield* listener.events();
+    });
 
 /// SyncService: ライフサイクル付き Provider。
 /// `ref.read(syncServiceProvider).start()` を起動時に1回呼ぶ。
-final Provider<SyncService> syncServiceProvider =
-    Provider<SyncService>((Ref<SyncService> ref) {
+final Provider<SyncService> syncServiceProvider = Provider<SyncService>((
+  Ref<SyncService> ref,
+) {
   final SyncService service = SyncService(
     orderRepository: ref.watch(orderRepositoryProvider),
     settingsRepository: ref.watch(settingsRepositoryProvider),
@@ -86,12 +89,12 @@ enum SyncWarningLevel {
 /// しきい値（デフォルト1時間）を超えたら prolongedFailure を emit する。
 final StreamProvider<SyncWarningLevel> syncWarningProvider =
     StreamProvider<SyncWarningLevel>((Ref<AsyncValue<SyncWarningLevel>> ref) {
-  final SyncService service = ref.watch(syncServiceProvider);
-  return Stream<SyncWarningLevel>.periodic(
-    const Duration(minutes: 1),
-    (_) => _evaluate(service.lastFailureSince),
-  ).distinct();
-});
+      final SyncService service = ref.watch(syncServiceProvider);
+      return Stream<SyncWarningLevel>.periodic(
+        const Duration(minutes: 1),
+        (_) => _evaluate(service.lastFailureSince),
+      ).distinct();
+    });
 
 SyncWarningLevel _evaluate(DateTime? since) {
   if (since == null) {

@@ -19,11 +19,11 @@ class MarkServedUseCase {
     required String shopId,
     Uuid uuid = const Uuid(),
     DateTime Function() now = DateTime.now,
-  })  : _repo = repository,
-        _transport = transport,
-        _shopId = shopId,
-        _uuid = uuid,
-        _now = now;
+  }) : _repo = repository,
+       _transport = transport,
+       _shopId = shopId,
+       _uuid = uuid,
+       _now = now;
 
   final KitchenOrderRepository _repo;
   final Transport _transport;
@@ -43,13 +43,15 @@ class MarkServedUseCase {
     await _repo.updateStatus(orderId, KitchenStatus.done);
 
     try {
-      await _transport.send(OrderServedEvent(
-        shopId: _shopId,
-        eventId: _uuid.v4(),
-        occurredAt: _now(),
-        orderId: orderId,
-        ticketNumber: order.ticketNumber,
-      ));
+      await _transport.send(
+        OrderServedEvent(
+          shopId: _shopId,
+          eventId: _uuid.v4(),
+          occurredAt: _now(),
+          orderId: orderId,
+          ticketNumber: order.ticketNumber,
+        ),
+      );
     } catch (e) {
       // 送信失敗時はステータスを戻す（ローカルは未確定にする）
       await _repo.updateStatus(orderId, KitchenStatus.pending);

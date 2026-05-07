@@ -9,13 +9,14 @@ import 'package:tofu_pos/domain/value_objects/ticket_number.dart';
 
 Order _makeOrder({
   Discount discount = Discount.none,
-  Money receivedCash = const Money(0),
+  Money receivedCash = Money.zero,
   List<OrderItem>? items,
 }) {
   return Order(
     id: 1,
     ticketNumber: const TicketNumber(1),
-    items: items ??
+    items:
+        items ??
         const <OrderItem>[
           OrderItem(
             productId: 'p1',
@@ -53,8 +54,9 @@ void main() {
     });
 
     test('finalPrice with amount discount', () {
-      final Order order =
-          _makeOrder(discount: const AmountDiscount(Money(-100)));
+      final Order order = _makeOrder(
+        discount: const AmountDiscount(Money(-100)),
+      );
       expect(order.discountAmount, const Money(-100));
       expect(order.finalPrice, const Money(850));
     });

@@ -33,13 +33,10 @@ class Orders extends Table {
   TextColumn get customerGroup => text().nullable()();
 
   /// 'amount' (円) または 'percent' (%)
-  TextColumn get discountKind =>
-      text().withDefault(const Constant('amount'))();
-  IntColumn get discountValue =>
-      integer().withDefault(const Constant(0))();
+  TextColumn get discountKind => text().withDefault(const Constant('amount'))();
+  IntColumn get discountValue => integer().withDefault(const Constant(0))();
 
-  IntColumn get receivedCashYen =>
-      integer().withDefault(const Constant(0))();
+  IntColumn get receivedCashYen => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
 
   /// OrderStatus.name
@@ -118,15 +115,17 @@ class OperationLogs extends Table {
 
 // =================== Database ===================
 
-@DriftDatabase(tables: <Type>[
-  Products,
-  Orders,
-  OrderItems,
-  CashDrawerCounts,
-  KitchenOrders,
-  CallingOrders,
-  OperationLogs,
-])
+@DriftDatabase(
+  tables: <Type>[
+    Products,
+    Orders,
+    OrderItems,
+    CashDrawerCounts,
+    KitchenOrders,
+    CallingOrders,
+    OperationLogs,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -137,15 +136,15 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (Migrator m) async {
-          await m.createAll();
-        },
-        beforeOpen: (OpeningDetails details) async {
-          // 外部キー制約を有効化（SQLite はデフォルト無効）。
-          // OrderItems → Orders の cascade delete 等が機能するように。
-          await customStatement('PRAGMA foreign_keys = ON');
-        },
-      );
+    onCreate: (Migrator m) async {
+      await m.createAll();
+    },
+    beforeOpen: (OpeningDetails details) async {
+      // 外部キー制約を有効化（SQLite はデフォルト無効）。
+      // OrderItems → Orders の cascade delete 等が機能するように。
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
 }
 
 LazyDatabase _openConnection() {

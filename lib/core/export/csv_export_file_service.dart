@@ -8,10 +8,8 @@ import '../../domain/entities/order.dart';
 import 'csv_export_service.dart';
 
 /// 共有シート起動を抽象化する関数シグネチャ（テスト容易性のため）。
-typedef ShareSheetLauncher = Future<ShareResult> Function(
-  List<XFile> files, {
-  String? subject,
-});
+typedef ShareSheetLauncher =
+    Future<ShareResult> Function(List<XFile> files, {String? subject});
 
 Future<ShareResult> _defaultShareLauncher(
   List<XFile> files, {
@@ -30,10 +28,10 @@ class CsvExportFileService {
         getApplicationDocumentsDirectory,
     ShareSheetLauncher share = _defaultShareLauncher,
     DateTime Function() now = DateTime.now,
-  })  : _csv = csv,
-        _getDirectory = getDirectory,
-        _share = share,
-        _now = now;
+  }) : _csv = csv,
+       _getDirectory = getDirectory,
+       _share = share,
+       _now = now;
 
   final CsvExportService _csv;
   final Future<Directory> Function() _getDirectory;
@@ -59,22 +57,22 @@ class CsvExportFileService {
     required String shopId,
   }) async {
     final String path = await writeToFile(orders: orders, shopId: shopId);
-    await _share(
-      <XFile>[XFile(path)],
-      subject: 'Tofu POS 売上データ',
-    );
+    await _share(<XFile>[XFile(path)], subject: 'Tofu POS 売上データ');
     return path;
   }
 
   String _buildFileName(String shopId) {
     final DateTime n = _now();
-    final String stamp = '${n.year.toString().padLeft(4, '0')}'
+    final String stamp =
+        '${n.year.toString().padLeft(4, '0')}'
         '${n.month.toString().padLeft(2, '0')}'
         '${n.day.toString().padLeft(2, '0')}'
         '_${n.hour.toString().padLeft(2, '0')}'
         '${n.minute.toString().padLeft(2, '0')}';
-    final String safeShopId =
-        shopId.replaceAll(RegExp(r'[^A-Za-z0-9_\-]'), '_');
+    final String safeShopId = shopId.replaceAll(
+      RegExp(r'[^A-Za-z0-9_\-]'),
+      '_',
+    );
     return 'tofu-pos_${safeShopId}_$stamp.csv';
   }
 }

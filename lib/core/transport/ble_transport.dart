@@ -12,9 +12,10 @@ import 'transport_event.dart';
 ///  - レジ: [BleCentralService]（スキャン + 接続 + 書き込み + Notify購読）
 ///  - キッチン/呼び出し: [BlePeripheralService]（GATT サーバ + Advertise）
 class BleTransport implements Transport {
-  BleTransport.central(BleCentralService central) : _impl = _CentralImpl(central);
+  BleTransport.central(BleCentralService central)
+    : _impl = _CentralImpl(central);
   BleTransport.peripheral(BlePeripheralService peripheral)
-      : _impl = _PeripheralImpl(peripheral);
+    : _impl = _PeripheralImpl(peripheral);
 
   final _BleImpl _impl;
 

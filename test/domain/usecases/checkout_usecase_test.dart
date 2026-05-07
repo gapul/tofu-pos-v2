@@ -84,10 +84,7 @@ void main() {
   });
 
   test('does NOT decrement stock when stockManagement is off', () async {
-    await usecase.execute(
-      draft: makeDraft(),
-      flags: FeatureFlags.allOff,
-    );
+    await usecase.execute(draft: makeDraft(), flags: FeatureFlags.allOff);
     final Product? p = await productRepo.findById('p1');
     expect(p!.stock, 10);
   });
@@ -114,14 +111,12 @@ void main() {
 
   test('updates cash drawer when cashManagement is on', () async {
     // ¥100コインを5枚積んでおく（お釣り用の seed money）
-    await cashRepo.replace(CashDrawer(<Denomination, int>{
-      const Denomination(100): 5,
-    }));
+    await cashRepo.replace(
+      CashDrawer(<Denomination, int>{const Denomination(100): 5}),
+    );
 
     await usecase.execute(
-      draft: makeDraft(
-        cashDelta: const <int, int>{1000: 1, 100: -2},
-      ),
+      draft: makeDraft(cashDelta: const <int, int>{1000: 1, 100: -2}),
       flags: const FeatureFlags(cashManagement: true),
     );
     final drawer = await cashRepo.get();
@@ -131,8 +126,10 @@ void main() {
 
   test('throws when ticket pool is exhausted', () async {
     // 番号1を払い出した状態（max=1, buffer=0）からスタート
-    final TicketNumberPool exhausted =
-        TicketNumberPool.empty(maxNumber: 1, bufferSize: 0).issue().pool;
+    final TicketNumberPool exhausted = TicketNumberPool.empty(
+      maxNumber: 1,
+      bufferSize: 0,
+    ).issue().pool;
     poolRepo = InMemoryTicketPoolRepository(exhausted);
     usecase = CheckoutUseCase(
       unitOfWork: InMemoryUnitOfWork(),
@@ -158,10 +155,14 @@ void main() {
   });
 
   test('issues sequential ticket numbers across multiple checkouts', () async {
-    final Order o1 =
-        await usecase.execute(draft: makeDraft(), flags: FeatureFlags.allOff);
-    final Order o2 =
-        await usecase.execute(draft: makeDraft(), flags: FeatureFlags.allOff);
+    final Order o1 = await usecase.execute(
+      draft: makeDraft(),
+      flags: FeatureFlags.allOff,
+    );
+    final Order o2 = await usecase.execute(
+      draft: makeDraft(),
+      flags: FeatureFlags.allOff,
+    );
     expect(o1.ticketNumber.value, 1);
     expect(o2.ticketNumber.value, 2);
   });

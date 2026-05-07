@@ -14,8 +14,9 @@ void main() {
         occurredAt: ts,
         productsJson: '[{"id":"p1"}]',
       );
-      final TransportEvent decoded =
-          LanProtocol.decode(LanProtocol.encode(original));
+      final TransportEvent decoded = LanProtocol.decode(
+        LanProtocol.encode(original),
+      );
       expect(decoded, isA<ProductMasterUpdateEvent>());
       final ProductMasterUpdateEvent r = decoded as ProductMasterUpdateEvent;
       expect(r.shopId, 'shop_a');
@@ -34,8 +35,9 @@ void main() {
         ticketNumber: const TicketNumber(7),
         itemsJson: '[{"name":"yakisoba","qty":2}]',
       );
-      final TransportEvent decoded =
-          LanProtocol.decode(LanProtocol.encode(original));
+      final TransportEvent decoded = LanProtocol.decode(
+        LanProtocol.encode(original),
+      );
       expect(decoded, isA<OrderSubmittedEvent>());
       final OrderSubmittedEvent r = decoded as OrderSubmittedEvent;
       expect(r.orderId, 42);
@@ -52,8 +54,9 @@ void main() {
         orderId: 1,
         ticketNumber: const TicketNumber(2),
       );
-      final TransportEvent decoded =
-          LanProtocol.decode(LanProtocol.encode(original));
+      final TransportEvent decoded = LanProtocol.decode(
+        LanProtocol.encode(original),
+      );
       expect(decoded, isA<OrderServedEvent>());
     });
 
@@ -65,8 +68,9 @@ void main() {
         orderId: 1,
         ticketNumber: const TicketNumber(2),
       );
-      final TransportEvent decoded =
-          LanProtocol.decode(LanProtocol.encode(original));
+      final TransportEvent decoded = LanProtocol.decode(
+        LanProtocol.encode(original),
+      );
       expect(decoded, isA<CallNumberEvent>());
     });
 
@@ -78,8 +82,9 @@ void main() {
         orderId: 99,
         ticketNumber: const TicketNumber(11),
       );
-      final TransportEvent decoded =
-          LanProtocol.decode(LanProtocol.encode(original));
+      final TransportEvent decoded = LanProtocol.decode(
+        LanProtocol.encode(original),
+      );
       expect(decoded, isA<OrderCancelledEvent>());
       expect((decoded as OrderCancelledEvent).orderId, 99);
     });
@@ -87,10 +92,7 @@ void main() {
 
   group('LanProtocol error handling', () {
     test('rejects non-object payload', () {
-      expect(
-        () => LanProtocol.decode('"hello"'),
-        throwsFormatException,
-      );
+      expect(() => LanProtocol.decode('"hello"'), throwsFormatException);
     });
 
     test('rejects unknown kind', () {

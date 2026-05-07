@@ -28,13 +28,15 @@ void main() {
 
   setUp(() async {
     repo = InMemoryKitchenOrderRepository();
-    await repo.upsert(KitchenOrder(
-      orderId: 1,
-      ticketNumber: const TicketNumber(7),
-      itemsJson: '[]',
-      status: KitchenStatus.pending,
-      receivedAt: DateTime(2026, 5, 7, 12),
-    ));
+    await repo.upsert(
+      KitchenOrder(
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+        itemsJson: '[]',
+        status: KitchenStatus.pending,
+        receivedAt: DateTime(2026, 5, 7, 12),
+      ),
+    );
   });
 
   test('marks done and sends OrderServedEvent', () async {
@@ -59,10 +61,7 @@ void main() {
       transport: _FailingTransport(),
       shopId: 'shop_a',
     );
-    expect(
-      () => u.execute(1),
-      throwsA(isA<TransportDeliveryException>()),
-    );
+    expect(() => u.execute(1), throwsA(isA<TransportDeliveryException>()));
     await Future<void>.delayed(const Duration(milliseconds: 10));
     expect((await repo.findByOrderId(1))!.status, KitchenStatus.pending);
   });
@@ -73,8 +72,7 @@ void main() {
       transport: NoopTransport(),
       shopId: 'shop_a',
     );
-    expect(() => u.execute(999),
-        throwsA(isA<OrderNotCancellableException>()));
+    expect(() => u.execute(999), throwsA(isA<OrderNotCancellableException>()));
   });
 
   test('rejects cancelled order', () async {
@@ -84,8 +82,7 @@ void main() {
       transport: NoopTransport(),
       shopId: 'shop_a',
     );
-    expect(() => u.execute(1),
-        throwsA(isA<OrderNotCancellableException>()));
+    expect(() => u.execute(1), throwsA(isA<OrderNotCancellableException>()));
   });
 
   test('undo flips done back to pending', () async {
@@ -105,7 +102,6 @@ void main() {
       transport: NoopTransport(),
       shopId: 'shop_a',
     );
-    expect(() => u.undo(1),
-        throwsA(isA<OrderNotCancellableException>()));
+    expect(() => u.undo(1), throwsA(isA<OrderNotCancellableException>()));
   });
 }

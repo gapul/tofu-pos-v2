@@ -26,17 +26,19 @@ void main() {
     auto.start();
 
     // 連続編集
-    await repo.upsert(const Product(
-        id: 'a', name: 'A', price: Money(100), stock: 1));
-    await repo.upsert(const Product(
-        id: 'b', name: 'B', price: Money(100), stock: 1));
-    await repo.upsert(const Product(
-        id: 'c', name: 'C', price: Money(100), stock: 1));
+    await repo.upsert(
+      const Product(id: 'a', name: 'A', price: Money(100), stock: 1),
+    );
+    await repo.upsert(
+      const Product(id: 'b', name: 'B', price: Money(100), stock: 1),
+    );
+    await repo.upsert(
+      const Product(id: 'c', name: 'C', price: Money(100), stock: 1),
+    );
 
     // debounce 経過まで待つ
     await Future<void>.delayed(const Duration(milliseconds: 200));
-    expect(transport.sent.length, 1,
-        reason: '3回連続編集が debounce で1回にまとまる');
+    expect(transport.sent.length, 1, reason: '3回連続編集が debounce で1回にまとまる');
     expect(transport.sent.single, isA<ProductMasterUpdateEvent>());
 
     await auto.stop();
@@ -84,8 +86,9 @@ void main() {
     expect(auto.isStarted, isFalse);
 
     // stop 後の編集はトリガーされない
-    await repo.upsert(const Product(
-        id: 'x', name: 'X', price: Money(100), stock: 1));
+    await repo.upsert(
+      const Product(id: 'x', name: 'X', price: Money(100), stock: 1),
+    );
     await Future<void>.delayed(const Duration(milliseconds: 300));
     expect(transport.sent, isEmpty);
   });

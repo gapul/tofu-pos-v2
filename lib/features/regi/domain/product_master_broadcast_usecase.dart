@@ -23,11 +23,11 @@ class ProductMasterBroadcastUseCase {
     required String shopId,
     Uuid uuid = const Uuid(),
     DateTime Function() now = DateTime.now,
-  })  : _productRepo = productRepository,
-        _transport = transport,
-        _shopId = shopId,
-        _uuid = uuid,
-        _now = now;
+  }) : _productRepo = productRepository,
+       _transport = transport,
+       _shopId = shopId,
+       _uuid = uuid,
+       _now = now;
 
   final ProductRepository _productRepo;
   final Transport _transport;
@@ -57,9 +57,7 @@ class ProductMasterBroadcastUseCase {
 
     try {
       await _transport.send(ev);
-      AppLogger.d(
-        'ProductMasterBroadcast: sent ${products.length} products',
-      );
+      AppLogger.d('ProductMasterBroadcast: sent ${products.length} products');
     } catch (e, st) {
       // 低緊急: 失敗してもユーザー通知しない（仕様書 §7.2）
       AppLogger.w(

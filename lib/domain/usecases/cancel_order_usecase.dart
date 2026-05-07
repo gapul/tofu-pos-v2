@@ -33,13 +33,13 @@ class CancelOrderUseCase {
     required TicketNumberPoolRepository ticketPoolRepository,
     OperationLogRepository? operationLogRepository,
     DateTime Function() now = DateTime.now,
-  })  : _uow = unitOfWork,
-        _orderRepo = orderRepository,
-        _productRepo = productRepository,
-        _cashRepo = cashDrawerRepository,
-        _poolRepo = ticketPoolRepository,
-        _logRepo = operationLogRepository,
-        _now = now;
+  }) : _uow = unitOfWork,
+       _orderRepo = orderRepository,
+       _productRepo = productRepository,
+       _cashRepo = cashDrawerRepository,
+       _poolRepo = ticketPoolRepository,
+       _logRepo = operationLogRepository,
+       _now = now;
 
   final UnitOfWork _uow;
   final OrderRepository _orderRepo;

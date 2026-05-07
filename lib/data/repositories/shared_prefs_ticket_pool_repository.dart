@@ -19,8 +19,8 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
     this._prefs, {
     int defaultMaxNumber = 99,
     int defaultBufferSize = 10,
-  })  : _defaultMax = defaultMaxNumber,
-        _defaultBuffer = defaultBufferSize;
+  }) : _defaultMax = defaultMaxNumber,
+       _defaultBuffer = defaultBufferSize;
 
   final SharedPreferences _prefs;
   final int _defaultMax;
@@ -42,8 +42,9 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
       maxNumber: json['maxNumber'] as int,
       bufferSize: json['bufferSize'] as int,
       inUse: (json['inUse'] as List<dynamic>).cast<int>().toSet(),
-      recentlyReleased:
-          (json['recentlyReleased'] as List<dynamic>).cast<int>().toList(),
+      recentlyReleased: (json['recentlyReleased'] as List<dynamic>)
+          .cast<int>()
+          .toList(),
     );
   }
 

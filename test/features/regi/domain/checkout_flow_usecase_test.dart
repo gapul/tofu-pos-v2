@@ -81,54 +81,58 @@ void main() {
     expect(transport.sent, isEmpty);
   });
 
-  test('with kitchenLink on: sends OrderSubmittedEvent and marks sent',
-      () async {
-    final NoopTransport transport = NoopTransport();
-    final CheckoutFlowUseCase flow = CheckoutFlowUseCase(
-      checkoutUseCase: checkout,
-      transport: transport,
-      orderRepository: orderRepo,
-      shopId: 'shop_a',
-    );
+  test(
+    'with kitchenLink on: sends OrderSubmittedEvent and marks sent',
+    () async {
+      final NoopTransport transport = NoopTransport();
+      final CheckoutFlowUseCase flow = CheckoutFlowUseCase(
+        checkoutUseCase: checkout,
+        transport: transport,
+        orderRepository: orderRepo,
+        shopId: 'shop_a',
+      );
 
-    final Order order = await flow.execute(
-      draft: draft,
-      flags: const FeatureFlags(kitchenLink: true),
-    );
-
-    expect(order.orderStatus, OrderStatus.sent);
-    expect(transport.sent, hasLength(1));
-    final TransportEvent ev = transport.sent.single;
-    expect(ev, isA<OrderSubmittedEvent>());
-    expect(ev.shopId, 'shop_a');
-    expect(ev.isHighPriority, isTrue);
-    final OrderSubmittedEvent submitted = ev as OrderSubmittedEvent;
-    expect(submitted.orderId, order.id);
-    expect(submitted.ticketNumber, order.ticketNumber);
-    expect(submitted.itemsJson, contains('Yakisoba'));
-  });
-
-  test('on transport failure: order is still saved (unsent), error thrown',
-      () async {
-    final CheckoutFlowUseCase flow = CheckoutFlowUseCase(
-      checkoutUseCase: checkout,
-      transport: _FailingTransport(),
-      orderRepository: orderRepo,
-      shopId: 'shop_a',
-    );
-
-    expect(
-      () => flow.execute(
+      final Order order = await flow.execute(
         draft: draft,
         flags: const FeatureFlags(kitchenLink: true),
-      ),
-      throwsA(isA<TransportDeliveryException>()),
-    );
+      );
 
-    // 例外発生後でも、ローカル保存は完了している（データ厳格性 §1.2）
-    await Future<void>.delayed(const Duration(milliseconds: 10));
-    final List<Order> saved = await orderRepo.findAll();
-    expect(saved, hasLength(1));
-    expect(saved.single.orderStatus, OrderStatus.unsent);
-  });
+      expect(order.orderStatus, OrderStatus.sent);
+      expect(transport.sent, hasLength(1));
+      final TransportEvent ev = transport.sent.single;
+      expect(ev, isA<OrderSubmittedEvent>());
+      expect(ev.shopId, 'shop_a');
+      expect(ev.isHighPriority, isTrue);
+      final OrderSubmittedEvent submitted = ev as OrderSubmittedEvent;
+      expect(submitted.orderId, order.id);
+      expect(submitted.ticketNumber, order.ticketNumber);
+      expect(submitted.itemsJson, contains('Yakisoba'));
+    },
+  );
+
+  test(
+    'on transport failure: order is still saved (unsent), error thrown',
+    () async {
+      final CheckoutFlowUseCase flow = CheckoutFlowUseCase(
+        checkoutUseCase: checkout,
+        transport: _FailingTransport(),
+        orderRepository: orderRepo,
+        shopId: 'shop_a',
+      );
+
+      expect(
+        () => flow.execute(
+          draft: draft,
+          flags: const FeatureFlags(kitchenLink: true),
+        ),
+        throwsA(isA<TransportDeliveryException>()),
+      );
+
+      // 例外発生後でも、ローカル保存は完了している（データ厳格性 §1.2）
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      final List<Order> saved = await orderRepo.findAll();
+      expect(saved, hasLength(1));
+      expect(saved.single.orderStatus, OrderStatus.unsent);
+    },
+  );
 }

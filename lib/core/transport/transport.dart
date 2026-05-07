@@ -1,3 +1,6 @@
+import 'package:tofu_pos/core/error/app_exceptions.dart'
+    show TransportDeliveryException;
+
 import 'transport_event.dart';
 
 /// 端末間通信の抽象（仕様書 §7）。

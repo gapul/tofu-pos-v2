@@ -160,7 +160,10 @@ void main() {
 
     await Future<void>.delayed(const Duration(milliseconds: 10));
     final Order? after = await orderRepo.findById(placed.id);
-    expect(after!.orderStatus, OrderStatus.cancelled,
-        reason: '通信失敗してもローカル取消は完了している');
+    expect(
+      after!.orderStatus,
+      OrderStatus.cancelled,
+      reason: '通信失敗してもローカル取消は完了している',
+    );
   });
 }

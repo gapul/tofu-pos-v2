@@ -9,20 +9,22 @@ class CallingIngestUseCase {
   CallingIngestUseCase({
     required CallingOrderRepository repository,
     DateTime Function() now = DateTime.now,
-  })  : _repo = repository,
-        _now = now;
+  }) : _repo = repository,
+       _now = now;
 
   final CallingOrderRepository _repo;
   final DateTime Function() _now;
 
   /// 呼び出し依頼を未呼び出し状態で永続化。
   Future<void> ingestCallNumber(CallNumberEvent ev) async {
-    await _repo.upsert(CallingOrder(
-      orderId: ev.orderId,
-      ticketNumber: ev.ticketNumber,
-      status: CallingStatus.pending,
-      receivedAt: _now(),
-    ));
+    await _repo.upsert(
+      CallingOrder(
+        orderId: ev.orderId,
+        ticketNumber: ev.ticketNumber,
+        status: CallingStatus.pending,
+        receivedAt: _now(),
+      ),
+    );
     AppLogger.i('Calling: queued ticket=${ev.ticketNumber}');
   }
 

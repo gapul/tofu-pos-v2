@@ -22,9 +22,7 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      overrides: <Override>[
-        sharedPreferencesProvider.overrideWithValue(prefs),
-      ],
+      overrides: <Override>[sharedPreferencesProvider.overrideWithValue(prefs)],
       child: const TofuPosApp(),
     ),
   );

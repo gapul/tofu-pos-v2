@@ -24,10 +24,10 @@ class LanProtocol {
     };
     return switch (event) {
       ProductMasterUpdateEvent(:final String productsJson) => <String, Object?>{
-          ...base,
-          'kind': 'ProductMasterUpdate',
-          'productsJson': productsJson,
-        },
+        ...base,
+        'kind': 'ProductMasterUpdate',
+        'productsJson': productsJson,
+      },
       OrderSubmittedEvent(
         :final int orderId,
         :final TicketNumber ticketNumber,
@@ -40,20 +40,14 @@ class LanProtocol {
           'ticketNumber': ticketNumber.value,
           'itemsJson': itemsJson,
         },
-      OrderServedEvent(
-        :final int orderId,
-        :final TicketNumber ticketNumber,
-      ) =>
+      OrderServedEvent(:final int orderId, :final TicketNumber ticketNumber) =>
         <String, Object?>{
           ...base,
           'kind': 'OrderServed',
           'orderId': orderId,
           'ticketNumber': ticketNumber.value,
         },
-      CallNumberEvent(
-        :final int orderId,
-        :final TicketNumber ticketNumber,
-      ) =>
+      CallNumberEvent(:final int orderId, :final TicketNumber ticketNumber) =>
         <String, Object?>{
           ...base,
           'kind': 'CallNumber',
@@ -88,8 +82,8 @@ class LanProtocol {
     final String kind = (json['kind'] as String?) ?? '';
     final String shopId = (json['shopId'] as String?) ?? '';
     final String eventId = (json['eventId'] as String?) ?? '';
-    final DateTime occurredAt = DateTime.tryParse(
-            (json['occurredAt'] as String?) ?? '') ??
+    final DateTime occurredAt =
+        DateTime.tryParse((json['occurredAt'] as String?) ?? '') ??
         DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
 
     switch (kind) {

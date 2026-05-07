@@ -33,12 +33,12 @@ class CheckoutUseCase {
     required CashDrawerRepository cashDrawerRepository,
     required TicketNumberPoolRepository ticketPoolRepository,
     DateTime Function() now = DateTime.now,
-  })  : _uow = unitOfWork,
-        _orderRepo = orderRepository,
-        _productRepo = productRepository,
-        _cashRepo = cashDrawerRepository,
-        _poolRepo = ticketPoolRepository,
-        _now = now;
+  }) : _uow = unitOfWork,
+       _orderRepo = orderRepository,
+       _productRepo = productRepository,
+       _cashRepo = cashDrawerRepository,
+       _poolRepo = ticketPoolRepository,
+       _now = now;
 
   final UnitOfWork _uow;
   final OrderRepository _orderRepo;
@@ -78,7 +78,8 @@ class CheckoutUseCase {
       if (!pool.hasAvailable) {
         throw const TicketPoolExhaustedException();
       }
-      final ({TicketNumberPool pool, TicketNumber number}) issued = pool.issue();
+      final ({TicketNumberPool pool, TicketNumber number}) issued = pool
+          .issue();
 
       // 3. 注文を保存（採番される）
       final Order draftOrder = Order(

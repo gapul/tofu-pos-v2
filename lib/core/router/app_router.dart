@@ -8,7 +8,9 @@ import '../../features/dev_console/presentation/screens/dev_console_screen.dart'
 ///
 /// Figma デザイン待ちのため、ホームは開発者用 DevConsole を表示している。
 /// 本番UIが揃ったら `/` をロール別ホームに差し替え、`/dev` を本画面に移す。
-final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref<GoRouter> ref) {
+final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((
+  Ref<GoRouter> ref,
+) {
   return GoRouter(
     initialLocation: '/',
     routes: <RouteBase>[

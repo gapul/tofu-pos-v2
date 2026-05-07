@@ -58,10 +58,10 @@ class FeatureFlags {
 
   @override
   int get hashCode => Object.hash(
-        stockManagement,
-        cashManagement,
-        customerAttributes,
-        kitchenLink,
-        callingLink,
-      );
+    stockManagement,
+    cashManagement,
+    customerAttributes,
+    kitchenLink,
+    callingLink,
+  );
 }

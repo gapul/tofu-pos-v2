@@ -4,18 +4,18 @@ import 'package:meta/meta.dart';
 @immutable
 class Denomination implements Comparable<Denomination> {
   const Denomination(this.yen)
-      : assert(
-          yen == 1 ||
-              yen == 5 ||
-              yen == 10 ||
-              yen == 50 ||
-              yen == 100 ||
-              yen == 500 ||
-              yen == 1000 ||
-              yen == 5000 ||
-              yen == 10000,
-          'Invalid denomination',
-        );
+    : assert(
+        yen == 1 ||
+            yen == 5 ||
+            yen == 10 ||
+            yen == 50 ||
+            yen == 100 ||
+            yen == 500 ||
+            yen == 1000 ||
+            yen == 5000 ||
+            yen == 10000,
+        'Invalid denomination',
+      );
 
   final int yen;
 

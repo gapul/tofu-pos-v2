@@ -8,11 +8,7 @@ import '../enums/customer_attributes_enums.dart';
 /// レジ担当の見立てで選ぶ前提のため、すべて null 可。
 @immutable
 class CustomerAttributes {
-  const CustomerAttributes({
-    this.age,
-    this.gender,
-    this.group,
-  });
+  const CustomerAttributes({this.age, this.gender, this.group});
 
   static const CustomerAttributes empty = CustomerAttributes();
 

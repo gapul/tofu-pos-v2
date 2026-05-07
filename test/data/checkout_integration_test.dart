@@ -57,12 +57,9 @@ void main() {
     );
 
     // 商品マスタを2件登録
-    await productRepo.upsert(const Product(
-      id: 'p1',
-      name: 'Yakisoba',
-      price: Money(400),
-      stock: 10,
-    ));
+    await productRepo.upsert(
+      const Product(id: 'p1', name: 'Yakisoba', price: Money(400), stock: 10),
+    );
   });
 
   tearDown(() async {
@@ -71,9 +68,9 @@ void main() {
 
   test('end-to-end: checkout persists everything atomically', () async {
     // ¥100 を 5 枚 seed
-    await cashRepo.replace(CashDrawer(<Denomination, int>{
-      const Denomination(100): 5,
-    }));
+    await cashRepo.replace(
+      CashDrawer(<Denomination, int>{const Denomination(100): 5}),
+    );
 
     final Order order = await checkout.execute(
       draft: const CheckoutDraft(
@@ -88,10 +85,7 @@ void main() {
         receivedCash: Money(1000),
         cashDelta: <int, int>{1000: 1, 100: -2},
       ),
-      flags: const FeatureFlags(
-        stockManagement: true,
-        cashManagement: true,
-      ),
+      flags: const FeatureFlags(stockManagement: true, cashManagement: true),
     );
 
     // 注文・明細・整理券・在庫・金種・プールがすべて永続化されている
@@ -109,9 +103,9 @@ void main() {
   });
 
   test('end-to-end: cancel rolls everything back atomically', () async {
-    await cashRepo.replace(CashDrawer(<Denomination, int>{
-      const Denomination(100): 5,
-    }));
+    await cashRepo.replace(
+      CashDrawer(<Denomination, int>{const Denomination(100): 5}),
+    );
 
     const FeatureFlags flags = FeatureFlags(
       stockManagement: true,

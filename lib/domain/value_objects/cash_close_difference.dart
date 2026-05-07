@@ -9,10 +9,7 @@ import 'money.dart';
 /// 理論値（システム計算）と実測値（人間が数えた枚数）の差を金種別に持つ。
 @immutable
 class CashCloseDifference {
-  const CashCloseDifference({
-    required this.theoretical,
-    required this.actual,
-  });
+  const CashCloseDifference({required this.theoretical, required this.actual});
 
   final CashDrawer theoretical;
   final CashDrawer actual;

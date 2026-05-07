@@ -18,10 +18,10 @@ class ProductMasterAutoBroadcaster {
     required ProductMasterBroadcastUseCase broadcast,
     Duration debounce = const Duration(milliseconds: 500),
     Duration periodicInterval = const Duration(minutes: 5),
-  })  : _productRepo = productRepository,
-        _broadcast = broadcast,
-        _debounce = debounce,
-        _periodicInterval = periodicInterval;
+  }) : _productRepo = productRepository,
+       _broadcast = broadcast,
+       _debounce = debounce,
+       _periodicInterval = periodicInterval;
 
   final ProductRepository _productRepo;
   final ProductMasterBroadcastUseCase _broadcast;

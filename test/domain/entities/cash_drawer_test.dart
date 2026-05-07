@@ -36,9 +36,7 @@ void main() {
       CashDrawer drawer = CashDrawer(<Denomination, int>{
         const Denomination(100): 5,
       });
-      drawer = drawer.apply(<Denomination, int>{
-        const Denomination(100): -3,
-      });
+      drawer = drawer.apply(<Denomination, int>{const Denomination(100): -3});
       expect(drawer.countOf(const Denomination(100)), 2);
     });
 

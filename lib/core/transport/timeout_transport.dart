@@ -12,8 +12,8 @@ class TimeoutTransport implements Transport {
   TimeoutTransport({
     required Transport inner,
     Duration timeout = const Duration(seconds: 5),
-  })  : _inner = inner,
-        _timeout = timeout;
+  }) : _inner = inner,
+       _timeout = timeout;
 
   final Transport _inner;
   final Duration _timeout;

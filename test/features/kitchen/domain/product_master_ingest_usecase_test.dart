@@ -13,15 +13,18 @@ void main() {
     ]);
     final u = ProductMasterIngestUseCase(productRepository: repo);
 
-    await u.ingest(ProductMasterUpdateEvent(
-      shopId: 'shop',
-      eventId: 'e1',
-      occurredAt: DateTime(2026, 5, 7, 12),
-      productsJson: '['
-          '{"id":"new1","name":"New 1","price_yen":300,"stock":5},'
-          '{"id":"new2","name":"New 2","price_yen":500,"stock":2,"display_color":4294934784}'
-          ']',
-    ));
+    await u.ingest(
+      ProductMasterUpdateEvent(
+        shopId: 'shop',
+        eventId: 'e1',
+        occurredAt: DateTime(2026, 5, 7, 12),
+        productsJson:
+            '['
+            '{"id":"new1","name":"New 1","price_yen":300,"stock":5},'
+            '{"id":"new2","name":"New 2","price_yen":500,"stock":2,"display_color":4294934784}'
+            ']',
+      ),
+    );
 
     final all = await repo.findAll();
     expect(all.map((p) => p.id), unorderedEquals(<String>['new1', 'new2']));
@@ -39,12 +42,14 @@ void main() {
       const Product(id: 'p1', name: 'P', price: Money(100), stock: 1),
     ]);
     final u = ProductMasterIngestUseCase(productRepository: repo);
-    await u.ingest(ProductMasterUpdateEvent(
-      shopId: 'shop',
-      eventId: 'e1',
-      occurredAt: DateTime(2026, 5, 7, 12),
-      productsJson: '[]',
-    ));
+    await u.ingest(
+      ProductMasterUpdateEvent(
+        shopId: 'shop',
+        eventId: 'e1',
+        occurredAt: DateTime(2026, 5, 7, 12),
+        productsJson: '[]',
+      ),
+    );
     final visible = await repo.findAll();
     expect(visible, isEmpty);
   });

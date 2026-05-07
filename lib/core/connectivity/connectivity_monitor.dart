@@ -16,7 +16,7 @@ abstract interface class ConnectivityMonitor {
 /// connectivity_plus を使った本番実装。
 class ConnectivityPlusMonitor implements ConnectivityMonitor {
   ConnectivityPlusMonitor({Connectivity? connectivity})
-      : _connectivity = connectivity ?? Connectivity() {
+    : _connectivity = connectivity ?? Connectivity() {
     _sub = _connectivity.onConnectivityChanged.listen(_onChanged);
     // 初期値を取得
     _connectivity.checkConnectivity().then(_onChanged);
@@ -29,8 +29,10 @@ class ConnectivityPlusMonitor implements ConnectivityMonitor {
   ConnectivityStatus _current = ConnectivityStatus.offline;
 
   static ConnectivityStatus _classify(List<ConnectivityResult> results) {
-    final bool hasNetwork = results.any((ConnectivityResult r) =>
-        r != ConnectivityResult.none && r != ConnectivityResult.bluetooth);
+    final bool hasNetwork = results.any(
+      (ConnectivityResult r) =>
+          r != ConnectivityResult.none && r != ConnectivityResult.bluetooth,
+    );
     return hasNetwork ? ConnectivityStatus.online : ConnectivityStatus.offline;
   }
 

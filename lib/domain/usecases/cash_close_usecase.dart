@@ -19,9 +19,9 @@ class CashCloseUseCase {
     required OrderRepository orderRepository,
     required CashDrawerRepository cashDrawerRepository,
     DateTime Function() now = DateTime.now,
-  })  : _orderRepo = orderRepository,
-        _cashRepo = cashDrawerRepository,
-        _now = now;
+  }) : _orderRepo = orderRepository,
+       _cashRepo = cashDrawerRepository,
+       _now = now;
 
   final OrderRepository _orderRepo;
   final CashDrawerRepository _cashRepo;

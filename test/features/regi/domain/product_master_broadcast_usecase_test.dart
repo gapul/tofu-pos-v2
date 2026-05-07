@@ -66,8 +66,9 @@ void main() {
   });
 
   test('sends empty array when no products', () async {
-    final InMemoryProductRepository repo =
-        InMemoryProductRepository(<Product>[]);
+    final InMemoryProductRepository repo = InMemoryProductRepository(
+      <Product>[],
+    );
     final NoopTransport transport = NoopTransport();
     final ProductMasterBroadcastUseCase u = ProductMasterBroadcastUseCase(
       productRepository: repo,

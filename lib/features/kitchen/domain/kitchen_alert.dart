@@ -21,13 +21,12 @@ class KitchenAlert {
     required int orderId,
     required TicketNumber ticketNumber,
     required KitchenStatus previousStatus,
-  }) =>
-      KitchenAlert._(
-        kind: KitchenAlertKind.cancelledMidProcess,
-        orderId: orderId,
-        ticketNumber: ticketNumber,
-        previousStatus: previousStatus,
-      );
+  }) => KitchenAlert._(
+    kind: KitchenAlertKind.cancelledMidProcess,
+    orderId: orderId,
+    ticketNumber: ticketNumber,
+    previousStatus: previousStatus,
+  );
 
   final KitchenAlertKind kind;
   final int orderId;

@@ -9,7 +9,7 @@ import '../value_objects/money.dart';
 @immutable
 class CashDrawer {
   CashDrawer(Map<Denomination, int> counts)
-      : _counts = Map<Denomination, int>.unmodifiable(counts) {
+    : _counts = Map<Denomination, int>.unmodifiable(counts) {
     for (final int count in _counts.values) {
       if (count < 0) {
         throw ArgumentError('Counts must be non-negative');

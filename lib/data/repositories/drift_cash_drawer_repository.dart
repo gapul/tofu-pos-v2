@@ -22,8 +22,9 @@ class DriftCashDrawerRepository implements CashDrawerRepository {
 
   @override
   Future<CashDrawer> get() async {
-    final List<CashDrawerCountRow> rows =
-        await _db.select(_db.cashDrawerCounts).get();
+    final List<CashDrawerCountRow> rows = await _db
+        .select(_db.cashDrawerCounts)
+        .get();
     return _toEntity(rows);
   }
 
@@ -36,19 +37,20 @@ class DriftCashDrawerRepository implements CashDrawerRepository {
   Future<void> apply(Map<Denomination, int> delta) async {
     await _db.transaction(() async {
       for (final MapEntry<Denomination, int> e in delta.entries) {
-        final CashDrawerCountRow? row = await (_db
-                .select(_db.cashDrawerCounts)
-              ..where(($CashDrawerCountsTable t) =>
-                  t.denomination.equals(e.key.yen)))
-            .getSingleOrNull();
+        final CashDrawerCountRow? row =
+            await (_db.select(_db.cashDrawerCounts)..where(
+                  ($CashDrawerCountsTable t) =>
+                      t.denomination.equals(e.key.yen),
+                ))
+                .getSingleOrNull();
         final int current = row?.count ?? 0;
         final int next = current + e.value;
         if (next < 0) {
-          throw StateError(
-            'CashDrawer: ${e.key} would go negative ($next)',
-          );
+          throw StateError('CashDrawer: ${e.key} would go negative ($next)');
         }
-        await _db.into(_db.cashDrawerCounts).insertOnConflictUpdate(
+        await _db
+            .into(_db.cashDrawerCounts)
+            .insertOnConflictUpdate(
               CashDrawerCountsCompanion(
                 denomination: Value<int>(e.key.yen),
                 count: Value<int>(next),
@@ -63,7 +65,9 @@ class DriftCashDrawerRepository implements CashDrawerRepository {
     await _db.transaction(() async {
       await _db.delete(_db.cashDrawerCounts).go();
       for (final MapEntry<Denomination, int> e in drawer.counts.entries) {
-        await _db.into(_db.cashDrawerCounts).insert(
+        await _db
+            .into(_db.cashDrawerCounts)
+            .insert(
               CashDrawerCountsCompanion(
                 denomination: Value<int>(e.key.yen),
                 count: Value<int>(e.value),

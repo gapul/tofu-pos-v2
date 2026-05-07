@@ -99,9 +99,9 @@ void main() {
 
   test('rolls back cash drawer when cashManagement was on', () async {
     // ¥100 を5枚 seed しておく
-    await cashRepo.replace(CashDrawer(<Denomination, int>{
-      const Denomination(100): 5,
-    }));
+    await cashRepo.replace(
+      CashDrawer(<Denomination, int>{const Denomination(100): 5}),
+    );
 
     const FeatureFlags flags = FeatureFlags(cashManagement: true);
     final Order placed = await checkout.execute(draft: draft, flags: flags);

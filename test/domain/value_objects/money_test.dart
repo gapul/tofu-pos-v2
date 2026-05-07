@@ -15,7 +15,7 @@ void main() {
 
     test('multiplication by int', () {
       expect(const Money(100) * 3, const Money(300));
-      expect(const Money(0) * 5, Money.zero);
+      expect(Money.zero * 5, Money.zero);
     });
 
     test('comparison', () {

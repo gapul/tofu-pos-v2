@@ -1,8 +1,8 @@
+import 'dart:async';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:async';
-
 import 'package:tofu_pos/core/connectivity/connectivity_monitor.dart';
 import 'package:tofu_pos/core/connectivity/connectivity_status.dart';
 import 'package:tofu_pos/core/export/csv_export_service.dart';
@@ -114,10 +114,15 @@ void main() {
     final List<ScenarioReport> reports = await runner.runAll().toList();
 
     expect(reports, hasLength(defaultScenarios().length));
-    final List<ScenarioReport> failures =
-        reports.where((ScenarioReport r) => !r.result.passed).toList();
-    expect(failures, isEmpty,
-        reason: 'failed: ${failures.map((r) => "${r.scenario.id}: ${r.result.message}").join(", ")}');
+    final List<ScenarioReport> failures = reports
+        .where((ScenarioReport r) => !r.result.passed)
+        .toList();
+    expect(
+      failures,
+      isEmpty,
+      reason:
+          'failed: ${failures.map((r) => "${r.scenario.id}: ${r.result.message}").join(", ")}',
+    );
 
     await ctx.db.close();
   });

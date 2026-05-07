@@ -34,8 +34,9 @@ class DriftProductRepository implements ProductRepository {
 
   @override
   Future<List<Product>> findAll({bool includeDeleted = false}) async {
-    final SimpleSelectStatement<$ProductsTable, ProductRow> q =
-        _db.select(_db.products);
+    final SimpleSelectStatement<$ProductsTable, ProductRow> q = _db.select(
+      _db.products,
+    );
     if (!includeDeleted) {
       q.where(($ProductsTable t) => t.isDeleted.equals(false));
     }
@@ -45,22 +46,23 @@ class DriftProductRepository implements ProductRepository {
 
   @override
   Future<Product?> findById(String id) async {
-    final ProductRow? row = await (_db.select(_db.products)
-          ..where(($ProductsTable t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final ProductRow? row = await (_db.select(
+      _db.products,
+    )..where(($ProductsTable t) => t.id.equals(id))).getSingleOrNull();
     return row == null ? null : _toEntity(row);
   }
 
   @override
   Stream<List<Product>> watchAll({bool includeDeleted = false}) {
-    final SimpleSelectStatement<$ProductsTable, ProductRow> q =
-        _db.select(_db.products);
+    final SimpleSelectStatement<$ProductsTable, ProductRow> q = _db.select(
+      _db.products,
+    );
     if (!includeDeleted) {
       q.where(($ProductsTable t) => t.isDeleted.equals(false));
     }
     return q.watch().map(
-          (List<ProductRow> rows) => rows.map(_toEntity).toList(),
-        );
+      (List<ProductRow> rows) => rows.map(_toEntity).toList(),
+    );
   }
 
   @override
@@ -78,9 +80,9 @@ class DriftProductRepository implements ProductRepository {
   @override
   Future<void> adjustStock(String productId, int delta) async {
     await _db.transaction(() async {
-      final ProductRow? row = await (_db.select(_db.products)
-            ..where(($ProductsTable t) => t.id.equals(productId)))
-          .getSingleOrNull();
+      final ProductRow? row = await (_db.select(
+        _db.products,
+      )..where(($ProductsTable t) => t.id.equals(productId))).getSingleOrNull();
       if (row == null) {
         throw StateError('Product not found: $productId');
       }

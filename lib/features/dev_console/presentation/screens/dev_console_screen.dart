@@ -5,10 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../../providers/auto_test_providers.dart';
-import '../../domain/auto_test/scenario.dart';
-import '../../domain/auto_test/scenario_runner.dart';
-
 import '../../../../core/config/env.dart';
 import '../../../../core/error/app_exceptions.dart';
 import '../../../../core/export/csv_export_file_service.dart';
@@ -16,19 +12,22 @@ import '../../../../core/export/csv_export_service.dart';
 import '../../../../core/sync/supabase_realtime_listener.dart';
 import '../../../../core/sync/sync_service.dart';
 import '../../../../domain/entities/operation_log.dart';
-import '../../../../domain/enums/transport_mode.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/entities/order_item.dart';
 import '../../../../domain/entities/product.dart';
 import '../../../../domain/enums/order_status.dart';
+import '../../../../domain/enums/transport_mode.dart';
 import '../../../../domain/value_objects/checkout_draft.dart';
 import '../../../../domain/value_objects/feature_flags.dart';
 import '../../../../domain/value_objects/money.dart';
 import '../../../../domain/value_objects/shop_id.dart';
+import '../../../../providers/auto_test_providers.dart';
 import '../../../../providers/repository_providers.dart';
 import '../../../../providers/settings_providers.dart';
 import '../../../../providers/sync_providers.dart';
 import '../../../../providers/usecase_providers.dart';
+import '../../domain/auto_test/scenario.dart';
+import '../../domain/auto_test/scenario_runner.dart';
 
 /// 開発者用コンソール画面（Figma デザイン待ちの間の検証用）。
 ///
@@ -69,8 +68,10 @@ class _DevConsoleScreenState extends ConsumerState<DevConsoleScreen> {
                 color: Theme.of(context).colorScheme.surfaceContainerHigh,
                 child: Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Text(_lastResult!,
-                      style: const TextStyle(fontFamily: 'monospace')),
+                  child: Text(
+                    _lastResult!,
+                    style: const TextStyle(fontFamily: 'monospace'),
+                  ),
                 ),
               ),
             const SizedBox(height: 8),
@@ -112,10 +113,7 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
+      child: Text(text, style: Theme.of(context).textTheme.titleMedium),
     );
   }
 }
@@ -242,16 +240,36 @@ class _FeatureFlagsSection extends ConsumerWidget {
         error: (Object e, _) => Text('error: $e'),
         data: (FeatureFlags flags) => Column(
           children: <Widget>[
-            _flagTile(ref, '在庫管理', flags.stockManagement,
-                (bool v) => flags.copyWith(stockManagement: v)),
-            _flagTile(ref, '金種管理', flags.cashManagement,
-                (bool v) => flags.copyWith(cashManagement: v)),
-            _flagTile(ref, '顧客属性入力', flags.customerAttributes,
-                (bool v) => flags.copyWith(customerAttributes: v)),
-            _flagTile(ref, 'キッチン連携', flags.kitchenLink,
-                (bool v) => flags.copyWith(kitchenLink: v)),
-            _flagTile(ref, '呼び出し連携', flags.callingLink,
-                (bool v) => flags.copyWith(callingLink: v)),
+            _flagTile(
+              ref,
+              '在庫管理',
+              flags.stockManagement,
+              (bool v) => flags.copyWith(stockManagement: v),
+            ),
+            _flagTile(
+              ref,
+              '金種管理',
+              flags.cashManagement,
+              (bool v) => flags.copyWith(cashManagement: v),
+            ),
+            _flagTile(
+              ref,
+              '顧客属性入力',
+              flags.customerAttributes,
+              (bool v) => flags.copyWith(customerAttributes: v),
+            ),
+            _flagTile(
+              ref,
+              'キッチン連携',
+              flags.kitchenLink,
+              (bool v) => flags.copyWith(kitchenLink: v),
+            ),
+            _flagTile(
+              ref,
+              '呼び出し連携',
+              flags.callingLink,
+              (bool v) => flags.copyWith(callingLink: v),
+            ),
           ],
         ),
       ),
@@ -269,9 +287,7 @@ class _FeatureFlagsSection extends ConsumerWidget {
       value: current,
       dense: true,
       onChanged: (bool v) async {
-        await ref
-            .read(settingsRepositoryProvider)
-            .setFeatureFlags(toggle(v));
+        await ref.read(settingsRepositoryProvider).setFeatureFlags(toggle(v));
         onResult('$label: $v');
       },
     );
@@ -299,8 +315,10 @@ class _ProductsSection extends ConsumerWidget {
               if (list.isEmpty) return const Text('商品なし');
               return Column(
                 children: list
-                    .map((Product p) => Text(
-                        '・${p.name}  ${p.price}  在庫=${p.stock}'))
+                    .map(
+                      (Product p) =>
+                          Text('・${p.name}  ${p.price}  在庫=${p.stock}'),
+                    )
                     .toList(),
               );
             },
@@ -314,10 +332,10 @@ class _ProductsSection extends ConsumerWidget {
                   final repo = ref.read(productRepositoryProvider);
                   final List<({String n, int p, int s})> samples =
                       <({String n, int p, int s})>[
-                    (n: '焼きそば', p: 400, s: 50),
-                    (n: 'ジュース', p: 150, s: 100),
-                    (n: 'たい焼き', p: 200, s: 30),
-                  ];
+                        (n: '焼きそば', p: 400, s: 50),
+                        (n: 'ジュース', p: 150, s: 100),
+                        (n: 'たい焼き', p: 200, s: 30),
+                      ];
                   for (final s in samples) {
                     await repo.upsert(
                       Product(
@@ -355,8 +373,9 @@ class _CheckoutSection extends ConsumerWidget {
         children: <Widget>[
           FilledButton(
             onPressed: () async {
-              final List<Product> products =
-                  await ref.read(productRepositoryProvider).findAll();
+              final List<Product> products = await ref
+                  .read(productRepositoryProvider)
+                  .findAll();
               if (products.isEmpty) {
                 onResult('商品がないので先に「サンプル商品3件追加」を押してください');
                 return;
@@ -381,7 +400,8 @@ class _CheckoutSection extends ConsumerWidget {
                     .read(checkoutUseCaseProvider)
                     .execute(draft: draft, flags: flags);
                 onResult(
-                    '会計確定 #${order.id} 整理券=${order.ticketNumber} ${p.name} ${p.price}');
+                  '会計確定 #${order.id} 整理券=${order.ticketNumber} ${p.name} ${p.price}',
+                );
               } on TicketPoolExhaustedException catch (e) {
                 onResult('エラー: ${e.message}');
               } on InsufficientStockException catch (e) {
@@ -473,8 +493,7 @@ class _TransportModeSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<TransportMode> async =
-        ref.watch(transportModeProvider);
+    final AsyncValue<TransportMode> async = ref.watch(transportModeProvider);
     return _Section(
       title: '8. 通信モード',
       child: async.when(
@@ -520,8 +539,9 @@ class _RealtimeSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<RealtimeOrderLineEvent> events =
-        ref.watch(realtimeOrderLineEventsProvider);
+    final AsyncValue<RealtimeOrderLineEvent> events = ref.watch(
+      realtimeOrderLineEventsProvider,
+    );
     return _Section(
       title: '9. Realtime 受信（直近1件）',
       child: events.when(
@@ -531,7 +551,9 @@ class _RealtimeSection extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text('種別: ${ev.eventType.name}'),
-            Text('整理券=${ev.ticketNumber} 注文ID=${ev.localOrderId} 行=${ev.lineNo}'),
+            Text(
+              '整理券=${ev.ticketNumber} 注文ID=${ev.localOrderId} 行=${ev.lineNo}',
+            ),
             Text('${ev.productName} x${ev.quantity}'),
             Text('ステータス=${ev.orderStatus} 取消=${ev.isCancelled}'),
           ],
@@ -557,8 +579,9 @@ class _OperationLogSectionState extends ConsumerState<_OperationLogSection> {
 
   Future<void> _refresh() async {
     setState(() => _loading = true);
-    final List<OperationLog> logs =
-        await ref.read(operationLogRepositoryProvider).findRecent(limit: 50);
+    final List<OperationLog> logs = await ref
+        .read(operationLogRepositoryProvider)
+        .findRecent(limit: 50);
     if (!mounted) return;
     setState(() {
       _logs = logs;
@@ -569,8 +592,7 @@ class _OperationLogSectionState extends ConsumerState<_OperationLogSection> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => unawaited(_refresh()));
+    WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_refresh()));
   }
 
   @override
@@ -612,8 +634,7 @@ class _SyncSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<SyncWarningLevel> warning =
-        ref.watch(syncWarningProvider);
+    final AsyncValue<SyncWarningLevel> warning = ref.watch(syncWarningProvider);
     return _Section(
       title: '7. クラウド同期',
       child: Column(
@@ -642,8 +663,9 @@ class _SyncSection extends ConsumerWidget {
           FilledButton(
             onPressed: () async {
               try {
-                final SyncResult r =
-                    await ref.read(syncServiceProvider).runOnce();
+                final SyncResult r = await ref
+                    .read(syncServiceProvider)
+                    .runOnce();
                 onResult('同期 OK=${r.successCount} NG=${r.failureCount}');
               } catch (e) {
                 onResult('エラー: $e');
@@ -670,10 +692,12 @@ class _ExportSection extends ConsumerWidget {
         children: <Widget>[
           OutlinedButton(
             onPressed: () async {
-              final List<Order> orders =
-                  await ref.read(orderRepositoryProvider).findAll();
-              final ShopId? shopId =
-                  await ref.read(settingsRepositoryProvider).getShopId();
+              final List<Order> orders = await ref
+                  .read(orderRepositoryProvider)
+                  .findAll();
+              final ShopId? shopId = await ref
+                  .read(settingsRepositoryProvider)
+                  .getShopId();
               final String csv = const CsvExportService().serialize(
                 orders: orders,
                 shopId: shopId?.value ?? '(unset)',
@@ -687,10 +711,12 @@ class _ExportSection extends ConsumerWidget {
           const SizedBox(height: 4),
           FilledButton(
             onPressed: () async {
-              final List<Order> orders =
-                  await ref.read(orderRepositoryProvider).findAll();
-              final ShopId? shopId =
-                  await ref.read(settingsRepositoryProvider).getShopId();
+              final List<Order> orders = await ref
+                  .read(orderRepositoryProvider)
+                  .findAll();
+              final ShopId? shopId = await ref
+                  .read(settingsRepositoryProvider)
+                  .getShopId();
               try {
                 final String path = await CsvExportFileService().writeAndShare(
                   orders: orders,
@@ -756,10 +782,12 @@ class _AutoTestSectionState extends ConsumerState<_AutoTestSection> {
   @override
   Widget build(BuildContext context) {
     final List<TestScenario> scenarios = ref.watch(scenariosProvider);
-    final int passed =
-        _results.values.where((ScenarioResult r) => r.passed).length;
-    final int failed =
-        _results.values.where((ScenarioResult r) => !r.passed).length;
+    final int passed = _results.values
+        .where((ScenarioResult r) => r.passed)
+        .length;
+    final int failed = _results.values
+        .where((ScenarioResult r) => !r.passed)
+        .length;
 
     return _Section(
       title: '12. 自動テスト（実機検証用）',
@@ -804,12 +832,13 @@ class _AutoTestSectionState extends ConsumerState<_AutoTestSection> {
             ],
           ),
           const Divider(),
-          for (final TestScenario s in scenarios) _ScenarioRow(
-            scenario: s,
-            result: _results[s.id],
-            running: _running,
-            onRun: () => _runOne(s),
-          ),
+          for (final TestScenario s in scenarios)
+            _ScenarioRow(
+              scenario: s,
+              result: _results[s.id],
+              running: _running,
+              onRun: () => _runOne(s),
+            ),
         ],
       ),
     );
@@ -834,18 +863,18 @@ class _ScenarioRow extends StatelessWidget {
     final Color? bg = result == null
         ? null
         : result!.passed
-            ? Colors.green.withValues(alpha: 0.08)
-            : Colors.red.withValues(alpha: 0.10);
+        ? Colors.green.withValues(alpha: 0.08)
+        : Colors.red.withValues(alpha: 0.10);
     final IconData icon = result == null
         ? Icons.circle_outlined
         : result!.passed
-            ? Icons.check_circle
-            : Icons.cancel;
+        ? Icons.check_circle
+        : Icons.cancel;
     final Color iconColor = result == null
         ? Colors.grey
         : result!.passed
-            ? Colors.green
-            : Colors.red;
+        ? Colors.green
+        : Colors.red;
 
     return Container(
       decoration: BoxDecoration(
@@ -932,8 +961,10 @@ class _AboutSectionState extends State<_AboutSection> {
                   'Version: ${_info!.version}+${_info!.buildNumber}',
                   style: const TextStyle(fontFamily: 'monospace'),
                 ),
-                Text('Package: ${_info!.packageName}',
-                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                Text(
+                  'Package: ${_info!.packageName}',
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
               ],
             ),
     );

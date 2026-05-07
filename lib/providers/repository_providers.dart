@@ -28,54 +28,54 @@ final Provider<UnitOfWork> unitOfWorkProvider = Provider<UnitOfWork>(
 
 final Provider<ProductRepository> productRepositoryProvider =
     Provider<ProductRepository>(
-  (Ref<ProductRepository> ref) =>
-      DriftProductRepository(ref.watch(appDatabaseProvider)),
-);
+      (Ref<ProductRepository> ref) =>
+          DriftProductRepository(ref.watch(appDatabaseProvider)),
+    );
 
 final Provider<OrderRepository> orderRepositoryProvider =
     Provider<OrderRepository>(
-  (Ref<OrderRepository> ref) =>
-      DriftOrderRepository(ref.watch(appDatabaseProvider)),
-);
+      (Ref<OrderRepository> ref) =>
+          DriftOrderRepository(ref.watch(appDatabaseProvider)),
+    );
 
 final Provider<CashDrawerRepository> cashDrawerRepositoryProvider =
     Provider<CashDrawerRepository>(
-  (Ref<CashDrawerRepository> ref) =>
-      DriftCashDrawerRepository(ref.watch(appDatabaseProvider)),
-);
+      (Ref<CashDrawerRepository> ref) =>
+          DriftCashDrawerRepository(ref.watch(appDatabaseProvider)),
+    );
 
 final Provider<SettingsRepository> settingsRepositoryProvider =
     Provider<SettingsRepository>(
-  (Ref<SettingsRepository> ref) =>
-      SharedPrefsSettingsRepository(ref.watch(sharedPreferencesProvider)),
-);
+      (Ref<SettingsRepository> ref) =>
+          SharedPrefsSettingsRepository(ref.watch(sharedPreferencesProvider)),
+    );
 
 final Provider<TicketNumberPoolRepository> ticketNumberPoolRepositoryProvider =
     Provider<TicketNumberPoolRepository>(
-  (Ref<TicketNumberPoolRepository> ref) =>
-      SharedPrefsTicketPoolRepository(ref.watch(sharedPreferencesProvider)),
-);
+      (Ref<TicketNumberPoolRepository> ref) =>
+          SharedPrefsTicketPoolRepository(ref.watch(sharedPreferencesProvider)),
+    );
 
 final Provider<OperationLogRepository> operationLogRepositoryProvider =
     Provider<OperationLogRepository>(
-  (Ref<OperationLogRepository> ref) =>
-      DriftOperationLogRepository(ref.watch(appDatabaseProvider)),
-);
+      (Ref<OperationLogRepository> ref) =>
+          DriftOperationLogRepository(ref.watch(appDatabaseProvider)),
+    );
 
 final Provider<DailyResetRepository> dailyResetRepositoryProvider =
     Provider<DailyResetRepository>(
-  (Ref<DailyResetRepository> ref) =>
-      SharedPrefsDailyResetRepository(ref.watch(sharedPreferencesProvider)),
-);
+      (Ref<DailyResetRepository> ref) =>
+          SharedPrefsDailyResetRepository(ref.watch(sharedPreferencesProvider)),
+    );
 
 final Provider<KitchenOrderRepository> kitchenOrderRepositoryProvider =
     Provider<KitchenOrderRepository>(
-  (Ref<KitchenOrderRepository> ref) =>
-      DriftKitchenOrderRepository(ref.watch(appDatabaseProvider)),
-);
+      (Ref<KitchenOrderRepository> ref) =>
+          DriftKitchenOrderRepository(ref.watch(appDatabaseProvider)),
+    );
 
 final Provider<CallingOrderRepository> callingOrderRepositoryProvider =
     Provider<CallingOrderRepository>(
-  (Ref<CallingOrderRepository> ref) =>
-      DriftCallingOrderRepository(ref.watch(appDatabaseProvider)),
-);
+      (Ref<CallingOrderRepository> ref) =>
+          DriftCallingOrderRepository(ref.watch(appDatabaseProvider)),
+    );

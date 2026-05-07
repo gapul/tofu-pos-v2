@@ -8,10 +8,7 @@ class AppTheme {
   static ThemeData light() {
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: _seedColor,
-        brightness: Brightness.light,
-      ),
+      colorScheme: ColorScheme.fromSeed(seedColor: _seedColor),
       visualDensity: VisualDensity.adaptivePlatformDensity,
     );
   }

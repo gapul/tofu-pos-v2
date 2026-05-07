@@ -22,11 +22,11 @@ class ServedToCallRouter {
     required String shopId,
     Uuid uuid = const Uuid(),
     DateTime Function() now = DateTime.now,
-  })  : _transport = transport,
-        _settings = settingsRepository,
-        _shopId = shopId,
-        _uuid = uuid,
-        _now = now;
+  }) : _transport = transport,
+       _settings = settingsRepository,
+       _shopId = shopId,
+       _uuid = uuid,
+       _now = now;
 
   final Transport _transport;
   final SettingsRepository _settings;
