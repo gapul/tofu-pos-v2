@@ -1,0 +1,79 @@
+name: tofu_pos
+description: "Tofu POS - 学祭向けオフラインPOSシステム"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI
+  cupertino_icons: ^1.0.8
+
+  # 状態管理
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # ルーティング
+  go_router: ^14.2.7
+
+  # データクラス・JSON
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+  # ローカルDB
+  drift: ^2.20.2
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
+  # 軽量保存
+  shared_preferences: ^2.3.2
+
+  # 通信
+  dio: ^5.7.0
+  connectivity_plus: ^6.0.5
+
+  # BLE（最後の砦としての選択肢）
+  flutter_blue_plus: ^1.32.12
+
+  # ローカルLAN（オフライン副経路）
+  bonsoir: ^5.1.10
+  web_socket_channel: ^3.0.1
+  shelf: ^1.4.1
+  shelf_web_socket: ^2.0.0
+
+  # クラウド（雛形だけ用意、Supabaseプロジェクトは未設定）
+  supabase_flutter: ^2.6.0
+
+  # ユーティリティ
+  uuid: ^4.5.1
+  intl: ^0.19.0
+  csv: ^6.0.0
+  share_plus: ^10.0.2
+  audioplayers: ^6.1.0
+  logger: ^2.4.0
+  wakelock_plus: ^1.2.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # コード生成
+  build_runner: ^2.4.13
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+  drift_dev: ^2.20.3
+  riverpod_generator: ^2.4.3
+  custom_lint: ^0.7.3
+  riverpod_lint: ^2.6.3
+
+  # テスト
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
