@@ -20,6 +20,7 @@ void main() {
   late InMemoryOrderRepository orderRepo;
   late InMemoryCashDrawerRepository cashRepo;
   late InMemoryTicketPoolRepository poolRepo;
+  late InMemoryOperationLogRepository logRepo;
   late CheckoutUseCase checkout;
   late CancelOrderUseCase cancel;
 
@@ -43,6 +44,7 @@ void main() {
     orderRepo = InMemoryOrderRepository();
     cashRepo = InMemoryCashDrawerRepository();
     poolRepo = InMemoryTicketPoolRepository();
+    logRepo = InMemoryOperationLogRepository();
     checkout = CheckoutUseCase(
       unitOfWork: InMemoryUnitOfWork(),
       orderRepository: orderRepo,
@@ -57,6 +59,8 @@ void main() {
       productRepository: productRepo,
       cashDrawerRepository: cashRepo,
       ticketPoolRepository: poolRepo,
+      operationLogRepository: logRepo,
+      now: () => DateTime(2026, 5, 7, 13),
     );
   });
 
@@ -141,6 +145,39 @@ void main() {
       ),
       throwsA(isA<OrderNotCancellableException>()),
     );
+  });
+
+  test('records cancel_order operation log entry', () async {
+    final Order placed = await checkout.execute(
+      draft: draft,
+      flags: FeatureFlags.allOff,
+    );
+    await cancel.execute(
+      orderId: placed.id,
+      flags: FeatureFlags.allOff,
+      originalCashDelta: const <int, int>{},
+    );
+
+    expect(logRepo.records, hasLength(1));
+    final logEntry = logRepo.records.single;
+    expect(logEntry.kind, 'cancel_order');
+    expect(logEntry.targetId, placed.id.toString());
+    expect(logEntry.detailJson, isNotNull);
+    expect(logEntry.detailJson, contains('ticket_number'));
+    expect(logEntry.occurredAt, DateTime(2026, 5, 7, 13));
+  });
+
+  test('does not log when cancellation throws', () async {
+    expect(
+      () => cancel.execute(
+        orderId: 999,
+        flags: FeatureFlags.allOff,
+        originalCashDelta: const <int, int>{},
+      ),
+      throwsA(isA<OrderNotCancellableException>()),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    expect(logRepo.records, isEmpty);
   });
 
   test('throws when order is already cancelled', () async {

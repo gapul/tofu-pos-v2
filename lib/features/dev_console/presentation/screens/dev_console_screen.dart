@@ -5,7 +5,9 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/config/env.dart';
 import '../../../../core/error/app_exceptions.dart';
 import '../../../../core/export/csv_export_service.dart';
+import '../../../../core/sync/supabase_realtime_listener.dart';
 import '../../../../core/sync/sync_service.dart';
+import '../../../../domain/enums/transport_mode.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/entities/order_item.dart';
 import '../../../../domain/entities/product.dart';
@@ -76,6 +78,10 @@ class _DevConsoleScreenState extends ConsumerState<DevConsoleScreen> {
             _ExportSection(onResult: _show),
             const SizedBox(height: 8),
             _SyncSection(onResult: _show),
+            const SizedBox(height: 8),
+            _TransportModeSection(onResult: _show),
+            const SizedBox(height: 8),
+            const _RealtimeSection(),
             const SizedBox(height: 32),
           ],
         ),
@@ -443,6 +449,82 @@ class _OrdersSection extends ConsumerWidget {
 }
 
 // ============== Export ==============
+
+// ============== Transport Mode ==============
+
+class _TransportModeSection extends ConsumerWidget {
+  const _TransportModeSection({required this.onResult});
+  final void Function(String) onResult;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<TransportMode> async =
+        ref.watch(transportModeProvider);
+    return _Section(
+      title: '8. 通信モード',
+      child: async.when(
+        loading: () => const CircularProgressIndicator.adaptive(),
+        error: (Object e, _) => Text('error: $e'),
+        data: (TransportMode current) => Wrap(
+          spacing: 8,
+          children: <Widget>[
+            for (final TransportMode m in TransportMode.values)
+              ChoiceChip(
+                label: Text(_labelOf(m)),
+                selected: m == current,
+                onSelected: (bool sel) async {
+                  if (!sel) return;
+                  await ref
+                      .read(settingsRepositoryProvider)
+                      .setTransportMode(m);
+                  onResult('通信モード: ${_labelOf(m)}');
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _labelOf(TransportMode m) {
+    switch (m) {
+      case TransportMode.online:
+        return 'オンライン';
+      case TransportMode.localLan:
+        return 'ローカルLAN';
+      case TransportMode.bluetooth:
+        return 'BLE';
+    }
+  }
+}
+
+// ============== Realtime ==============
+
+class _RealtimeSection extends ConsumerWidget {
+  const _RealtimeSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<RealtimeOrderLineEvent> events =
+        ref.watch(realtimeOrderLineEventsProvider);
+    return _Section(
+      title: '9. Realtime 受信（直近1件）',
+      child: events.when(
+        loading: () => const Text('購読待機中...'),
+        error: (Object e, _) => Text('error: $e'),
+        data: (RealtimeOrderLineEvent ev) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text('種別: ${ev.eventType.name}'),
+            Text('整理券=${ev.ticketNumber} 注文ID=${ev.localOrderId} 行=${ev.lineNo}'),
+            Text('${ev.productName} x${ev.quantity}'),
+            Text('ステータス=${ev.orderStatus} 取消=${ev.isCancelled}'),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 // ============== Sync ==============
 

@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import '../../core/error/app_exceptions.dart';
 import '../entities/order.dart';
 import '../entities/order_item.dart';
 import '../enums/order_status.dart';
 import '../enums/sync_status.dart';
 import '../repositories/cash_drawer_repository.dart';
+import '../repositories/operation_log_repository.dart';
 import '../repositories/order_repository.dart';
 import '../repositories/product_repository.dart';
 import '../repositories/ticket_number_pool_repository.dart';
@@ -28,17 +31,23 @@ class CancelOrderUseCase {
     required ProductRepository productRepository,
     required CashDrawerRepository cashDrawerRepository,
     required TicketNumberPoolRepository ticketPoolRepository,
+    OperationLogRepository? operationLogRepository,
+    DateTime Function() now = DateTime.now,
   })  : _uow = unitOfWork,
         _orderRepo = orderRepository,
         _productRepo = productRepository,
         _cashRepo = cashDrawerRepository,
-        _poolRepo = ticketPoolRepository;
+        _poolRepo = ticketPoolRepository,
+        _logRepo = operationLogRepository,
+        _now = now;
 
   final UnitOfWork _uow;
   final OrderRepository _orderRepo;
   final ProductRepository _productRepo;
   final CashDrawerRepository _cashRepo;
   final TicketNumberPoolRepository _poolRepo;
+  final OperationLogRepository? _logRepo;
+  final DateTime Function() _now;
 
   Future<Order> execute({
     required int orderId,
@@ -77,6 +86,20 @@ class CancelOrderUseCase {
       // 4. 整理券番号を解放
       final pool = await _poolRepo.load();
       await _poolRepo.save(pool.release(order.ticketNumber));
+
+      // 5. 操作ログを記録（信用ベース監査の根拠、§6.6）
+      if (_logRepo != null) {
+        await _logRepo.record(
+          kind: 'cancel_order',
+          targetId: orderId.toString(),
+          detailJson: jsonEncode(<String, Object?>{
+            'ticket_number': order.ticketNumber.value,
+            'final_price_yen': order.finalPrice.yen,
+            'item_count': order.items.length,
+          }),
+          at: _now(),
+        );
+      }
 
       return order.copyWith(
         orderStatus: OrderStatus.cancelled,

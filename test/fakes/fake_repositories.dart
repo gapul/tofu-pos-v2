@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:tofu_pos/domain/entities/cash_drawer.dart';
+import 'package:tofu_pos/domain/entities/operation_log.dart';
 import 'package:tofu_pos/domain/entities/order.dart';
 import 'package:tofu_pos/domain/entities/product.dart';
 import 'package:tofu_pos/domain/enums/order_status.dart';
 import 'package:tofu_pos/domain/enums/sync_status.dart';
 import 'package:tofu_pos/domain/repositories/cash_drawer_repository.dart';
+import 'package:tofu_pos/domain/repositories/operation_log_repository.dart';
 import 'package:tofu_pos/domain/repositories/order_repository.dart';
 import 'package:tofu_pos/domain/repositories/product_repository.dart';
 import 'package:tofu_pos/domain/repositories/ticket_number_pool_repository.dart';
@@ -164,5 +166,34 @@ class InMemoryTicketPoolRepository implements TicketNumberPoolRepository {
   @override
   Future<void> save(TicketNumberPool pool) async {
     _pool = pool;
+  }
+}
+
+class InMemoryOperationLogRepository implements OperationLogRepository {
+  final List<OperationLog> records = <OperationLog>[];
+  int _nextId = 1;
+
+  @override
+  Future<void> record({
+    required String kind,
+    String? targetId,
+    String? detailJson,
+    DateTime? at,
+  }) async {
+    records.add(OperationLog(
+      id: _nextId++,
+      kind: kind,
+      targetId: targetId,
+      detailJson: detailJson,
+      occurredAt: at ?? DateTime.now(),
+    ));
+  }
+
+  @override
+  Future<List<OperationLog>> findRecent({int limit = 100}) async {
+    final List<OperationLog> sorted = <OperationLog>[...records]
+      ..sort((OperationLog a, OperationLog b) =>
+          b.occurredAt.compareTo(a.occurredAt));
+    return sorted.take(limit).toList();
   }
 }
