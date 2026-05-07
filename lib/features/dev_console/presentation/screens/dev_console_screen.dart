@@ -5,6 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../providers/auto_test_providers.dart';
+import '../../domain/auto_test/scenario.dart';
+import '../../domain/auto_test/scenario_runner.dart';
+
 import '../../../../core/config/env.dart';
 import '../../../../core/error/app_exceptions.dart';
 import '../../../../core/export/csv_export_file_service.dart';
@@ -89,6 +93,8 @@ class _DevConsoleScreenState extends ConsumerState<DevConsoleScreen> {
             const _RealtimeSection(),
             const SizedBox(height: 8),
             const _OperationLogSection(),
+            const SizedBox(height: 8),
+            const _AutoTestSection(),
             const SizedBox(height: 8),
             const _AboutSection(),
             const SizedBox(height: 32),
@@ -704,6 +710,194 @@ class _ExportSection extends ConsumerWidget {
 }
 
 // ============== About / Version ==============
+
+// ============== 自動テスト ==============
+
+class _AutoTestSection extends ConsumerStatefulWidget {
+  const _AutoTestSection();
+
+  @override
+  ConsumerState<_AutoTestSection> createState() => _AutoTestSectionState();
+}
+
+class _AutoTestSectionState extends ConsumerState<_AutoTestSection> {
+  final Map<String, ScenarioResult> _results = <String, ScenarioResult>{};
+  bool _running = false;
+
+  Future<void> _runAll() async {
+    setState(() {
+      _running = true;
+      _results.clear();
+    });
+    final ScenarioRunner runner = ref.read(scenarioRunnerProvider);
+    await for (final ScenarioReport r in runner.runAll()) {
+      if (!mounted) break;
+      setState(() => _results[r.scenario.id] = r.result);
+    }
+    if (mounted) {
+      setState(() => _running = false);
+    }
+  }
+
+  Future<void> _runOne(TestScenario s) async {
+    setState(() {
+      _running = true;
+      _results.remove(s.id);
+    });
+    final ScenarioRunner runner = ref.read(scenarioRunnerProvider);
+    final ScenarioReport r = await runner.runOne(s);
+    if (!mounted) return;
+    setState(() {
+      _results[r.scenario.id] = r.result;
+      _running = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<TestScenario> scenarios = ref.watch(scenariosProvider);
+    final int passed =
+        _results.values.where((ScenarioResult r) => r.passed).length;
+    final int failed =
+        _results.values.where((ScenarioResult r) => !r.passed).length;
+
+    return _Section(
+      title: '12. 自動テスト（実機検証用）',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Container(
+            padding: const EdgeInsets.all(8),
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.tertiaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '注意: 実行するとローカルDB・整理券プール・最終リセット日が'
+              '初期化されます（商品/注文/金種/ログがすべて消えます）。',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onTertiaryContainer,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          Row(
+            children: <Widget>[
+              FilledButton.icon(
+                onPressed: _running ? null : _runAll,
+                icon: const Icon(Icons.play_arrow),
+                label: const Text('全シナリオ実行'),
+              ),
+              const SizedBox(width: 16),
+              if (_results.isNotEmpty)
+                Text(
+                  '$passed / ${_results.length} pass'
+                  '${failed > 0 ? "  ($failed fail)" : ""}',
+                  style: TextStyle(
+                    color: failed > 0
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+            ],
+          ),
+          const Divider(),
+          for (final TestScenario s in scenarios) _ScenarioRow(
+            scenario: s,
+            result: _results[s.id],
+            running: _running,
+            onRun: () => _runOne(s),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScenarioRow extends StatelessWidget {
+  const _ScenarioRow({
+    required this.scenario,
+    required this.result,
+    required this.running,
+    required this.onRun,
+  });
+
+  final TestScenario scenario;
+  final ScenarioResult? result;
+  final bool running;
+  final VoidCallback onRun;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color? bg = result == null
+        ? null
+        : result!.passed
+            ? Colors.green.withValues(alpha: 0.08)
+            : Colors.red.withValues(alpha: 0.10);
+    final IconData icon = result == null
+        ? Icons.circle_outlined
+        : result!.passed
+            ? Icons.check_circle
+            : Icons.cancel;
+    final Color iconColor = result == null
+        ? Colors.grey
+        : result!.passed
+            ? Colors.green
+            : Colors.red;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      margin: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(icon, color: iconColor, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  scenario.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  scenario.description,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+                if (result != null) ...<Widget>[
+                  const SizedBox(height: 2),
+                  Text(
+                    '${result!.message}'
+                    ' (${result!.duration.inMilliseconds}ms)',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      color: result!.passed
+                          ? Colors.green.shade800
+                          : Colors.red.shade800,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh, size: 18),
+            onPressed: running ? null : onRun,
+            tooltip: 'このシナリオだけ実行',
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _AboutSection extends StatefulWidget {
   const _AboutSection();
