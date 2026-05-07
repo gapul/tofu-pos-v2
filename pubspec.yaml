@@ -39,7 +39,10 @@ dependencies:
   connectivity_plus: ^6.0.5
 
   # BLE（最後の砦としての選択肢）
+  # Central は flutter_blue_plus（Android/iOS 両対応、成熟）。
   flutter_blue_plus: ^1.32.12
+  # Peripheral は bluetooth_low_energy（iOS/Android 両対応の GATT Server）。
+  bluetooth_low_energy: ^6.0.0
 
   # ローカルLAN（オフライン副経路）
   bonsoir: ^5.1.10
