@@ -15,14 +15,9 @@ dependencies:
 
   # 状態管理
   flutter_riverpod: ^2.5.1
-  # riverpod_annotation も同上の理由で外す（手書きで Notifier を書く）
 
   # ルーティング
   go_router: ^14.2.7
-
-  # データクラス・JSON
-  freezed_annotation: ^2.4.4
-  json_annotation: ^4.9.0
 
   # ローカルDB
   drift: ^2.20.2
@@ -34,8 +29,7 @@ dependencies:
   # 軽量保存
   shared_preferences: ^2.3.2
 
-  # 通信
-  dio: ^5.7.0
+  # 接続状態の検出
   connectivity_plus: ^6.0.5
 
   # BLE（最後の砦としての選択肢）
@@ -50,37 +44,26 @@ dependencies:
   shelf: ^1.4.1
   shelf_web_socket: ^2.0.0
 
-  # クラウド（雛形だけ用意、Supabaseプロジェクトは未設定）
+  # クラウド
   supabase_flutter: ^2.6.0
 
   # ユーティリティ
   meta: ^1.15.0
   uuid: ^4.5.1
   flutter_dotenv: ^5.2.1
-  intl: ^0.19.0
   csv: ^6.0.0
   share_plus: ^10.0.2
-  audioplayers: ^6.1.0
   logger: ^2.4.0
   package_info_plus: ^8.0.2
-  wakelock_plus: ^1.2.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
   very_good_analysis: ^7.0.0
 
-  # コード生成
+  # コード生成（drift のみ）
   build_runner: ^2.4.13
-  freezed: ^2.5.7
-  json_serializable: ^6.8.0
   drift_dev: ^2.20.3
-  # riverpod_generator / custom_lint / riverpod_lint は analyzer の transitive
-  # 依存衝突で build_runner を壊すため一旦外す（手書き Notifier で進める）。
-
-  # テスト
-  mocktail: ^1.0.4
 
 flutter:
   uses-material-design: true

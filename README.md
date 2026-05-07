@@ -37,7 +37,7 @@ SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
 SUPABASE_ANON_KEY=sb_publishable_xxxxx
 ```
 
-### 3. コード生成（drift, freezed 等）
+### 3. コード生成（drift）
 
 ```bash
 dart run build_runner build --delete-conflicting-outputs
@@ -98,7 +98,7 @@ flutter test test/domain/usecases/checkout_usecase_test.dart
 flutter test --coverage
 ```
 
-現状 144 件 passing、`flutter analyze` 0 issues。
+現状 190 件 passing、`flutter analyze` 0 issues。
 
 ---
 
@@ -112,5 +112,7 @@ flutter test --coverage
 
 - [`仕様書.md`](./仕様書.md): システム仕様書（業務 + UI/UX要件）
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md): アーキテクチャ詳細
+- [`docs/MANUAL_TEST_RUNBOOK.md`](./docs/MANUAL_TEST_RUNBOOK.md): 実機テストのチェックリスト（Online / LAN / BLE / 学祭リハ）
 - [`supabase/README.md`](./supabase/README.md): Supabase セットアップ
 - [`supabase/functions/README.md`](./supabase/functions/README.md): Edge Functions
+- [`dashboard/README.md`](./dashboard/README.md): 売上可視化用 Web ダッシュボード（暫定UI / Figma 待ち）

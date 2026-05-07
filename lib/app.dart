@@ -6,6 +6,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/role_router_providers.dart';
 import 'providers/sync_providers.dart';
+import 'providers/telemetry_providers.dart';
 import 'providers/usecase_providers.dart';
 
 /// アプリ起動直後に1回だけ走る初期化。
@@ -27,6 +28,8 @@ class _StartupInitializerState extends ConsumerState<_StartupInitializer> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // 0. テレメトリの初期化（shop / device / role が確定後に有効化）
+      await ref.read(telemetryInitProvider.future);
       // 1. 営業日切替チェック → 整理券プールのリセット
       await ref.read(dailyResetUseCaseProvider).runIfNeeded();
       // 2. クラウド同期の自動起動

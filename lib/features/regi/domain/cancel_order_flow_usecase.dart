@@ -2,6 +2,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/error/app_exceptions.dart';
 import '../../../core/logging/app_logger.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../../../core/transport/transport.dart';
 import '../../../core/transport/transport_event.dart';
 import '../../../domain/entities/order.dart';
@@ -46,6 +47,13 @@ class CancelOrderFlowUseCase {
       flags: flags,
       originalCashDelta: originalCashDelta,
     );
+    Telemetry.instance.event(
+      'order.cancelled',
+      attrs: <String, Object?>{
+        'order_id': cancelled.id,
+        'ticket': cancelled.ticketNumber.value,
+      },
+    );
 
     // 2. キッチン・呼び出しいずれかがオンなら通知
     if (!flags.kitchenLink && !flags.callingLink) {
@@ -62,11 +70,22 @@ class CancelOrderFlowUseCase {
 
     try {
       await _transport.send(ev);
+      Telemetry.instance.event(
+        'transport.send.order_cancelled.ok',
+        attrs: <String, Object?>{'order_id': cancelled.id},
+      );
     } catch (e, st) {
       AppLogger.w(
         'CancelOrderFlow: cancellation notice failed for order #$orderId',
         error: e,
         stackTrace: st,
+      );
+      Telemetry.instance.error(
+        'transport.send.order_cancelled.failed',
+        message: '取消通知失敗',
+        error: e,
+        stackTrace: st,
+        attrs: <String, Object?>{'order_id': cancelled.id},
       );
       throw TransportDeliveryException('取消通知の送信に失敗しました（ローカルの取消は完了しています）: $e');
     }

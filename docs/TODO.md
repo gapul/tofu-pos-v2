@@ -15,17 +15,18 @@
 
 ---
 
-## 実機検証が必要な箇所
+## 実機検証
 
-| 領域 | 内容 |
-|---|---|
-| **BLE Central（レジ）** | flutter_blue_plus でスキャン・接続・書き込み・notify購読が実機で正しく動くか。advName ベースの shopId フィルタが実 advertisement 仕様に合うか |
-| **BLE Peripheral (iOS)** | bluetooth_low_energy 6.x の iOS 側 GATT Server が期待通り advertise / write 受信 / notify 配信できるか |
-| **BLE Peripheral (Android)** | 同上、Android 12+ permission（BLUETOOTH_CONNECT 等）の挙動 |
-| **LAN mDNS** | bonsoir でのサービス発見が実ネットワークで動くか。AP 分離されたネットワーク（一部の公共 Wi-Fi）での挙動 |
-| **WebSocket** | shelf_web_socket サーバが iOS / Android の前面アプリで安定動作するか |
-| **Supabase Realtime** | postgres_changes 購読の遅延・再接続 |
-| **Supabase Auth → RLS** | v2 で導入する際の段取り |
+手順とチェックリストは [`MANUAL_TEST_RUNBOOK.md`](./MANUAL_TEST_RUNBOOK.md) 参照。
+要検証ポイントの要約:
+
+- BLE Central（flutter_blue_plus）: スキャン・接続・write・notify、shopId ベースのフィルタ
+- BLE Peripheral（bluetooth_low_energy 6.x）: iOS / Android の GATT Server
+- Android 12+ permissions（`BLUETOOTH_CONNECT` 等）の実機ダイアログ
+- LAN mDNS（bonsoir）: 実ネットワーク／公共 Wi-Fi の AP 分離
+- WebSocket（shelf_web_socket）: iOS / Android 前面アプリの安定性
+- Supabase Realtime: postgres_changes の遅延・再接続
+- Supabase Auth → RLS: v2 導入時の段取り
 
 ---
 

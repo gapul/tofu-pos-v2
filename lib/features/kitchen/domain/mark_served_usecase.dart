@@ -2,6 +2,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/error/app_exceptions.dart';
 import '../../../core/logging/app_logger.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../../../core/transport/transport.dart';
 import '../../../core/transport/transport_event.dart';
 import '../../../domain/entities/kitchen_order.dart';
@@ -52,10 +53,24 @@ class MarkServedUseCase {
           ticketNumber: order.ticketNumber,
         ),
       );
-    } catch (e) {
+      Telemetry.instance.event(
+        'kitchen.served',
+        attrs: <String, Object?>{
+          'order_id': orderId,
+          'ticket': order.ticketNumber.value,
+        },
+      );
+    } catch (e, st) {
       // 送信失敗時はステータスを戻す（ローカルは未確定にする）
       await _repo.updateStatus(orderId, KitchenStatus.pending);
       AppLogger.w('MarkServed: send failed, reverted to pending', error: e);
+      Telemetry.instance.error(
+        'transport.send.order_served.failed',
+        message: '提供完了通知失敗',
+        error: e,
+        stackTrace: st,
+        attrs: <String, Object?>{'order_id': orderId},
+      );
       throw TransportDeliveryException('提供完了の通知に失敗しました: $e');
     }
   }

@@ -29,4 +29,8 @@ abstract interface class SettingsRepository {
   /// BLE Transport の高緊急 send タイムアウト（既定: 10秒）。
   Future<Duration> getBleSendTimeout();
   Future<void> setBleSendTimeout(Duration value);
+
+  /// 端末の安定IDを返す。未設定なら新規生成して永続化する。
+  /// テレメトリでの端末識別に用いる（個人情報ではなく不可視のランダム値）。
+  Future<String> getOrCreateDeviceId();
 }

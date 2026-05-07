@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/error/app_exceptions.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../../../core/transport/transport.dart';
 import '../../../core/transport/transport_event.dart';
 import '../../../domain/entities/order.dart';
@@ -50,6 +51,15 @@ class CheckoutFlowUseCase {
   }) async {
     // 1. ローカル保存（失敗したら例外がそのまま伝播）
     final Order saved = await _checkout.execute(draft: draft, flags: flags);
+    Telemetry.instance.event(
+      'order.created',
+      attrs: <String, Object?>{
+        'order_id': saved.id,
+        'ticket': saved.ticketNumber.value,
+        'total_yen': saved.finalPrice.yen,
+        'item_count': saved.items.length,
+      },
+    );
 
     // 2. キッチン連携オフ時は送信せず終了
     if (!flags.kitchenLink) {
@@ -59,12 +69,23 @@ class CheckoutFlowUseCase {
     // 3. 送信
     try {
       await _transport.send(_buildEvent(saved));
-    } catch (e) {
+    } catch (e, st) {
+      Telemetry.instance.error(
+        'transport.send.order_submitted.failed',
+        message: '注文送信失敗',
+        error: e,
+        stackTrace: st,
+        attrs: <String, Object?>{'order_id': saved.id},
+      );
       throw TransportDeliveryException('注文をキッチンに送信できませんでした: $e');
     }
 
     // 4. 送信成功 → ステータス更新
     await _orderRepo.updateStatus(saved.id, OrderStatus.sent);
+    Telemetry.instance.event(
+      'transport.send.order_submitted.ok',
+      attrs: <String, Object?>{'order_id': saved.id},
+    );
     return saved.copyWith(orderStatus: OrderStatus.sent);
   }
 

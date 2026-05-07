@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../domain/enums/device_role.dart';
 import '../../domain/enums/transport_mode.dart';
@@ -24,6 +25,7 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   static const String _kFlagCalling = 'flag.callingLink';
   static const String _kLanSendTimeoutMs = 'lanSendTimeoutMs';
   static const String _kBleSendTimeoutMs = 'bleSendTimeoutMs';
+  static const String _kDeviceId = 'deviceId';
 
   static const Duration _defaultLanTimeout = Duration(seconds: 5);
   static const Duration _defaultBleTimeout = Duration(seconds: 10);
@@ -128,5 +130,16 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   @override
   Future<void> setBleSendTimeout(Duration value) async {
     await _prefs.setInt(_kBleSendTimeoutMs, value.inMilliseconds);
+  }
+
+  @override
+  Future<String> getOrCreateDeviceId() async {
+    final String? existing = _prefs.getString(_kDeviceId);
+    if (existing != null && existing.isNotEmpty) {
+      return existing;
+    }
+    final String fresh = const Uuid().v4();
+    await _prefs.setString(_kDeviceId, fresh);
+    return fresh;
   }
 }

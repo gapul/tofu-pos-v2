@@ -36,16 +36,6 @@ final FutureProvider<ServedToCallRouter?> servedToCallRouterProvider =
       return router;
     });
 
-final Provider<ProductMasterBroadcastUseCase>
-productMasterBroadcastUseCaseProvider = Provider<ProductMasterBroadcastUseCase>(
-  (Ref<ProductMasterBroadcastUseCase> ref) {
-    throw UnimplementedError(
-      'productMasterBroadcastUseCaseProvider must be overridden in '
-      'productMasterBroadcastUseCaseFutureProvider after shopId is set.',
-    );
-  },
-);
-
 final FutureProvider<ProductMasterBroadcastUseCase?>
 productMasterBroadcastUseCaseFutureProvider =
     FutureProvider<ProductMasterBroadcastUseCase?>((

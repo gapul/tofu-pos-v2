@@ -1,3 +1,7 @@
+// role により kitchen 用 / calling 用で生成する characteristic が変わるため、
+// nullable のまま保持する必要がある（late final が使えない）。
+// ignore_for_file: use_late_for_private_fields_and_variables
+
 import 'dart:async';
 
 import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
@@ -26,9 +30,6 @@ class BlePeripheralService {
 
   final PeripheralManager _manager = PeripheralManager();
 
-  // role により kitchen 用 / calling 用で生成する characteristic が変わるため
-  // nullable のまま保持する（late final は使えない）。
-  // ignore_for_file: use_late_for_private_fields_and_variables
   GATTService? _service;
   GATTCharacteristic? _orderWriteChar;
   GATTCharacteristic? _productMasterWriteChar;

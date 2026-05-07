@@ -50,6 +50,8 @@ class _FakeSettings implements SettingsRepository {
   Future<Duration> getBleSendTimeout() async => const Duration(seconds: 10);
   @override
   Future<void> setBleSendTimeout(Duration value) async {}
+  @override
+  Future<String> getOrCreateDeviceId() async => 'test-device';
 }
 
 class _FakeTransport implements Transport {
