@@ -9,6 +9,7 @@
 | 0001 | `migrations/0001_initial.sql` | `order_lines` テーブル + index + anon RLS + Realtime publication |
 | 0002 | `migrations/0002_telemetry.sql` | `telemetry_events` テーブル + anon RLS |
 | 0003 | `migrations/0003_idempotency_key.sql` | `order_lines.idempotency_key` 列追加 + partial UNIQUE index（端末側の冪等送信に対応） |
+| 0004 | `migrations/0004_device_events.sql` | `device_events` テーブル（端末間シグナリング）+ anon RLS + Realtime publication。学祭1日なら自然蓄積で問題ないが、長期運用時は `inserted_at` による retention を検討。 |
 
 ### 方法 A: ダッシュボード SQL Editor（推奨・初回）
 
@@ -50,3 +51,5 @@ supabase db push
 
 1. **Database** → **Replication**
 2. `order_lines` テーブルの **Source** タブで **Enable Realtime** を ON
+3. `device_events` テーブルでも同様に **Enable Realtime** を ON
+   （`TransportMode.online` の端末間シグナリングに必須）

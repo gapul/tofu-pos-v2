@@ -51,9 +51,16 @@ flutter test
 
 ### 5. アプリ起動（実機 or シミュレータ）
 
+ローカル開発は `.env` の値を `--dart-define` 経由で渡すラッパー経由が必須:
+
 ```bash
-flutter run
+tools/run-dev.sh                       # flutter run（既定）
+tools/run-dev.sh -d <device-id>        # 端末指定
+tools/run-dev.sh build ipa --release   # IPA を作る場合も同じ
 ```
+
+**注意**: 直接 `flutter run` で起動すると `.env` の値は読み込まれず、
+Supabase 接続情報なしで起動します（dotenv の asset 同梱はセキュリティ理由で廃止済み）。
 
 起動すると **DevConsole**（仮UI）が開きます。Figma デザイン確定後に本番UIに差し替え予定。
 

@@ -16,21 +16,34 @@ class SupabaseTelemetrySink implements TelemetrySink {
     this._client, {
     Duration batchWindow = const Duration(milliseconds: 300),
     int maxBatchSize = 50,
+    int maxBufferSize = 2000,
   }) : _batchWindow = batchWindow,
-       _maxBatchSize = maxBatchSize;
+       _maxBatchSize = maxBatchSize,
+       _maxBufferSize = maxBufferSize;
 
   final SupabaseClient _client;
   final Duration _batchWindow;
   final int _maxBatchSize;
+
+  /// バッファに保持できる上限。超えると古い側から捨てる（オーバーフロー対策）。
+  /// 8 時間稼働で 1 端末数千イベント想定なので 2000 で 1 時間分弱を担保。
+  final int _maxBufferSize;
 
   static const String _table = 'telemetry_events';
 
   final List<TelemetryEvent> _buffer = <TelemetryEvent>[];
   Timer? _timer;
   Future<void>? _inflight;
+  int _droppedSinceLastFlush = 0;
 
   @override
   void enqueue(TelemetryEvent event) {
+    if (_buffer.length >= _maxBufferSize) {
+      // 古い側を捨てる。クラウド側で「最新の状況」を見たい用途なので
+      // 新しいイベントを優先する。
+      _buffer.removeAt(0);
+      _droppedSinceLastFlush++;
+    }
     _buffer.add(event);
     if (_buffer.length >= _maxBatchSize) {
       unawaited(_flushNow());
@@ -69,9 +82,27 @@ class SupabaseTelemetrySink implements TelemetrySink {
         for (final TelemetryEvent e in events) e.toRow(),
       ];
       await _client.from(_table).insert(rows);
+      if (_droppedSinceLastFlush > 0) {
+        AppLogger.w(
+          'Telemetry overflow: $_droppedSinceLastFlush events dropped to keep newest',
+        );
+        _droppedSinceLastFlush = 0;
+      }
     } catch (e, st) {
+      // 送信失敗。可能ならバッファに戻して次回再送するが、すでに新規イベントで
+      // 溢れてる可能性もあるので _maxBufferSize の範囲で再投入する。
+      final int reinsertable = _maxBufferSize - _buffer.length;
+      if (reinsertable > 0) {
+        final int take = events.length < reinsertable
+            ? events.length
+            : reinsertable;
+        _buffer.insertAll(0, events.sublist(events.length - take));
+      }
+      final int dropped = events.length - (reinsertable > 0
+          ? (events.length < reinsertable ? events.length : reinsertable)
+          : 0);
       AppLogger.w(
-        'Telemetry send failed (${events.length} events dropped)',
+        'Telemetry send failed (${events.length} events, $dropped dropped)',
         error: e,
         stackTrace: st,
       );

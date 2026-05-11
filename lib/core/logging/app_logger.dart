@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:logger/logger.dart';
 
 /// 構造化ログのレベル。
-enum AppLogLevel { debug, info, warn }
+enum AppLogLevel { debug, info, warn, error }
 
 /// アプリ全体で共有するロガー。
 ///
@@ -60,6 +60,8 @@ class AppLogger {
         _instance.i(line);
       case AppLogLevel.warn:
         _instance.w(line);
+      case AppLogLevel.error:
+        _instance.e(line);
     }
     return line;
   }

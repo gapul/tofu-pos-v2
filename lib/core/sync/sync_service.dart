@@ -58,6 +58,11 @@ class SyncService {
   DateTime? _firstFailureAt;
   bool _running = false;
 
+  /// 現在実行中の runOnce の所有トークン。
+  /// タイムアウトで強制リセットされた後、古い runOnce が完了しても
+  /// `_running` を勝手にクリアしないようにするための識別子。
+  Object? _runToken;
+
   /// オンライン復帰と周期再試行を起動する。
   void start() {
     _connSub ??= _connectivity.watch().listen((status) {
@@ -90,8 +95,12 @@ class SyncService {
           'timeout_seconds': _runOnceTimeout.inSeconds,
         },
       );
-      // 元の runOnce future はバックグラウンドで継続し、完了時に
-      // finally で _running を false に戻す。ここでは何もしない。
+      // 元の runOnce はバックグラウンドで生きているが、_runToken を
+      // 切り替えて「孤児」化することで、後続の runOnce を即時許可する。
+      // 古い runOnce の finally は token 比較に失敗して _running を
+      // 触らないので、新しい run の進行を邪魔しない。
+      _running = false;
+      _runToken = null;
     } catch (e, st) {
       AppLogger.w('Sync runOnce failed', error: e, stackTrace: st);
       Telemetry.instance.error(
@@ -119,6 +128,8 @@ class SyncService {
       return const SyncResult(successCount: 0, failureCount: 0);
     }
     _running = true;
+    final Object myToken = Object();
+    _runToken = myToken;
     try {
       if (_connectivity.current != ConnectivityStatus.online) {
         return const SyncResult(successCount: 0, failureCount: 0);
@@ -176,7 +187,12 @@ class SyncService {
       );
       return SyncResult(successCount: success, failureCount: failure);
     } finally {
-      _running = false;
+      // _runOnceGuarded のタイムアウトで token がすり替わっていたら
+      // 自分は孤児扱い。後発の runOnce の状態は触らない。
+      if (identical(_runToken, myToken)) {
+        _running = false;
+        _runToken = null;
+      }
     }
   }
 }

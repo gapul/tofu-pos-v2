@@ -93,6 +93,8 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   Future<TransportMode> getTransportMode() async {
     final String? raw = _prefs.getString(_kTransportMode);
     if (raw == null) {
+      // online mode は `device_events` テーブルが必要。
+      // `supabase/migrations/0004_device_events.sql` を本番に適用してから運用。
       return TransportMode.online;
     }
     return TransportMode.values.byName(raw);

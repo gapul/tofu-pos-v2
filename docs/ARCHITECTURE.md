@@ -76,10 +76,10 @@ Repository 実装と DataSource。
 | feature | 状態 |
 |---|---|
 | `dev_console/` | ✅ 仮UI、全機能の手動検証用 + 自動テストランナー |
-| `regi/` | ✅ domain（会計フロー / 取消フロー / 商品マスタ配信 / 自動転送ルーター）。UI は Figma 待ち |
-| `kitchen/` | ✅ domain（受信ルーター / 提供完了 / 商品マスタ取込 / アラート）。UI は Figma 待ち |
-| `calling/` | ✅ domain（受信ルーター / 呼び出し取込）。UI は Figma 待ち |
-| `settings/`, `startup/` | 空、UI は Figma 待ち |
+| `regi/` | ✅ domain + UI（顧客属性 / 商品選択 / 会計 / 締め / 履歴 / 商品マスタ）。Figma 本番デザイン適用は別フェーズ |
+| `kitchen/` | ✅ domain + UI（注文一覧 / 提供操作 / アラート）。Figma 本番デザイン適用は別フェーズ |
+| `calling/` | ✅ domain + UI（呼び出し画面）。Figma 本番デザイン適用は別フェーズ |
+| `settings/`, `startup/` | ✅ UI（設定画面 / ShopID 入力 / 役割選択）。Figma 本番デザイン適用は別フェーズ |
 
 ### `lib/providers/`
 Riverpod の DI グラフ。

@@ -31,14 +31,6 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
-      - name: Create empty .env (CI placeholder)
-        # Supabase 接続情報は CI では使わないが、pubspec の assets に
-        # .env が登録されているのでビルドのためにファイル自体は必要。
-        run: |
-          touch .env
-          echo "SUPABASE_URL=" >> .env
-          echo "SUPABASE_ANON_KEY=" >> .env
-
       - name: Run code generation
         run: dart run build_runner build --delete-conflicting-outputs
 

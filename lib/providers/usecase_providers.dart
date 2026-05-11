@@ -1,8 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/config/env.dart';
+import '../core/logging/app_logger.dart';
+import '../core/telemetry/telemetry.dart';
 import '../core/transport/ble_transport.dart';
 import '../core/transport/lan_transport.dart';
 import '../core/transport/noop_transport.dart';
+import '../core/transport/supabase_transport.dart';
 import '../core/transport/timeout_transport.dart';
 import '../core/transport/transport.dart';
 import '../data/datasources/ble/ble_central_service.dart';
@@ -69,7 +74,7 @@ final Provider<DailyResetUseCase> dailyResetUseCaseProvider =
 
 /// 端末間連携の Transport を、現在の TransportMode と DeviceRole から自動選択する。
 ///
-/// - online: NoopTransport（実通信は SyncService + SupabaseRealtimeListener が担う）
+/// - online: Supabase Realtime + `device_events` テーブル（認証情報なしは Noop に degrade）
 /// - localLan: 役割に応じて LanClient（レジ）／LanServer（キッチン・呼び出し）
 /// - bluetooth: 役割に応じて BleCentral（レジ）／BlePeripheral（キッチン・呼び出し）
 ///
@@ -112,11 +117,36 @@ Future<Transport> _buildTransport({
 }) async {
   switch (mode) {
     case TransportMode.online:
-      // オンライン経路は SyncService（送信）+ SupabaseRealtimeListener（受信）が
-      // それぞれ担うため、Transport 抽象としては Noop を返す。
-      final NoopTransport t = NoopTransport();
-      await t.connect();
-      return t;
+      if (!Env.hasSupabaseCredentials) {
+        // 認証情報なしで online を選んだ場合は Noop に degrade
+        // （業務停止より黙って動く方を選ぶ）。
+        final NoopTransport t = NoopTransport();
+        await t.connect();
+        return t;
+      }
+      try {
+        final SupabaseTransport t = SupabaseTransport(
+          client: Supabase.instance.client,
+          shopId: shopId,
+        );
+        await t.connect();
+        return t;
+        // Supabase 未初期化や Realtime チャンネル張り損ねなど、
+        // 業務継続を優先して Noop に degrade（テレメトリで可視化）。
+      } catch (e, st) {
+        AppLogger.w(
+          'usecase_providers: SupabaseTransport init failed, falling back to Noop',
+          error: e,
+          stackTrace: st,
+        );
+        Telemetry.instance.warn(
+          'transport.supabase.init.failure',
+          attrs: <String, Object?>{'shop_id': shopId, 'error': e.toString()},
+        );
+        final NoopTransport t = NoopTransport();
+        await t.connect();
+        return t;
+      }
     case TransportMode.localLan:
       if (role == DeviceRole.register) {
         final LanClient client = LanClient(shopId: shopId);

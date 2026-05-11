@@ -92,11 +92,13 @@ class DriftOrderRepository implements OrderRepository {
     final SimpleSelectStatement<$OrdersTable, OrderRow> q = _db.select(
       _db.orders,
     );
+    // 半開区間 [from, to) で扱う。
+    // 0:00:00 ちょうどの注文が前日後日両方に集計される事故を防ぐ。
     if (from != null) {
       q.where((t) => t.createdAt.isBiggerOrEqualValue(from));
     }
     if (to != null) {
-      q.where((t) => t.createdAt.isSmallerOrEqualValue(to));
+      q.where((t) => t.createdAt.isSmallerThanValue(to));
     }
     q.orderBy(<OrderClauseGenerator<$OrdersTable>>[
       ($OrdersTable t) =>
@@ -128,11 +130,13 @@ class DriftOrderRepository implements OrderRepository {
     final SimpleSelectStatement<$OrdersTable, OrderRow> q = _db.select(
       _db.orders,
     );
+    // 半開区間 [from, to) で扱う。
+    // 0:00:00 ちょうどの注文が前日後日両方に集計される事故を防ぐ。
     if (from != null) {
       q.where((t) => t.createdAt.isBiggerOrEqualValue(from));
     }
     if (to != null) {
-      q.where((t) => t.createdAt.isSmallerOrEqualValue(to));
+      q.where((t) => t.createdAt.isSmallerThanValue(to));
     }
     return q.watch().asyncMap(
       (rows) => Future.wait(rows.map(_hydrate)),

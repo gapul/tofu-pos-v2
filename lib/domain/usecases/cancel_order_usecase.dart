@@ -88,8 +88,9 @@ class CancelOrderUseCase {
       }
 
       // 4. 整理券番号を解放
-      final pool = await _poolRepo.load();
-      await _poolRepo.save(pool.release(order.ticketNumber));
+      // load + save の直書きは _synchronized を迂回し、並行する allocate と
+      // 干渉して番号重複の温床になる。release() API を直接呼んで直列化する。
+      await _poolRepo.release(order.ticketNumber);
 
       // 5. 操作ログを記録（信用ベース監査の根拠、§6.6）
       if (_logRepo != null) {

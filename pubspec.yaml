@@ -66,5 +66,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - .env
+  # 注意: .env を assets に含めると IPA/APK にバンドルされ、配布物から
+  # シークレットを読み取られる経路になる。本番ビルドは必ず --dart-define
+  # （または --dart-define-from-file=.env.json）で値を渡す。
+  # ローカル開発で .env を使いたい場合は tools/run-dev.sh 経由で起動する。
