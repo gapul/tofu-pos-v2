@@ -1,0 +1,5 @@
+# 共通テスト設定。
+# golden タグはフォントレンダリング差で OS / CI で flaky になりやすいので
+# 既定では走らせる、CI からは --exclude-tags=golden で除外する。
+tags:
+  golden:

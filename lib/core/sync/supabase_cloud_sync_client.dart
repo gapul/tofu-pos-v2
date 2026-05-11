@@ -13,17 +13,16 @@ import 'cloud_sync_client.dart';
 /// `order_lines` テーブル（仕様書 §8.2 の非正規化形式）に upsert する。
 /// 同じ (shop_id, local_order_id, line_no) は冪等に上書きされる。
 ///
-/// **冪等性キー（idempotency_key）**:
-///   各行に決定論的な UUID v5（名前空間 = [_idempotencyNamespace]、
-///   名前 = "$shopId/$orderId/$lineNo"）を付与する。
-///   ネットワーク再試行で同じ行を複数回送っても、クラウド側は
-///   `idempotency_key` の UNIQUE 制約 + INSERT ... ON CONFLICT DO NOTHING
-///   （または upsert）で安全に重複排除できる。
-///
-///   **クラウド側スキーマ要件**（このリポジトリ管理外）:
-///     - `order_lines.idempotency_key TEXT` カラムを持ち、UNIQUE 制約があること。
-///     - 書き込みは upsert (ON CONFLICT (idempotency_key) DO NOTHING/UPDATE) で
-///       受けること。
+/// **冪等性は二重に守る**:
+///   1. **主キー (shop_id, local_order_id, line_no)**:
+///      upsert の `onConflict` がこれを使う。ネット再試行で同じ行が
+///      何度送られても1行に収束する。
+///   2. **idempotency_key (補助)**:
+///      決定論的な UUID v5（名前空間 = [_idempotencyNamespace]、
+///      名前 = "$shopId/$orderId/$lineNo"）を各行に付与し、
+///      `migrations/0003_idempotency_key.sql` の partial UNIQUE index で
+///      別経路の重複（例: shop_id 切替後の同じ local_order_id 再使用）も
+///      検知できるようにしている。通常の運用では (1) で十分。
 class SupabaseCloudSyncClient implements CloudSyncClient {
   SupabaseCloudSyncClient(
     this._client, {

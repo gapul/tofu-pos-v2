@@ -48,4 +48,6 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        run: flutter test
+        # golden は macOS で生成しているため Linux CI でフォントレンダリング
+        # 差で落ちる可能性がある。CI では除外し、開発者ローカルで保つ。
+        run: flutter test --exclude-tags=golden

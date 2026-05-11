@@ -10,7 +10,7 @@ import 'package:tofu_pos/features/kitchen/presentation/screens/kitchen_screen.da
 
 /// キッチン画面の golden（仕様書 §6.2 / §9.4）。
 void main() {
-  testWidgets('KitchenScreen golden', (tester) async {
+  testWidgets('KitchenScreen golden', tags: <String>['golden'], (tester) async {
     tester.view.physicalSize = const Size(1024, 1400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);

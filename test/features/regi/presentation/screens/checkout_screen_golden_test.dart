@@ -18,7 +18,7 @@ class _StubCheckoutNotifier extends CheckoutSessionNotifier {
 }
 
 void main() {
-  testWidgets('CheckoutScreen golden', (tester) async {
+  testWidgets('CheckoutScreen golden', tags: <String>['golden'], (tester) async {
     tester.view.physicalSize = const Size(1024, 1400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
