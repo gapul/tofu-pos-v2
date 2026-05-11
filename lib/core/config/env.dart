@@ -147,12 +147,13 @@ class Env {
 
   static bool _looksLikeAnonKey(String value) {
     if (value.isEmpty) return false;
-    // JWT: 3 セグメントの base64url ドット区切り。
+    // JWT: 3 セグメントの base64url ドット区切り。全セグメントを検証。
     final List<String> parts = value.split('.');
-    if (parts.length == 3 &&
-        parts.every((s) => s.isNotEmpty) &&
-        RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(parts.first)) {
-      return true;
+    if (parts.length == 3) {
+      final RegExp base64Url = RegExp(r'^[A-Za-z0-9_-]+$');
+      if (parts.every((s) => s.isNotEmpty && base64Url.hasMatch(s))) {
+        return true;
+      }
     }
     // 新形式の Publishable Key（参考: sb_publishable_xxx）。
     if (value.startsWith('sb_publishable_') && value.length > 'sb_publishable_'.length) {

@@ -10,13 +10,13 @@ import '../theme/tokens.dart';
 /// 仕組み:
 ///   * 初回構築時に [ErrorWidget.builder] を1回だけ上書きし、
 ///     アプリ全体のデフォルトエラー画面を [_ErrorFallback] に差し替える。
-///   * ボックスを別の Element 木で隔離し、子の例外で親が壊れないようにする
-///     （Flutter は子の build 例外を `ErrorWidget.builder` に流すので、
-///     子 subtree が `_ErrorFallback` に置換されるだけで親は生き残る）。
-///   * Telemetry は `main.dart` で `FlutterError.onError` を既に拾っており、
-///     そこで送信されるためここでは追加で送らない（重複防止）。
-///     ただし `label` を `FlutterErrorDetails.context` 相当に残したい場合は
-///     構造化ログ側で対応する。
+///   * 子 subtree が `_ErrorFallback` に置換されるだけで親は生き残る
+///     （Flutter は子の build 例外を `ErrorWidget.builder` に流す）。
+///   * Telemetry は `main.dart` の `FlutterError.onError` がフレームワーク全体の
+///     例外を `flutter.error` として既に送っている。本クラスは追加で
+///     `ui.error_boundary` を送り、`label`（route 識別子）と
+///     AppException の `kind` を attrs に付けて UI 層由来として分類できるようにする。
+///     生エラー自体は `flutter.error` 側にも残るので、二重に見えるが目的が違う。
 ///
 /// セットアップ画面など「失敗を握りつぶしたくない」画面では使わない。
 class ErrorBoundary extends StatefulWidget {
@@ -35,15 +35,21 @@ class ErrorBoundary extends StatefulWidget {
   @visibleForTesting
   static void debugReset() {
     _installed = false;
+    _currentLabel = null;
   }
 
   static bool _installed = false;
+
+  /// 現在マウント中の ErrorBoundary が宣言した label。
+  /// `ErrorWidget.builder` は BuildContext を取らないため、
+  /// アクティブな boundary の label を静的に共有する。
+  /// ルートは同時に 1 つしか active にならない前提（兄弟ではない）。
+  static String? _currentLabel;
 
   static void _ensureInstalled() {
     if (_installed) return;
     _installed = true;
     ErrorWidget.builder = (details) {
-      // 例外が AppException の場合は kind を attrs に流す。
       final Object error = details.exception;
       Telemetry.instance.error(
         'ui.error_boundary',
@@ -52,6 +58,7 @@ class ErrorBoundary extends StatefulWidget {
         stackTrace: details.stack,
         attrs: <String, Object?>{
           if (error is AppException) 'kind': error.kind,
+          if (_currentLabel != null) 'label': _currentLabel,
         },
       );
       return _ErrorFallback(error: error);
@@ -69,6 +76,17 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
   void initState() {
     super.initState();
     ErrorBoundary._ensureInstalled();
+    if (widget.label != null) {
+      ErrorBoundary._currentLabel = widget.label;
+    }
+  }
+
+  @override
+  void dispose() {
+    if (ErrorBoundary._currentLabel == widget.label) {
+      ErrorBoundary._currentLabel = null;
+    }
+    super.dispose();
   }
 
   void _retry() {

@@ -19,7 +19,11 @@ final Provider<TelemetrySink> telemetrySinkProvider = Provider<TelemetrySink>((
   if (!Env.hasSupabaseCredentials) {
     return const NoopTelemetrySink();
   }
-  return RedactingTelemetrySink(SupabaseTelemetrySink(Supabase.instance.client));
+  final SupabaseTelemetrySink inner = SupabaseTelemetrySink(
+    Supabase.instance.client,
+  );
+  ref.onDispose(inner.close);
+  return RedactingTelemetrySink(inner);
 });
 
 /// アプリ起動時に1回だけ実行する初期化。Telemetry のグローバル状態に

@@ -202,6 +202,25 @@ void main() {
     // ここで例外が外に漏れていなければタイムアウトガードが効いている。
     expect(true, isTrue);
   });
+
+  test('stop() cancels retry timer and connectivity subscription', () async {
+    final _RecordingClient quietClient = _RecordingClient();
+    final SyncService svc = SyncService(
+      orderRepository: orderRepo,
+      settingsRepository: _FakeSettings(ShopId('shop_a')),
+      connectivityMonitor: monitor,
+      client: quietClient,
+      retryInterval: const Duration(milliseconds: 10),
+    );
+    svc.start();
+    // Allow at least one periodic tick to fire.
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    await svc.stop();
+    final int before = quietClient.pushed.length;
+    // After stop, no further pushes should happen even if timer would have fired.
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    expect(quietClient.pushed.length, before);
+  });
 }
 
 class _HangingClient implements CloudSyncClient {

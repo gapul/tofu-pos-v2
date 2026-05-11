@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../domain/value_objects/ticket_number.dart';
+import '../telemetry/telemetry.dart';
 
 /// Supabase Realtime で `order_lines` テーブルの変更を購読する受信側サービス。
 ///
@@ -63,10 +64,18 @@ class SupabaseRealtimeListener {
     final RealtimeOrderLineEvent? ev = parsePayload(payload);
     if (ev != null) {
       _events.add(ev);
+    } else {
+      Telemetry.instance.warn(
+        'realtime.parse.failure',
+        attrs: <String, Object?>{'event_type': payload.eventType.name},
+      );
     }
   }
 
   /// 純粋関数化したペイロード変換（テスト用に切り出し）。
+  ///
+  /// 不正なペイロード（空 row / 必須フィールド欠落 / 型不一致など）は
+  /// 例外を投げず null を返す。`_handlePayload` が Telemetry に流して drop する。
   static RealtimeOrderLineEvent? parsePayload(PostgresChangePayload payload) {
     final Map<String, dynamic> row =
         payload.eventType == PostgresChangeEvent.delete
@@ -75,17 +84,31 @@ class SupabaseRealtimeListener {
     if (row.isEmpty) {
       return null;
     }
-    return RealtimeOrderLineEvent(
-      eventType: payload.eventType,
-      shopId: row['shop_id'] as String? ?? '',
-      localOrderId: (row['local_order_id'] as num?)?.toInt() ?? 0,
-      lineNo: (row['line_no'] as num?)?.toInt() ?? 0,
-      ticketNumber: TicketNumber((row['ticket_number'] as num?)?.toInt() ?? 1),
-      productName: row['product_name'] as String? ?? '',
-      quantity: (row['quantity'] as num?)?.toInt() ?? 0,
-      isCancelled: row['is_cancelled'] as bool? ?? false,
-      orderStatus: row['order_status'] as String? ?? '',
-    );
+    // 必須: shop_id / local_order_id。これらが欠けたら不正ペイロードとして drop。
+    final String? shopId = row['shop_id'] as String?;
+    final num? localOrderId = row['local_order_id'] as num?;
+    if (shopId == null || shopId.isEmpty || localOrderId == null) {
+      return null;
+    }
+    try {
+      return RealtimeOrderLineEvent(
+        eventType: payload.eventType,
+        shopId: shopId,
+        localOrderId: localOrderId.toInt(),
+        lineNo: (row['line_no'] as num?)?.toInt() ?? 0,
+        ticketNumber: TicketNumber(
+          (row['ticket_number'] as num?)?.toInt() ?? 1,
+        ),
+        productName: row['product_name'] as String? ?? '',
+        quantity: (row['quantity'] as num?)?.toInt() ?? 0,
+        isCancelled: row['is_cancelled'] as bool? ?? false,
+        orderStatus: row['order_status'] as String? ?? '',
+      );
+      // 信頼境界では業務継続のため、型不一致 (TypeError) も握り潰して drop する。
+      // ignore: avoid_catching_errors
+    } on TypeError {
+      return null;
+    }
   }
 }
 

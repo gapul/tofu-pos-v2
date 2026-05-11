@@ -4,6 +4,7 @@ import 'package:bonsoir/bonsoir.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../../core/logging/app_logger.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../../../core/transport/transport_event.dart';
 import 'lan_protocol.dart';
 
@@ -103,16 +104,25 @@ class LanClient {
       ch.stream.listen(
         (message) {
           if (message is! String) {
+            Telemetry.instance.warn(
+              'lan.parse.failure',
+              attrs: <String, Object?>{'reason': 'non_string_frame'},
+            );
             return;
           }
-          try {
-            final TransportEvent ev = LanProtocol.decode(message);
-            if (ev.shopId != shopId) {
-              return;
-            }
-            _events.add(ev);
-          } catch (e, st) {
-            AppLogger.w('LanClient: decode failed', error: e, stackTrace: st);
+          final LanDecodeResult result = LanProtocol.tryDecode(message);
+          switch (result) {
+            case LanDecodeOk(:final TransportEvent event):
+              if (event.shopId != shopId) {
+                return;
+              }
+              _events.add(event);
+            case LanDecodeFailure(:final String reason):
+              AppLogger.w('LanClient: decode failed ($reason)');
+              Telemetry.instance.warn(
+                'lan.parse.failure',
+                attrs: <String, Object?>{'reason': reason},
+              );
           }
         },
         onDone: () {

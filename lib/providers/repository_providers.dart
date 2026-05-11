@@ -45,10 +45,12 @@ final Provider<CashDrawerRepository> cashDrawerRepositoryProvider =
     );
 
 final Provider<SettingsRepository> settingsRepositoryProvider =
-    Provider<SettingsRepository>(
-      (ref) =>
-          SharedPrefsSettingsRepository(ref.watch(sharedPreferencesProvider)),
-    );
+    Provider<SettingsRepository>((ref) {
+      final SharedPrefsSettingsRepository repo =
+          SharedPrefsSettingsRepository(ref.watch(sharedPreferencesProvider));
+      ref.onDispose(repo.dispose);
+      return repo;
+    });
 
 final Provider<TicketNumberPoolRepository> ticketNumberPoolRepositoryProvider =
     Provider<TicketNumberPoolRepository>(

@@ -19,6 +19,7 @@ import 'package:tofu_pos/domain/repositories/product_repository.dart';
 import 'package:tofu_pos/domain/repositories/ticket_number_pool_repository.dart';
 import 'package:tofu_pos/domain/repositories/unit_of_work.dart';
 import 'package:tofu_pos/domain/value_objects/denomination.dart';
+import 'package:tofu_pos/domain/value_objects/ticket_number.dart';
 import 'package:tofu_pos/domain/value_objects/ticket_number_pool.dart';
 
 /// テスト用 InMemory の UnitOfWork。
@@ -189,6 +190,7 @@ class InMemoryTicketPoolRepository implements TicketNumberPoolRepository {
     : _pool = initial ?? TicketNumberPool.empty();
 
   TicketNumberPool _pool;
+  Future<void> _lock = Future<void>.value();
 
   @override
   Future<TicketNumberPool> load() async => _pool;
@@ -196,6 +198,36 @@ class InMemoryTicketPoolRepository implements TicketNumberPoolRepository {
   @override
   Future<void> save(TicketNumberPool pool) async {
     _pool = pool;
+  }
+
+  Future<T> _synchronized<T>(Future<T> Function() body) {
+    final Completer<T> result = Completer<T>();
+    final Future<void> previous = _lock;
+    _lock = previous.then((_) async {
+      try {
+        result.complete(await body());
+      } catch (e, st) {
+        result.completeError(e, st);
+      }
+    });
+    return result.future;
+  }
+
+  @override
+  Future<TicketNumber> allocate() {
+    return _synchronized<TicketNumber>(() async {
+      final ({TicketNumberPool pool, TicketNumber number}) issued = _pool
+          .issue();
+      _pool = issued.pool;
+      return issued.number;
+    });
+  }
+
+  @override
+  Future<void> release(TicketNumber number) {
+    return _synchronized<void>(() async {
+      _pool = _pool.release(number);
+    });
   }
 }
 

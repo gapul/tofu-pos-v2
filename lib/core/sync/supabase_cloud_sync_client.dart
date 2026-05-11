@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/order.dart';
 import '../../domain/entities/order_item.dart';
@@ -11,6 +12,18 @@ import 'cloud_sync_client.dart';
 ///
 /// `order_lines` テーブル（仕様書 §8.2 の非正規化形式）に upsert する。
 /// 同じ (shop_id, local_order_id, line_no) は冪等に上書きされる。
+///
+/// **冪等性キー（idempotency_key）**:
+///   各行に決定論的な UUID v5（名前空間 = [_idempotencyNamespace]、
+///   名前 = "$shopId/$orderId/$lineNo"）を付与する。
+///   ネットワーク再試行で同じ行を複数回送っても、クラウド側は
+///   `idempotency_key` の UNIQUE 制約 + INSERT ... ON CONFLICT DO NOTHING
+///   （または upsert）で安全に重複排除できる。
+///
+///   **クラウド側スキーマ要件**（このリポジトリ管理外）:
+///     - `order_lines.idempotency_key TEXT` カラムを持ち、UNIQUE 制約があること。
+///     - 書き込みは upsert (ON CONFLICT (idempotency_key) DO NOTHING/UPDATE) で
+///       受けること。
 class SupabaseCloudSyncClient implements CloudSyncClient {
   SupabaseCloudSyncClient(
     this._client, {
@@ -23,6 +36,25 @@ class SupabaseCloudSyncClient implements CloudSyncClient {
   final RetryPolicy _retry;
 
   static const String _table = 'order_lines';
+
+  /// idempotency_key 生成用の名前空間 UUID（固定値）。
+  /// 値そのものは任意だが、絶対に書き換えないこと（再試行の冪等性が壊れる）。
+  static const String _idempotencyNamespace =
+      'f6c8b8a2-2a8f-4d2a-9e3a-91f0a3c0d1e7';
+
+  static const Uuid _uuid = Uuid();
+
+  /// (shopId, orderId, lineNo) から決定論的に idempotency_key を生成する。
+  ///
+  /// 同じ入力に対して常に同じ UUID を返す（UUID v5 / SHA-1 ベース）。
+  static String buildIdempotencyKey({
+    required String shopId,
+    required int orderId,
+    required int lineNo,
+  }) {
+    final String name = '$shopId/$orderId/$lineNo';
+    return _uuid.v5(_idempotencyNamespace, name);
+  }
 
   /// Order を「1明細 = 1行」の形式に展開する（純粋関数、テスト容易）。
   static List<Map<String, Object?>> buildRows(
@@ -40,10 +72,16 @@ class SupabaseCloudSyncClient implements CloudSyncClient {
           ? 0
           : (discountAmount.yen * item.subtotal.yen / totalPrice.yen).round();
 
+      final int lineNo = i + 1;
       rows.add(<String, Object?>{
         'shop_id': shopId,
         'local_order_id': order.id,
-        'line_no': i + 1,
+        'line_no': lineNo,
+        'idempotency_key': buildIdempotencyKey(
+          shopId: shopId,
+          orderId: order.id,
+          lineNo: lineNo,
+        ),
         'ticket_number': order.ticketNumber.value,
         // 顧客属性は **粗いバケット enum 名**（例 'twenties', 'female'）として送る。
         // 細粒度化や生年齢への変更は ADR-0005 の再レビュー対象。

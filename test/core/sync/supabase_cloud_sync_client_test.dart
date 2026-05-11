@@ -123,6 +123,65 @@ void main() {
       expect(iso.endsWith('Z'), isTrue);
     });
 
+    test('idempotency_key is present on every row', () {
+      final List<Map<String, Object?>> rows = SupabaseCloudSyncClient.buildRows(
+        _makeOrder(),
+        shopId: 'shop_a',
+      );
+      for (final Map<String, Object?> r in rows) {
+        expect(r['idempotency_key'], isA<String>());
+        expect((r['idempotency_key']! as String).length, 36);
+      }
+    });
+
+    test('idempotency_key is deterministic for same input', () {
+      final List<Map<String, Object?>> a = SupabaseCloudSyncClient.buildRows(
+        _makeOrder(),
+        shopId: 'shop_a',
+      );
+      final List<Map<String, Object?>> b = SupabaseCloudSyncClient.buildRows(
+        _makeOrder(),
+        shopId: 'shop_a',
+      );
+      expect(a[0]['idempotency_key'], b[0]['idempotency_key']);
+      expect(a[1]['idempotency_key'], b[1]['idempotency_key']);
+    });
+
+    test('idempotency_key differs across lines', () {
+      final List<Map<String, Object?>> rows = SupabaseCloudSyncClient.buildRows(
+        _makeOrder(),
+        shopId: 'shop_a',
+      );
+      expect(rows[0]['idempotency_key'], isNot(rows[1]['idempotency_key']));
+    });
+
+    test('idempotency_key differs across shops', () {
+      final List<Map<String, Object?>> a = SupabaseCloudSyncClient.buildRows(
+        _makeOrder(),
+        shopId: 'shop_a',
+      );
+      final List<Map<String, Object?>> b = SupabaseCloudSyncClient.buildRows(
+        _makeOrder(),
+        shopId: 'shop_b',
+      );
+      expect(a[0]['idempotency_key'], isNot(b[0]['idempotency_key']));
+    });
+
+    test('buildIdempotencyKey is pure and deterministic', () {
+      final String k1 = SupabaseCloudSyncClient.buildIdempotencyKey(
+        shopId: 'shop_a',
+        orderId: 42,
+        lineNo: 1,
+      );
+      final String k2 = SupabaseCloudSyncClient.buildIdempotencyKey(
+        shopId: 'shop_a',
+        orderId: 42,
+        lineNo: 1,
+      );
+      expect(k1, k2);
+      expect(k1, hasLength(36));
+    });
+
     test('zero-total order produces zero discount per item', () {
       final Order order = Order(
         id: 1,

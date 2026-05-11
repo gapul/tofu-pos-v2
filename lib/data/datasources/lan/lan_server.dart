@@ -8,6 +8,7 @@ import 'package:shelf_web_socket/shelf_web_socket.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../../core/logging/app_logger.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../../../core/transport/transport_event.dart';
 import 'lan_protocol.dart';
 
@@ -106,23 +107,32 @@ class LanServer {
     channel.stream.listen(
       (message) {
         if (message is! String) {
+          Telemetry.instance.warn(
+            'lan.parse.failure',
+            attrs: <String, Object?>{'reason': 'non_string_frame'},
+          );
           return;
         }
-        try {
-          final TransportEvent ev = LanProtocol.decode(message);
-          if (ev.shopId != shopId) {
-            AppLogger.w(
-              'LanServer: ignored event for foreign shopId ${ev.shopId}',
+        final LanDecodeResult result = LanProtocol.tryDecode(message);
+        switch (result) {
+          case LanDecodeOk(:final TransportEvent event):
+            if (event.shopId != shopId) {
+              AppLogger.w(
+                'LanServer: ignored event for foreign shopId ${event.shopId}',
+              );
+              Telemetry.instance.event(
+                'lan.parse.foreign_shop',
+                attrs: <String, Object?>{'foreign_shop': event.shopId},
+              );
+              return;
+            }
+            _events.add(event);
+          case LanDecodeFailure(:final String reason):
+            AppLogger.w('LanServer: failed to decode message ($reason)');
+            Telemetry.instance.warn(
+              'lan.parse.failure',
+              attrs: <String, Object?>{'reason': reason},
             );
-            return;
-          }
-          _events.add(ev);
-        } catch (e, st) {
-          AppLogger.w(
-            'LanServer: failed to decode message',
-            error: e,
-            stackTrace: st,
-          );
         }
       },
       onDone: () {

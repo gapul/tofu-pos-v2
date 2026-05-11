@@ -77,4 +77,12 @@ class SupabaseTelemetrySink implements TelemetrySink {
       );
     }
   }
+
+  /// 残バッファを送信して内部 Timer を停止する。
+  /// 8時間以上連続稼働を想定するためアプリ終了時に必ず呼ぶこと。
+  Future<void> close() async {
+    _timer?.cancel();
+    _timer = null;
+    await flush();
+  }
 }

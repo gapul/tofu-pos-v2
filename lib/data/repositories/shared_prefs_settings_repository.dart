@@ -142,4 +142,12 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
     await _prefs.setString(_kDeviceId, fresh);
     return fresh;
   }
+
+  /// プロセス終了 / ProviderContainer 破棄時に呼ぶ。
+  /// テストで多数の container を作る場合のリーク防止用途が主。
+  /// 本番では App 単一インスタンスなので影響は軽微。
+  Future<void> dispose() async {
+    await _flagsController.close();
+    await _modeController.close();
+  }
 }

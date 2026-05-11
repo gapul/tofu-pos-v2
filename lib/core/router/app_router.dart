@@ -195,19 +195,31 @@ class _MissingSetupView extends StatelessWidget {
   }
 }
 
-class _MissingOrderRedirect extends StatelessWidget {
+class _MissingOrderRedirect extends StatefulWidget {
   const _MissingOrderRedirect();
 
   @override
-  Widget build(BuildContext context) {
+  State<_MissingOrderRedirect> createState() => _MissingOrderRedirectState();
+}
+
+class _MissingOrderRedirectState extends State<_MissingOrderRedirect> {
+  bool _redirected = false;
+
+  @override
+  void initState() {
+    super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_redirected || !mounted) return;
+      _redirected = true;
       GoRouter.of(context).go('/');
     });
-    return const Scaffold(
-      backgroundColor: TofuTokens.bgCanvas,
-      body: Center(child: CircularProgressIndicator()),
-    );
   }
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(
+    backgroundColor: TofuTokens.bgCanvas,
+    body: Center(child: CircularProgressIndicator()),
+  );
 }
 
 /// SetupState の変化を GoRouter の refreshListenable に流す ChangeNotifier。
