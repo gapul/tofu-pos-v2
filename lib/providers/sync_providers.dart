@@ -43,11 +43,14 @@ supabaseRealtimeListenerProvider = FutureProvider<SupabaseRealtimeListener?>((
   return listener;
 });
 
-/// 受信した Realtime イベントを Stream で公開。
-final StreamProvider<RealtimeOrderLineEvent> realtimeOrderLineEventsProvider =
-    StreamProvider<RealtimeOrderLineEvent>((
-      ref,
-    ) async* {
+/// Realtime の **生イベント Stream** を公開する Provider。
+///
+/// 仕様書 §8.2 / 監査メモ: ここは「Stream を出すだけ」に純化している。
+/// フィルタや変換は本 Provider では行わず、別の Provider で合成すること。
+/// 例: 整理券一致だけを取りたいなら、本 Provider を watch する派生 Provider を作る。
+final StreamProvider<RealtimeOrderLineEvent>
+rawRealtimeOrderLineEventsProvider =
+    StreamProvider<RealtimeOrderLineEvent>((ref) async* {
       final SupabaseRealtimeListener? listener = await ref.watch(
         supabaseRealtimeListenerProvider.future,
       );
@@ -56,6 +59,13 @@ final StreamProvider<RealtimeOrderLineEvent> realtimeOrderLineEventsProvider =
       }
       yield* listener.events();
     });
+
+/// 旧 API 互換: `realtimeOrderLineEventsProvider` は生イベント Provider と同義。
+///
+/// 既存の参照（DevConsole 等）を壊さないために残しているエイリアス。
+/// 新規コードからは [rawRealtimeOrderLineEventsProvider] を直接参照してよい。
+final StreamProvider<RealtimeOrderLineEvent> realtimeOrderLineEventsProvider =
+    rawRealtimeOrderLineEventsProvider;
 
 /// SyncService: ライフサイクル付き Provider。
 /// `ref.read(syncServiceProvider).start()` を起動時に1回呼ぶ。

@@ -45,7 +45,7 @@ class _KitchenScreenState extends ConsumerState<KitchenScreen>
         (prev, next) {
           final KitchenAlert? alert = next.value;
           if (alert != null && alert != _activeAlert) {
-            HapticFeedback.heavyImpact();
+            unawaited(HapticFeedback.heavyImpact());
             setState(() => _activeAlert = alert);
           }
         },

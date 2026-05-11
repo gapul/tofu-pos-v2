@@ -85,7 +85,7 @@ class _ProductSelectScreenState extends ConsumerState<ProductSelectScreen> {
                       stockEnabled: flags.stockManagement,
                       recentlyChangedId: _recentlyChangedId,
                       onAdd: (p) {
-                        HapticFeedback.selectionClick();
+                        unawaited(HapticFeedback.selectionClick());
                         notifier.addProduct(
                           p,
                           maxStock: flags.stockManagement ? p.stock : null,
@@ -100,7 +100,7 @@ class _ProductSelectScreenState extends ConsumerState<ProductSelectScreen> {
                       stockEnabled: flags.stockManagement,
                       recentlyChangedId: _recentlyChangedId,
                       onAdd: (p) {
-                        HapticFeedback.selectionClick();
+                        unawaited(HapticFeedback.selectionClick());
                         notifier.addProduct(
                           p,
                           maxStock: flags.stockManagement ? p.stock : null,
@@ -182,7 +182,7 @@ class _PortraitBody extends StatelessWidget {
   final ValueChanged<Product> onAdd;
 
   void _showCartSheet(BuildContext context) {
-    showModalBottomSheet<void>(
+    unawaited(showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -206,12 +206,12 @@ class _PortraitBody extends StatelessWidget {
             recentlyChangedId: recentlyChangedId,
             onCheckout: () {
               Navigator.of(c2).pop();
-              context.push('/regi/checkout');
+              unawaited(context.push('/regi/checkout'));
             },
           ),
         ),
       ),
-    );
+    ));
   }
 
   @override

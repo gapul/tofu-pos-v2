@@ -41,7 +41,7 @@ class ProductMasterAutoBroadcaster {
       _scheduleDebounced();
     });
     _periodicTimer = Timer.periodic(_periodicInterval, (_) {
-      _trigger('periodic');
+      unawaited(_trigger('periodic'));
     });
     _started = true;
     AppLogger.i('ProductMasterAutoBroadcaster started');

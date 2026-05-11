@@ -15,8 +15,6 @@ class SupabaseCloudSyncClient implements CloudSyncClient {
   SupabaseCloudSyncClient(
     this._client, {
     RetryPolicy retryPolicy = const RetryPolicy(
-      maxAttempts: 3,
-      initialDelay: Duration(milliseconds: 200),
       maxDelay: Duration(seconds: 2),
     ),
   }) : _retry = retryPolicy;
@@ -47,6 +45,9 @@ class SupabaseCloudSyncClient implements CloudSyncClient {
         'local_order_id': order.id,
         'line_no': i + 1,
         'ticket_number': order.ticketNumber.value,
+        // 顧客属性は **粗いバケット enum 名**（例 'twenties', 'female'）として送る。
+        // 細粒度化や生年齢への変更は ADR-0005 の再レビュー対象。
+        // 詳細: docs/adr/0005-customer-enums-sent-to-cloud.md
         'customer_age': order.customerAttributes.age?.name,
         'customer_gender': order.customerAttributes.gender?.name,
         'customer_group': order.customerAttributes.group?.name,

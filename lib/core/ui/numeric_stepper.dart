@@ -54,7 +54,7 @@ class _NumericStepperState extends State<NumericStepper> {
     if (next == widget.value) {
       return;
     }
-    HapticFeedback.selectionClick();
+    unawaited(HapticFeedback.selectionClick());
     widget.onChanged(next);
   }
 

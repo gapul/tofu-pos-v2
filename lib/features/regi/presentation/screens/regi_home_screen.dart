@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -137,9 +139,9 @@ class _StartButton extends StatelessWidget {
       onPressed: () {
         ref.read(checkoutSessionProvider.notifier).reset();
         if (flags.customerAttributes) {
-          context.push('/regi/customer');
+          unawaited(context.push('/regi/customer'));
         } else {
-          context.push('/regi/products');
+          unawaited(context.push('/regi/products'));
         }
       },
     );

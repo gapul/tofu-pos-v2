@@ -161,7 +161,7 @@ class _SetupSectionState extends ConsumerState<_SetupSection> {
   @override
   void initState() {
     super.initState();
-    _refresh();
+    unawaited(_refresh());
   }
 
   Future<void> _refresh() async {
@@ -941,10 +941,12 @@ class _AboutSectionState extends State<_AboutSection> {
   @override
   void initState() {
     super.initState();
-    PackageInfo.fromPlatform().then((i) {
-      if (!mounted) return;
-      setState(() => _info = i);
-    });
+    unawaited(
+      PackageInfo.fromPlatform().then((i) {
+        if (!mounted) return;
+        setState(() => _info = i);
+      }),
+    );
   }
 
   @override

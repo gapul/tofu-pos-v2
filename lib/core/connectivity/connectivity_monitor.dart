@@ -19,7 +19,7 @@ class ConnectivityPlusMonitor implements ConnectivityMonitor {
     : _connectivity = connectivity ?? Connectivity() {
     _sub = _connectivity.onConnectivityChanged.listen(_onChanged);
     // 初期値を取得
-    _connectivity.checkConnectivity().then(_onChanged);
+    unawaited(_connectivity.checkConnectivity().then(_onChanged));
   }
 
   final Connectivity _connectivity;
