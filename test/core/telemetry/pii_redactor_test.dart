@@ -98,6 +98,29 @@ void main() {
       final out = redactor.redact(const <String, Object?>{});
       expect(out, isEmpty);
     });
+
+    test('error / stack 文字列の中の email を *** にマスクする', () {
+      final out = redactor.redact(<String, Object?>{
+        'error': 'Failed to send to alice@example.com',
+      });
+      expect(out['error'], 'Failed to send to ***@***');
+    });
+
+    test('error / stack 文字列の中の電話番号を *** にマスクする', () {
+      final out = redactor.redact(<String, Object?>{
+        'error': 'Could not call 090-1234-5678',
+        'stack': 'at 03-0000-0000 in handler',
+      });
+      expect(out['error'], 'Could not call ***-****-****');
+      expect(out['stack'], 'at ***-****-**** in handler');
+    });
+
+    test('error 文字列の中のハイフンなし電話番号もマスクされる', () {
+      final out = redactor.redact(<String, Object?>{
+        'error': 'phone=09012345678 failed',
+      });
+      expect(out['error'], 'phone=***-****-**** failed');
+    });
   });
 
   group('PiiRedactor.redactEvent', () {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../core/error/app_exceptions.dart';
+import '../../core/logging/app_logger.dart';
 import '../entities/order.dart';
 import '../entities/order_item.dart';
 import '../enums/order_status.dart';
@@ -16,12 +17,14 @@ import '../value_objects/feature_flags.dart';
 
 /// 注文の取り消し（仕様書 §6.6）。
 ///
-/// 不可分単位で:
-///   1. 注文ステータスを取消済に更新
-///   2. 在庫を戻す（在庫管理オン時）
-///   3. 金種を戻す（金種管理オン時）
-///   4. 整理券番号をプールへ返却
-///   5. 同期ステータスを未同期に戻す（クラウドへ取消行を送るため）
+/// 整理券プールは DB と別永続層なので **UoW の外** で操作する:
+///
+///   1. UoW 内で 注文ステータス更新・在庫戻し・金種戻し・操作ログを記録
+///   2. UoW 成功後に 整理券プールへ release を発行
+///
+/// UoW がロールバックされた場合は release を呼ばない → 整合性が保たれる。
+/// 仮に release が独立で失敗してもログだけ残して呼び出し元には成功を返す
+/// （注文は取消済みになっており、整理券が無駄遣いされるだけ）。
 ///
 /// 通信フェーズ（キッチン・呼び出しへの取消通知）は本UseCaseの責務外。
 class CancelOrderUseCase {
@@ -54,7 +57,7 @@ class CancelOrderUseCase {
     required FeatureFlags flags,
     required Map<int, int> originalCashDelta,
   }) async {
-    return _uow.run<Order>(() async {
+    final Order updated = await _uow.run<Order>(() async {
       final Order? order = await _orderRepo.findById(orderId);
       if (order == null) {
         throw OrderNotCancellableException('注文が見つかりません: $orderId');
@@ -87,12 +90,7 @@ class CancelOrderUseCase {
         await _cashRepo.apply(reverse);
       }
 
-      // 4. 整理券番号を解放
-      // load + save の直書きは _synchronized を迂回し、並行する allocate と
-      // 干渉して番号重複の温床になる。release() API を直接呼んで直列化する。
-      await _poolRepo.release(order.ticketNumber);
-
-      // 5. 操作ログを記録（信用ベース監査の根拠、§6.6）
+      // 4. 操作ログを記録（信用ベース監査の根拠、§6.6）
       if (_logRepo != null) {
         await _logRepo.record(
           kind: 'cancel_order',
@@ -111,5 +109,21 @@ class CancelOrderUseCase {
         syncStatus: SyncStatus.notSynced,
       );
     });
+
+    // 5. 整理券番号を解放（UoW 成功後 / 直列化済み API）。
+    //    UoW がロールバックされていれば、ここには来ない → 整理券は in_use の
+    //    まま残る（次回 cancel/served で正しく release される）。
+    try {
+      await _poolRepo.release(updated.ticketNumber);
+    } catch (e, st) {
+      // release 失敗は業務継続を優先して swallow。番号は日次リセットで清掃される。
+      AppLogger.w(
+        'CancelOrderUseCase: ticket release failed for #${updated.ticketNumber.value}',
+        error: e,
+        stackTrace: st,
+      );
+    }
+
+    return updated;
   }
 }

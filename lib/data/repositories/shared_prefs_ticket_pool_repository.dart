@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/error/app_exceptions.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/telemetry/telemetry.dart';
 import '../../domain/repositories/ticket_number_pool_repository.dart';
@@ -61,6 +62,13 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
     } catch (e, st) {
       // 永続層が壊れている。空に倒すと整理券番号の再利用が起きるため
       // ここでは絶対に黙って空プールを返さない。loud に throw する。
+      // 致命的なので構造化イベントを error レベルで残す（ダッシュボード可視化）。
+      AppLogger.event(
+        'ticket_pool',
+        'load.corrupted',
+        fields: <String, Object?>{'error': e.toString()},
+        level: AppLogLevel.error,
+      );
       AppLogger.e(
         'TicketPool persisted state is corrupted; refusing to reset',
         error: e,
@@ -105,10 +113,23 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
   Future<TicketNumber> allocate() {
     return _synchronized<TicketNumber>(() async {
       final TicketNumberPool pool = await load();
-      final ({TicketNumberPool pool, TicketNumber number}) issued = pool
-          .issue();
-      await save(issued.pool);
-      return issued.number;
+      if (!pool.hasAvailable) {
+        // 枯渇は業務上ありうるエラーなので、ドメイン例外に詰め替える。
+        // `issue()` の StateError は内部実装の都合なので外には出さない。
+        throw const TicketPoolExhaustedException();
+      }
+      try {
+        final ({TicketNumberPool pool, TicketNumber number}) issued = pool
+            .issue();
+        await save(issued.pool);
+        return issued.number;
+        // `hasAvailable` を通過した直後の枯渇（バッファ計算の境界ケース）でも
+        // 同じドメイン例外に揃える。StateError は通常握らないが、ここは
+        // `issue()` の契約由来なので明示的に変換する。
+        // ignore: avoid_catching_errors
+      } on StateError {
+        throw const TicketPoolExhaustedException();
+      }
     });
   }
 
@@ -118,6 +139,14 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
       final TicketNumberPool pool = await load();
       final TicketNumberPool next = pool.release(number);
       await save(next);
+    });
+  }
+
+  @override
+  Future<void> reset() {
+    return _synchronized<void>(() async {
+      final TicketNumberPool pool = await load();
+      await save(pool.reset());
     });
   }
 }

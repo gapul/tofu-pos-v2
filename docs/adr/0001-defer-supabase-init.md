@@ -8,7 +8,7 @@
 
 `Supabase.initialize()` を `runApp` 前で同期的に await すると、ネットワーク状況や DNS 解決の遅延次第で iOS のアプリ起動 watchdog（約 20 秒）に当たって SIGKILL される事象を再現確認した。学祭という現場では起動の決定論性が最優先で、ネット不調時に「アプリが立ち上がらない」状態は許容できない。
 
-また `flutter_dotenv` の読み込み・SharedPreferences の初期化は速いが、Supabase は内部で複数 isolate を立ち上げるため、起動経路を太らせる主因になっていた。
+設定値の読み込み（`--dart-define` / `Env.load`）・SharedPreferences の初期化は速いが、Supabase は内部で複数 isolate を立ち上げるため、起動経路を太らせる主因になっていた。
 
 ## Decision
 
@@ -26,3 +26,8 @@ Supabase 初期化を `runApp` 前から **第1フレーム描画後の `addPost
 - ADR-0004: 起動シーケンスの構造化
 - `lib/app.dart` の `_StartupInitializer`
 - `lib/core/config/supabase_bootstrap.dart`
+
+---
+
+2026-05-09 修正: flutter_dotenv 撤去に伴い記述更新（設定値は `--dart-define`
+または `Env.load` で渡す方針に統一）。Decision / Consequences の本筋は変更なし。

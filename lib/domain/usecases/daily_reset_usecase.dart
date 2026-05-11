@@ -32,8 +32,9 @@ class DailyResetUseCase {
       return false;
     }
 
-    final pool = await _poolRepo.load();
-    await _poolRepo.save(pool.reset());
+    // 直列化済み API を使う。load + save の直書きは並行する allocate と
+    // 干渉して整理券番号の不整合を起こす温床になる。
+    await _poolRepo.reset();
     await _dailyResetRepo.setLastResetDate(today);
     AppLogger.i('Daily reset performed for $today (was: $last)');
     return true;

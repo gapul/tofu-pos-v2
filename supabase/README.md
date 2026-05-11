@@ -10,6 +10,8 @@
 | 0002 | `migrations/0002_telemetry.sql` | `telemetry_events` テーブル + anon RLS |
 | 0003 | `migrations/0003_idempotency_key.sql` | `order_lines.idempotency_key` 列追加 + partial UNIQUE index（端末側の冪等送信に対応） |
 | 0004 | `migrations/0004_device_events.sql` | `device_events` テーブル（端末間シグナリング）+ anon RLS + Realtime publication。学祭1日なら自然蓄積で問題ないが、長期運用時は `inserted_at` による retention を検討。 |
+| 0005 | `migrations/0005_device_events_retention.sql` | `device_events` の retention 運用ガイド（SQL コメントのみ。スキーマ変更なし）。長期運用時の手動 / pg_cron 削除レシピを記載。 |
+| 0006 | `migrations/0006_idempotency_key_per_shop.sql` | `order_lines.idempotency_key` の UNIQUE スコープを `(shop_id, idempotency_key)` の複合に変更。マルチ店舗運用時のキー衝突を防ぐ。 |
 
 ### 方法 A: ダッシュボード SQL Editor（推奨・初回）
 

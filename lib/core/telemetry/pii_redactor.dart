@@ -48,6 +48,26 @@ class PiiRedactor {
     'raw_age',
   };
 
+  /// 例外文字列やスタックトレースが入りうるキー群（呼び出し側規約だけに
+  /// 任せず、ここで軽くマスクして多層防御の1枚にする）。
+  static const Set<String> _freeTextKeys = <String>{
+    'error',
+    'stack',
+    'stack_trace',
+    'message',
+    'detail',
+    'reason',
+  };
+
+  /// メールアドレスらしき塊。`local@domain` を丸ごとマスクする。
+  static final RegExp _emailLike = RegExp(r'[\w.+\-]+@[\w.\-]+\.[A-Za-z]{2,}');
+
+  /// 日本の電話番号らしき塊:
+  ///   - ハイフン区切り（市外2〜4 / 局番2〜4 / 加入者3〜4）
+  ///   - 0 始まりの 10〜11 桁連続
+  static final RegExp _phoneHyphen = RegExp(r'\b\d{2,4}-\d{2,4}-\d{3,4}\b');
+  static final RegExp _phoneFlat = RegExp(r'\b0\d{9,10}\b');
+
   /// 単一の attrs マップを redact する。元のマップは破壊しない。
   Map<String, Object?> redact(Map<String, Object?> attrs) {
     if (attrs.isEmpty) return attrs;
@@ -66,9 +86,23 @@ class PiiRedactor {
         out['${key}_bucket'] = _ageBucket(value);
         continue;
       }
+      if (_freeTextKeys.contains(key) && value is String) {
+        out[key] = _maskFreeText(value);
+        continue;
+      }
       out[key] = value;
     }
     return out;
+  }
+
+  /// 自由テキストから email / 電話番号らしきパターンをマスクする。
+  /// 完璧な検出ではなく、誤って漏れた個人情報を最終防衛で減らすことが目的。
+  static String _maskFreeText(String s) {
+    if (s.isEmpty) return s;
+    return s
+        .replaceAll(_emailLike, '***@***')
+        .replaceAll(_phoneHyphen, '***-****-****')
+        .replaceAll(_phoneFlat, '***-****-****');
   }
 
   /// イベント全体を redact した新しい [TelemetryEvent] を返す。

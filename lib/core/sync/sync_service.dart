@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:meta/meta.dart';
+
 import '../../domain/entities/order.dart';
 import '../../domain/enums/sync_status.dart';
 import '../../domain/repositories/order_repository.dart';
@@ -122,6 +124,14 @@ class SyncService {
   /// §8.2 の「1時間継続で通知」判定に使う。
   DateTime? get lastFailureSince => _firstFailureAt;
 
+  /// テスト用: 強制的に runToken を孤児化する（タイムアウト同等）。
+  /// 既存の runOnce ループはこの直後に break して終了する。
+  @visibleForTesting
+  void debugInvalidateRunToken() {
+    _running = false;
+    _runToken = null;
+  }
+
   /// 1回だけ同期を試みる。並行起動はガード。
   Future<SyncResult> runOnce() async {
     if (_running) {
@@ -142,6 +152,18 @@ class SyncService {
       int success = 0;
       int failure = 0;
       for (final Order order in unsynced) {
+        // タイムアウトで token がすり替わった「孤児 runOnce」は、新 run に
+        // 道を譲って早期終了する。これにより DB の `updateSyncStatus` や
+        // `sync.order.ok` テレメトリの二重発行を防ぐ。
+        if (!identical(_runToken, myToken)) {
+          AppLogger.event(
+            'sync',
+            'orphan_break',
+            fields: <String, Object?>{'pending': unsynced.length - success - failure},
+            level: AppLogLevel.debug,
+          );
+          break;
+        }
         try {
           await _client.push(order, shopId: shopId.value);
           await _orderRepo.updateSyncStatus(order.id, SyncStatus.synced);

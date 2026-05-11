@@ -35,16 +35,25 @@ class ErrorBoundary extends StatefulWidget {
   @visibleForTesting
   static void debugReset() {
     _installed = false;
-    _currentLabel = null;
+    _labelStack.clear();
   }
 
   static bool _installed = false;
 
-  /// 現在マウント中の ErrorBoundary が宣言した label。
+  /// 現在マウント中の ErrorBoundary が宣言した label のスタック。
   /// `ErrorWidget.builder` は BuildContext を取らないため、
   /// アクティブな boundary の label を静的に共有する。
-  /// ルートは同時に 1 つしか active にならない前提（兄弟ではない）。
-  static String? _currentLabel;
+  ///
+  /// go_router の遷移中は旧 boundary の dispose が新 boundary の initState
+  /// より後に走る（フレーム境界をまたぐ）ことがあり、同じ label を持つ
+  /// boundary が同時に2つマウントされ得る。単純な `String?` ではどちらかが
+  /// 早く落ちて null になるため、スタックで「直近に push された label」を
+  /// 安全に取り出す。
+  static final List<String> _labelStack = <String>[];
+
+  /// 最も新しくマウントされた boundary の label（無ければ null）。
+  static String? get _currentLabel =>
+      _labelStack.isEmpty ? null : _labelStack.last;
 
   static void _ensureInstalled() {
     if (_installed) return;
@@ -77,14 +86,19 @@ class _ErrorBoundaryState extends State<ErrorBoundary> {
     super.initState();
     ErrorBoundary._ensureInstalled();
     if (widget.label != null) {
-      ErrorBoundary._currentLabel = widget.label;
+      ErrorBoundary._labelStack.add(widget.label!);
     }
   }
 
   @override
   void dispose() {
-    if (ErrorBoundary._currentLabel == widget.label) {
-      ErrorBoundary._currentLabel = null;
+    if (widget.label != null) {
+      // 自分の label を末尾から探して削除する。同名 label が複数積まれている
+      // 場合でも、最新の同名エントリだけが落ちるのでスタックの整合性が保たれる。
+      final int idx = ErrorBoundary._labelStack.lastIndexOf(widget.label!);
+      if (idx >= 0) {
+        ErrorBoundary._labelStack.removeAt(idx);
+      }
     }
     super.dispose();
   }

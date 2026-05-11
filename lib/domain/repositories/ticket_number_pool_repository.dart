@@ -17,4 +17,8 @@ abstract interface class TicketNumberPoolRepository {
 
   /// 番号を解放してプールを永続化する。すでに使用中でない番号は no-op。
   Future<void> release(TicketNumber number);
+
+  /// 日次リセット用。プールを完全初期化する（使用中・バッファ含めて空）。
+  /// 並行する allocate / release とも直列化される。
+  Future<void> reset();
 }

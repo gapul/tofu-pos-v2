@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -25,6 +27,7 @@ import '../domain/value_objects/shop_id.dart';
 import '../features/regi/domain/cancel_order_flow_usecase.dart';
 import '../features/regi/domain/checkout_flow_usecase.dart';
 import 'repository_providers.dart';
+import 'settings_providers.dart';
 
 final Provider<CheckoutUseCase> checkoutUseCaseProvider =
     Provider<CheckoutUseCase>(
@@ -80,17 +83,28 @@ final Provider<DailyResetUseCase> dailyResetUseCaseProvider =
 ///
 /// 店舗ID または役割が未設定なら Noop を返して安全側に倒す。
 /// `connect()` は [_buildTransport] 内で呼び、ref.onDispose で disconnect する。
+///
+/// TransportMode が変わったら provider 自体が再ビルドされ、旧 Transport は
+/// `ref.onDispose(disconnect)` で確実に切断される。`transportModeProvider`
+/// が Stream で公開されているため、`ref.watch` するだけで変更検知できる。
 final FutureProvider<Transport> transportProvider = FutureProvider<Transport>((
   ref,
 ) async {
   final settings = ref.watch(settingsRepositoryProvider);
-  final TransportMode mode = await settings.getTransportMode();
+  // TransportMode の変更を購読する。初期値が到着するまで待つ。
+  // 取得失敗時は SharedPrefs のデフォルト（online）にフォールバックする。
+  final TransportMode mode = await ref.watch(
+    transportModeProvider.future,
+  );
   final ShopId? shopId = await settings.getShopId();
   final DeviceRole? role = await settings.getDeviceRole();
 
   if (shopId == null || role == null) {
     final NoopTransport t = NoopTransport();
-    ref.onDispose(t.disconnect);
+    // 旧 Transport の確実な後始末。disconnect 完了は待たない（unawaited）。
+    ref.onDispose(() {
+      unawaited(t.disconnect());
+    });
     return t;
   }
 
@@ -104,7 +118,9 @@ final FutureProvider<Transport> transportProvider = FutureProvider<Transport>((
     lanTimeout: lanTimeout,
     bleTimeout: bleTimeout,
   );
-  ref.onDispose(t.disconnect);
+  ref.onDispose(() {
+    unawaited(t.disconnect());
+  });
   return t;
 });
 

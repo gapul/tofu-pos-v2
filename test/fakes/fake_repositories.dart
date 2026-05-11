@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:tofu_pos/core/error/app_exceptions.dart';
 import 'package:tofu_pos/domain/entities/calling_order.dart';
 import 'package:tofu_pos/domain/entities/cash_drawer.dart';
 import 'package:tofu_pos/domain/entities/kitchen_order.dart';
@@ -216,10 +217,19 @@ class InMemoryTicketPoolRepository implements TicketNumberPoolRepository {
   @override
   Future<TicketNumber> allocate() {
     return _synchronized<TicketNumber>(() async {
-      final ({TicketNumberPool pool, TicketNumber number}) issued = _pool
-          .issue();
-      _pool = issued.pool;
-      return issued.number;
+      if (!_pool.hasAvailable) {
+        throw const TicketPoolExhaustedException();
+      }
+      try {
+        final ({TicketNumberPool pool, TicketNumber number}) issued = _pool
+            .issue();
+        _pool = issued.pool;
+        return issued.number;
+        // `issue()` 由来の StateError をドメイン例外に揃えるための明示的変換。
+        // ignore: avoid_catching_errors
+      } on StateError {
+        throw const TicketPoolExhaustedException();
+      }
     });
   }
 
@@ -227,6 +237,13 @@ class InMemoryTicketPoolRepository implements TicketNumberPoolRepository {
   Future<void> release(TicketNumber number) {
     return _synchronized<void>(() async {
       _pool = _pool.release(number);
+    });
+  }
+
+  @override
+  Future<void> reset() {
+    return _synchronized<void>(() async {
+      _pool = _pool.reset();
     });
   }
 }

@@ -203,6 +203,46 @@ void main() {
     expect(true, isTrue);
   });
 
+  test('orphan runOnce breaks the loop after token is invalidated and does '
+      'not double-update synced orders', () async {
+    // 3 件 unsynced を仕込む。各 push の合間に token を孤児化することで、
+    // ループの最初の order だけが処理されて break するはず。
+    final Order o1 = await orderRepo.create(_makeOrder());
+    await orderRepo.create(_makeOrder());
+    await orderRepo.create(_makeOrder());
+
+    // push 後すぐに token をすり替える「介入クライアント」。
+    // 戻り値: 何件成功したか。
+    final List<int> pushedIds = <int>[];
+    int callCount = 0;
+    final _InterceptingClient client = _InterceptingClient(
+      onPush: (order) async {
+        pushedIds.add(order.id);
+        callCount++;
+        if (callCount == 1) {
+          // 1 件目処理直後に孤児化 → 次のループ先頭の token チェックで break。
+          service.debugInvalidateRunToken();
+        }
+      },
+    );
+    service = SyncService(
+      orderRepository: orderRepo,
+      settingsRepository: _FakeSettings(ShopId('shop_a')),
+      connectivityMonitor: monitor,
+      client: client,
+    );
+
+    final SyncResult r = await service.runOnce();
+    // 1 件だけ成功、残り 2 件は break で未処理のまま。
+    expect(r.successCount, 1);
+    expect(r.failureCount, 0);
+    expect(pushedIds, <int>[o1.id]);
+
+    // 早期 break したので、2 件目以降は依然として notSynced のまま。
+    final List<Order> stillUnsynced = await orderRepo.findUnsynced();
+    expect(stillUnsynced.length, 2);
+  });
+
   test('stop() cancels retry timer and connectivity subscription', () async {
     final _RecordingClient quietClient = _RecordingClient();
     final SyncService svc = SyncService(
@@ -234,4 +274,12 @@ class _HangingClient implements CloudSyncClient {
 
   @override
   Future<void> push(Order order, {required String shopId}) => _completer.future;
+}
+
+class _InterceptingClient implements CloudSyncClient {
+  _InterceptingClient({required this.onPush});
+  final Future<void> Function(Order order) onPush;
+
+  @override
+  Future<void> push(Order order, {required String shopId}) => onPush(order);
 }

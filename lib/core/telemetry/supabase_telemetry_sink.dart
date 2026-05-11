@@ -91,17 +91,34 @@ class SupabaseTelemetrySink implements TelemetrySink {
     } catch (e, st) {
       // 送信失敗。可能ならバッファに戻して次回再送するが、すでに新規イベントで
       // 溢れてる可能性もあるので _maxBufferSize の範囲で再投入する。
+      //
+      // 重要: `enqueue` のオーバーフロー drop は「先頭（古い側）から捨てる」。
+      // 再投入を先頭に積むと、直後の overflow drop で「再投入したばかりの
+      // イベント」が真っ先に捨てられてしまう。`enqueue` の優先方針
+      // （新しいイベントを保つ）を尊重するため、再投入は **末尾** に積む。
       final int reinsertable = _maxBufferSize - _buffer.length;
-      if (reinsertable > 0) {
-        final int take = events.length < reinsertable
-            ? events.length
-            : reinsertable;
-        _buffer.insertAll(0, events.sublist(events.length - take));
+      final int take = reinsertable <= 0
+          ? 0
+          : (events.length < reinsertable ? events.length : reinsertable);
+      if (take > 0) {
+        // 再投入対象は古い方から（events の先頭から）取る。新しい側は
+        // バッファに残っている可能性が高いので、再送漏れを最小化する。
+        _buffer.addAll(events.sublist(0, take));
       }
-      final int dropped = events.length - (reinsertable > 0
-          ? (events.length < reinsertable ? events.length : reinsertable)
-          : 0);
-      AppLogger.w(
+      final int dropped = events.length - take;
+      // 送信失敗は重要：警告ではなく error 相当として可視化する。
+      AppLogger.event(
+        'telemetry',
+        'send.failed',
+        fields: <String, Object?>{
+          'attempted': events.length,
+          'dropped': dropped,
+          'error': e.toString(),
+        },
+        level: AppLogLevel.error,
+      );
+      // スタックトレースは event() に乗せられないので別途 e() でも出す。
+      AppLogger.e(
         'Telemetry send failed (${events.length} events, $dropped dropped)',
         error: e,
         stackTrace: st,

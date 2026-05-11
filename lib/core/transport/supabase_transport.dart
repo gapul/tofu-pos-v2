@@ -45,8 +45,12 @@ class SupabaseTransport implements Transport {
   static const String _table = 'device_events';
 
   RealtimeChannel? _channel;
-  final StreamController<TransportEvent> _events =
+  StreamController<TransportEvent> _events =
       StreamController<TransportEvent>.broadcast();
+
+  /// subscribe 完了を待つ際の最大時間。Realtime チャネル張りに数秒程度かかる
+  /// ことはあるが、それ以上は業務継続を優先して諦める（HTTP 経由の送信は動く）。
+  static const Duration _subscribeTimeout = Duration(seconds: 5);
 
   bool get isConnected => _channel != null;
 
@@ -58,6 +62,13 @@ class SupabaseTransport implements Transport {
     if (_channel != null) {
       return;
     }
+    // disconnect で StreamController を閉じてしまった後でも再接続できるよう、
+    // ここで必要なら新しい broadcast controller を作り直す。
+    if (_events.isClosed) {
+      _events = StreamController<TransportEvent>.broadcast();
+    }
+
+    final Completer<void> ready = Completer<void>();
     final RealtimeChannel ch = _client
         .channel('tofu-pos:device-events:$shopId')
         .onPostgresChanges(
@@ -72,16 +83,53 @@ class SupabaseTransport implements Transport {
           callback: _handlePayload,
         );
     _channel = ch;
-    ch.subscribe();
+    ch.subscribe((status, [_]) {
+      if (status == RealtimeSubscribeStatus.subscribed) {
+        if (!ready.isCompleted) ready.complete();
+      } else if (status == RealtimeSubscribeStatus.channelError ||
+          status == RealtimeSubscribeStatus.closed ||
+          status == RealtimeSubscribeStatus.timedOut) {
+        // subscribe 失敗は send には影響しない。ready を完了させて connect
+        // をブロックしないようにする（receive ができないだけで業務継続）。
+        if (!ready.isCompleted) ready.complete();
+      }
+    });
+    try {
+      await ready.future.timeout(_subscribeTimeout);
+    } on TimeoutException catch (e, st) {
+      // タイムアウト時もチャネル自体は維持し、送信機能（HTTP insert）で
+      // 業務継続。Telemetry にだけ落として可視化する。
+      AppLogger.w(
+        'SupabaseTransport: subscribe did not confirm in '
+        '${_subscribeTimeout.inSeconds}s; continuing without realtime receive',
+        error: e,
+        stackTrace: st,
+      );
+      Telemetry.instance.warn(
+        'transport.supabase.subscribe.timeout',
+        attrs: <String, Object?>{
+          'shop_id': shopId,
+          'timeout_seconds': _subscribeTimeout.inSeconds,
+        },
+      );
+    }
   }
 
   @override
   Future<void> disconnect() async {
+    // チャネルだけを閉じる。StreamController は閉じないので、`connect()` で
+    // 再購読すれば同じ Stream で受信を再開できる（既存リスナーを切らない）。
     final RealtimeChannel? ch = _channel;
     _channel = null;
     if (ch != null) {
       await _client.removeChannel(ch);
     }
+  }
+
+  /// アプリ終了時の完全な後始末。これを呼ぶと `events()` の Stream は close
+  /// され、以降の `connect()` でも新規 Stream を張り直すことになる。
+  Future<void> dispose() async {
+    await disconnect();
     if (!_events.isClosed) {
       await _events.close();
     }
@@ -106,7 +154,18 @@ class SupabaseTransport implements Transport {
         await _client.from(_table).insert(row);
       });
     } catch (e, st) {
-      AppLogger.w(
+      // 送信失敗は致命級。エラーレベルでログ + 構造化イベントの両方を残す。
+      AppLogger.event(
+        'transport.supabase',
+        'send.failed',
+        fields: <String, Object?>{
+          'event_type': eventTypeNameOf(event),
+          'shop_id': event.shopId,
+          'error': e.toString(),
+        },
+        level: AppLogLevel.error,
+      );
+      AppLogger.e(
         'SupabaseTransport: send failed',
         error: e,
         stackTrace: st,

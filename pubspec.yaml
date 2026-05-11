@@ -56,6 +56,9 @@ dev_dependencies:
     sdk: flutter
   very_good_analysis: ^10.2.0
 
+  # 単体テストでの SupabaseClient モック等に使用（#13 のため追加）。
+  mocktail: ^1.0.4
+
   # コード生成（drift のみ）
   build_runner: ^2.4.13
   drift_dev: ^2.20.3
