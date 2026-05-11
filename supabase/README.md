@@ -2,14 +2,24 @@
 
 ## マイグレーションの適用
 
+マイグレーションは **番号順に全部適用**する。同名の SQL を再実行しても冪等になるよう書いてあるので、追加マイグレーションが入った場合は最新のものだけを後から流せばよい。
+
+| 番号 | ファイル | 目的 |
+|---|---|---|
+| 0001 | `migrations/0001_initial.sql` | `order_lines` テーブル + index + anon RLS + Realtime publication |
+| 0002 | `migrations/0002_telemetry.sql` | `telemetry_events` テーブル + anon RLS |
+| 0003 | `migrations/0003_idempotency_key.sql` | `order_lines.idempotency_key` 列追加 + partial UNIQUE index（端末側の冪等送信に対応） |
+
 ### 方法 A: ダッシュボード SQL Editor（推奨・初回）
 
 1. Supabase ダッシュボード → 左サイドバー **SQL Editor**
 2. **New query** で空のクエリを開く
-3. `migrations/0001_initial.sql` の中身を全部貼り付け
-4. **Run** で実行
+3. 上の表のファイルを順番に全文貼り付けて **Run**
+4. 既に新版アプリを動かしている場合は、`0003_idempotency_key.sql` を未適用だと
+   端末側の upsert が「unknown column `idempotency_key`」で失敗する。
+   バージョンアップ時は必ず先に流すこと。
 
-成功すると:
+成功すると（0001 完了時点）:
 - `public.order_lines` テーブルが作成される
 - インデックス2本が貼られる
 - RLS が有効化され、anon ロールに read/insert/update のポリシーが設定される

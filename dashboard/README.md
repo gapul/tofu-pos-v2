@@ -35,6 +35,34 @@ http://localhost:8787/?shop=yakisoba_A
 
 `dashboard/` をそのまま静的ホスティング（GitHub Pages / Cloudflare Pages / Supabase Static Hosting 等）にアップロードすれば動きます。secret はリポジトリに含めず、ブラウザの localStorage に閲覧者が入力します。
 
+### Cloudflare Pages
+
+2 通りどちらでも動きます。
+
+**A. CF Dashboard 経由でリポジトリ連携（推奨・GUI のみ）**
+
+1. <https://dash.cloudflare.com/> → Workers & Pages → Create → Pages → Connect to Git
+2. このリポジトリを選択。Production branch = `main`
+3. Build settings:
+   - Framework preset: **None**
+   - Build command: 空欄
+   - Build output directory: **`dashboard`**
+4. Save and Deploy。`https://tofu-pos-dashboard.pages.dev`（プロジェクト名により変動）で公開される。
+5. カスタムドメインが必要なら **Custom domains** から DNS CNAME を設定。
+
+**B. GitHub Actions 経由（CI で自動デプロイ）**
+
+`.github/workflows/cf-pages-dashboard.yml` が `main` ブランチへの `dashboard/**` 変更で発火する。事前に GitHub Secrets を 2 つ設定:
+
+- `CLOUDFLARE_API_TOKEN` — CF Dashboard → My Profile → API Tokens → Create で「Account / Cloudflare Pages / Edit」権限を付与
+- `CLOUDFLARE_ACCOUNT_ID` — CF Dashboard 右サイドバー or Workers のアカウント概要から確認
+
+プロジェクト名は `tofu-pos-dashboard`。別名にする場合はワークフローの `--project-name` を書き換える。
+
+### セキュリティヘッダ
+
+`dashboard/_headers` で Cloudflare Pages のレスポンスヘッダを設定している（XFO/Referrer-Policy 等）。CSP は CDN（tailwind / esm.sh）と Supabase の wss 接続があるため緩めにも書きづらく、現時点では未設定。将来の改修課題。
+
 ## タブ構成
 
 ### 📈 売上タブ
