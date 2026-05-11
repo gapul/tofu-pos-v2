@@ -1,5 +1,3 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
 /// `Env.validate()` の結果。
 sealed class EnvValidation {
   const EnvValidation();
@@ -18,15 +16,13 @@ class EnvInvalid extends EnvValidation {
 
 /// 環境変数アクセサ。
 ///
-/// 解決優先順位:
-///   1. ビルド時 --dart-define（本番ビルド向け）
-///   2. .env ファイル（開発時、`Env.load()` で事前読み込み必須）
-///   3. デフォルト値（テスト時の空文字など）
+/// 値の供給は **`--dart-define`（or `--dart-define-from-file`）のみ**。
+/// ローカル開発は `tools/run-dev.sh` 経由で `.env` を読み込んで
+/// `--dart-define` に展開する（asset 同梱は廃止：シークレット流出経路を防ぐため）。
 ///
 /// 例:
-/// ```dart
-/// await Env.load();
-/// print(Env.supabaseUrl);
+/// ```bash
+/// flutter run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
 /// ```
 class Env {
   Env._();
@@ -42,32 +38,14 @@ class Env {
   static bool get _hasAnyDartDefine =>
       _supabaseUrlDefine.isNotEmpty || _supabaseAnonKeyDefine.isNotEmpty;
 
-  /// `.env` を読み込む。アプリ起動時 `runApp` の前に1回だけ呼ぶ。
-  ///
-  /// `.env` が見つからない場合（CI 等）も例外にせず、
-  /// その場合は --dart-define の値だけが効く。
-  static Future<void> load() async {
-    try {
-      await dotenv.load();
-    } catch (_) {
-      // .env が無くても致命ではない（dart-define で渡せばよい）
-    }
-  }
+  /// 互換のために残してある no-op。
+  /// 旧 API で `await Env.load()` を呼んでいた箇所は触らずに済む。
+  /// 値は `--dart-define` 経由で既に解決済み（コンパイル時定数）。
+  static Future<void> load() async {}
 
-  static String _read(String defineValue, String key) {
-    if (defineValue.isNotEmpty) {
-      return defineValue;
-    }
-    if (dotenv.isInitialized) {
-      return dotenv.maybeGet(key) ?? '';
-    }
-    return '';
-  }
+  static String get supabaseUrl => _supabaseUrlDefine;
 
-  static String get supabaseUrl => _read(_supabaseUrlDefine, 'SUPABASE_URL');
-
-  static String get supabaseAnonKey =>
-      _read(_supabaseAnonKeyDefine, 'SUPABASE_ANON_KEY');
+  static String get supabaseAnonKey => _supabaseAnonKeyDefine;
 
   /// Supabase 接続情報が揃っているか。
   static bool get hasSupabaseCredentials =>
@@ -82,14 +60,14 @@ class Env {
     if (hasSupabaseCredentials) {
       return;
     }
-    if (_hasAnyDartDefine || dotenv.isInitialized) {
-      // 何かしら設定は試みられている（部分指定など）。それ用のログは
-      // ここでは出さず、呼び元で必要なら別途扱う。
+    if (_hasAnyDartDefine) {
+      // 部分指定（片方だけ渡された）。呼び元で必要なら別途扱う。
       return;
     }
     log(
-      'Supabase credentials not provided (no .env, no --dart-define). '
-      'Cloud features (sync / telemetry) will be disabled.',
+      'Supabase credentials not provided (no --dart-define). '
+      'Cloud features (sync / telemetry) will be disabled. '
+      'Use tools/run-dev.sh or pass --dart-define manually.',
     );
   }
 

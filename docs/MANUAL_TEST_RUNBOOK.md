@@ -14,7 +14,7 @@
 |---|---|---|
 | iOS | Apple Developer 登録、Provisioning Profile 作成、TestFlight 内部テスト構成 | ☐ |
 | Android | Google Play Console 内部テストトラック、または `flutter build apk --release` を adb push | ☐ |
-| 共通 | `.env` を `--dart-define` 化（リリースビルドでは `flutter_dotenv` が assets に bundle されない可能性に備える） | ☐ |
+| 共通 | **本番ビルドは必ず `--dart-define` で `SUPABASE_URL` / `SUPABASE_ANON_KEY` を渡す**。`.env` の assets 同梱は廃止済み（シークレット流出経路を遮断するため）。ローカル開発は `tools/run-dev.sh` 経由 | ☐ |
 
 毎回ケーブルで `flutter run` だと運用負荷が高い。最低でも TestFlight or 内部テストトラックを通せるようにしておく。
 
@@ -30,9 +30,13 @@
 
 ### 0.3. Supabase 側の設定
 
-- `supabase/migrations/0001_initial.sql` を本番プロジェクトに適用済みか
-- Database > Replication で `order_lines` テーブルの Realtime を有効化済みか
-- `.env` の `SUPABASE_URL` / `SUPABASE_ANON_KEY` が本番の値か
+- マイグレーション 4 本すべて本番プロジェクトに適用済みか
+  - `0001_initial.sql`（`order_lines` テーブル + RLS + Realtime publication）
+  - `0002_telemetry.sql`（`telemetry_events`）
+  - `0003_idempotency_key.sql`（`order_lines.idempotency_key` + partial UNIQUE）
+  - `0004_device_events.sql`（端末間シグナリング `device_events` + Realtime publication）
+- Database > Replication で `order_lines` と `device_events` の Realtime を有効化済みか
+- `SUPABASE_URL` / `SUPABASE_ANON_KEY` が本番の値で `--dart-define` 渡されているか
 
 ---
 
@@ -79,9 +83,22 @@
 | 前日分の使用済番号がプールに返却 | プールサイズが復元 | ☐ |
 | 商品マスタ・金種・フラグは持ち越し | 維持される | ☐ |
 
----
+### 1.5. オンライン経路の端末間連携（Supabase Realtime / `device_events`）
 
-## 2. LAN 経路（同一 Wi-Fi 上の 2 台以上）
+レジ + キッチン（+ 呼び出し）を **インターネット接続あり**で起動、Transport モードを `online`。
+`device_events` テーブル経由で端末間シグナリングが動く。
+
+| 項目 | 期待値 | 結果 |
+|---|---|---|
+| 0004 マイグレーション適用済み | `device_events` テーブル存在、Realtime publication 有効 | ☐ |
+| レジで会計確定 | `device_events` に `order_submitted` が INSERT | ☐ |
+| キッチンで受信 | キッチン画面に注文表示（送信から 1〜2 秒以内） | ☐ |
+| キッチンで提供完了 | レジ側に `order_served` 到達、ステータス更新 | ☐ |
+| レジで呼び出し転送 | 呼び出し画面に `call_number` で番号表示 | ☐ |
+| レジで取消 | キッチン側に `order_cancelled` 到達、調理中なら警告 | ☐ |
+| 商品マスタ編集 | キッチン側へ `product_master_update` 伝播 | ☐ |
+| 自分の送信が自端末にエコーバックされない | loopback dedup が効いて二重処理しない | ☐ |
+| ネット切断 → 復帰 | Realtime チャネル自動再接続、消失なし | ☐ |
 
 レジ + キッチン（最小）、+ 呼び出し（最大）を **同じ Wi-Fi に接続**。Transport モードを `localLan`。
 
