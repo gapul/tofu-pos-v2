@@ -77,6 +77,7 @@ final Provider<SyncService> syncServiceProvider = Provider<SyncService>((
     settingsRepository: ref.watch(settingsRepositoryProvider),
     connectivityMonitor: ref.watch(connectivityMonitorProvider),
     client: ref.watch(cloudSyncClientProvider),
+    clock: ref.watch(clockProvider),
   );
   ref.onDispose(service.stop);
   return service;

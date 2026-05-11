@@ -49,7 +49,16 @@ class _ShopIdScreenState extends ConsumerState<ShopIdScreen> {
       _error = null;
       _saving = true;
     });
-    await ref.read(setupNotifierProvider.notifier).saveShopId(ShopId(text));
+    try {
+      await ref.read(setupNotifierProvider.notifier).saveShopId(ShopId(text));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = '保存に失敗しました。もう一度お試しください。';
+      });
+      return;
+    }
     if (!mounted) {
       return;
     }

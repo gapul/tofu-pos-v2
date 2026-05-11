@@ -43,7 +43,18 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
       return;
     }
     setState(() => _saving = true);
-    await ref.read(setupNotifierProvider.notifier).saveRole(_selected!);
+    try {
+      await ref.read(setupNotifierProvider.notifier).saveRole(_selected!);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('保存に失敗しました。もう一度お試しください。'),
+        ),
+      );
+      return;
+    }
     if (!mounted) {
       return;
     }

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/app_exceptions.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/format.dart';
 import '../../../../core/ui/status_chip.dart';
@@ -347,17 +348,24 @@ class _OrderCard extends StatelessWidget {
       if (raw is! List) {
         return <({String name, int qty})>[];
       }
-      return raw.map<({String name, int qty})>((dynamic e) {
-        final Map<String, dynamic> m = e as Map<String, dynamic>;
-        return (
-          name: m['name']?.toString() ?? '',
+      final List<({String name, int qty})> out = <({String name, int qty})>[];
+      for (final dynamic e in raw) {
+        if (e is! Map<String, dynamic>) continue;
+        out.add((
+          name: e['name']?.toString() ?? '',
           qty:
-              (m['quantity'] as num?)?.toInt() ??
-              (m['qty'] as num?)?.toInt() ??
+              (e['quantity'] as num?)?.toInt() ??
+              (e['qty'] as num?)?.toInt() ??
               0,
-        );
-      }).toList();
-    } catch (_) {
+        ));
+      }
+      return out;
+    } catch (e, st) {
+      AppLogger.w(
+        'KitchenOrder.itemsJson parse failed (order=${order.orderId})',
+        error: e,
+        stackTrace: st,
+      );
       return <({String name, int qty})>[];
     }
   }

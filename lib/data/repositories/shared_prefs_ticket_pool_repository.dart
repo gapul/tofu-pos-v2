@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/logging/app_logger.dart';
+import '../../core/telemetry/telemetry.dart';
 import '../../domain/repositories/ticket_number_pool_repository.dart';
 import '../../domain/value_objects/ticket_number.dart';
 import '../../domain/value_objects/ticket_number_pool.dart';
@@ -45,15 +47,33 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
         bufferSize: _defaultBuffer,
       );
     }
-    final Map<String, dynamic> json = jsonDecode(raw) as Map<String, dynamic>;
-    return TicketNumberPool(
-      maxNumber: json['maxNumber'] as int,
-      bufferSize: json['bufferSize'] as int,
-      inUse: (json['inUse'] as List<dynamic>).cast<int>().toSet(),
-      recentlyReleased: (json['recentlyReleased'] as List<dynamic>)
-          .cast<int>()
-          .toList(),
-    );
+    try {
+      final Map<String, dynamic> json =
+          jsonDecode(raw) as Map<String, dynamic>;
+      return TicketNumberPool(
+        maxNumber: json['maxNumber'] as int,
+        bufferSize: json['bufferSize'] as int,
+        inUse: (json['inUse'] as List<dynamic>).cast<int>().toSet(),
+        recentlyReleased: (json['recentlyReleased'] as List<dynamic>)
+            .cast<int>()
+            .toList(),
+      );
+    } catch (e, st) {
+      // 永続層が壊れている。空に倒すと整理券番号の再利用が起きるため
+      // ここでは絶対に黙って空プールを返さない。loud に throw する。
+      AppLogger.e(
+        'TicketPool persisted state is corrupted; refusing to reset',
+        error: e,
+        stackTrace: st,
+      );
+      Telemetry.instance.error(
+        'ticket_pool.load.corrupted',
+        message: 'persisted JSON is unparseable',
+        error: e,
+        stackTrace: st,
+      );
+      rethrow;
+    }
   }
 
   @override

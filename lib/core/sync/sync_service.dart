@@ -8,6 +8,7 @@ import '../connectivity/connectivity_monitor.dart';
 import '../connectivity/connectivity_status.dart';
 import '../logging/app_logger.dart';
 import '../telemetry/telemetry.dart';
+import '../time/clock.dart';
 import 'cloud_sync_client.dart';
 
 /// 未同期注文をクラウドに送る同期サービス（仕様書 §8.1 / §8.2）。
@@ -33,12 +34,14 @@ class SyncService {
     required SettingsRepository settingsRepository,
     required ConnectivityMonitor connectivityMonitor,
     required CloudSyncClient client,
+    Clock clock = const SystemClock(),
     Duration retryInterval = const Duration(minutes: 5),
     Duration runOnceTimeout = const Duration(seconds: 30),
   }) : _orderRepo = orderRepository,
        _settingsRepo = settingsRepository,
        _connectivity = connectivityMonitor,
        _client = client,
+       _clock = clock,
        _retryInterval = retryInterval,
        _runOnceTimeout = runOnceTimeout;
 
@@ -46,6 +49,7 @@ class SyncService {
   final SettingsRepository _settingsRepo;
   final ConnectivityMonitor _connectivity;
   final CloudSyncClient _client;
+  final Clock _clock;
   final Duration _retryInterval;
   final Duration _runOnceTimeout;
 
@@ -158,7 +162,7 @@ class SyncService {
         }
         _firstFailureAt = null;
       } else {
-        _firstFailureAt ??= DateTime.now();
+        _firstFailureAt ??= _clock.now();
       }
       AppLogger.event(
         'sync',
