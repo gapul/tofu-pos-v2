@@ -237,38 +237,38 @@ class _FeatureFlagsSection extends ConsumerWidget {
       title: '2. 機能フラグ',
       child: async.when(
         loading: () => const CircularProgressIndicator.adaptive(),
-        error: (Object e, _) => Text('error: $e'),
-        data: (FeatureFlags flags) => Column(
+        error: (e, _) => Text('error: $e'),
+        data: (flags) => Column(
           children: <Widget>[
             _flagTile(
               ref,
               '在庫管理',
               flags.stockManagement,
-              (bool v) => flags.copyWith(stockManagement: v),
+              (v) => flags.copyWith(stockManagement: v),
             ),
             _flagTile(
               ref,
               '金種管理',
               flags.cashManagement,
-              (bool v) => flags.copyWith(cashManagement: v),
+              (v) => flags.copyWith(cashManagement: v),
             ),
             _flagTile(
               ref,
               '顧客属性入力',
               flags.customerAttributes,
-              (bool v) => flags.copyWith(customerAttributes: v),
+              (v) => flags.copyWith(customerAttributes: v),
             ),
             _flagTile(
               ref,
               'キッチン連携',
               flags.kitchenLink,
-              (bool v) => flags.copyWith(kitchenLink: v),
+              (v) => flags.copyWith(kitchenLink: v),
             ),
             _flagTile(
               ref,
               '呼び出し連携',
               flags.callingLink,
-              (bool v) => flags.copyWith(callingLink: v),
+              (v) => flags.copyWith(callingLink: v),
             ),
           ],
         ),
@@ -286,7 +286,7 @@ class _FeatureFlagsSection extends ConsumerWidget {
       title: Text(label),
       value: current,
       dense: true,
-      onChanged: (bool v) async {
+      onChanged: (v) async {
         await ref.read(settingsRepositoryProvider).setFeatureFlags(toggle(v));
         onResult('$label: $v');
       },
@@ -310,13 +310,13 @@ class _ProductsSection extends ConsumerWidget {
         children: <Widget>[
           StreamBuilder<List<Product>>(
             stream: ref.watch(productRepositoryProvider).watchAll(),
-            builder: (BuildContext c, AsyncSnapshot<List<Product>> snap) {
+            builder: (c, snap) {
               final List<Product> list = snap.data ?? <Product>[];
               if (list.isEmpty) return const Text('商品なし');
               return Column(
                 children: list
                     .map(
-                      (Product p) =>
+                      (p) =>
                           Text('・${p.name}  ${p.price}  在庫=${p.stock}'),
                     )
                     .toList(),
@@ -430,13 +430,13 @@ class _OrdersSection extends ConsumerWidget {
       title: '5. 注文一覧 / 取消',
       child: StreamBuilder<List<Order>>(
         stream: ref.watch(orderRepositoryProvider).watchAll(),
-        builder: (BuildContext c, AsyncSnapshot<List<Order>> snap) {
+        builder: (c, snap) {
           final List<Order> list = snap.data ?? <Order>[];
           if (list.isEmpty) return const Text('注文なし');
           return Column(
             children: list
                 .map(
-                  (Order o) => Padding(
+                  (o) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Row(
                       children: <Widget>[
@@ -498,15 +498,15 @@ class _TransportModeSection extends ConsumerWidget {
       title: '8. 通信モード',
       child: async.when(
         loading: () => const CircularProgressIndicator.adaptive(),
-        error: (Object e, _) => Text('error: $e'),
-        data: (TransportMode current) => Wrap(
+        error: (e, _) => Text('error: $e'),
+        data: (current) => Wrap(
           spacing: 8,
           children: <Widget>[
             for (final TransportMode m in TransportMode.values)
               ChoiceChip(
                 label: Text(_labelOf(m)),
                 selected: m == current,
-                onSelected: (bool sel) async {
+                onSelected: (sel) async {
                   if (!sel) return;
                   await ref
                       .read(settingsRepositoryProvider)
@@ -546,8 +546,8 @@ class _RealtimeSection extends ConsumerWidget {
       title: '9. Realtime 受信（直近1件）',
       child: events.when(
         loading: () => const Text('購読待機中...'),
-        error: (Object e, _) => Text('error: $e'),
-        data: (RealtimeOrderLineEvent ev) => Column(
+        error: (e, _) => Text('error: $e'),
+        data: (ev) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text('種別: ${ev.eventType.name}'),
@@ -783,10 +783,10 @@ class _AutoTestSectionState extends ConsumerState<_AutoTestSection> {
   Widget build(BuildContext context) {
     final List<TestScenario> scenarios = ref.watch(scenariosProvider);
     final int passed = _results.values
-        .where((ScenarioResult r) => r.passed)
+        .where((r) => r.passed)
         .length;
     final int failed = _results.values
-        .where((ScenarioResult r) => !r.passed)
+        .where((r) => !r.passed)
         .length;
 
     return _Section(
@@ -941,7 +941,7 @@ class _AboutSectionState extends State<_AboutSection> {
   @override
   void initState() {
     super.initState();
-    PackageInfo.fromPlatform().then((PackageInfo i) {
+    PackageInfo.fromPlatform().then((i) {
       if (!mounted) return;
       setState(() => _info = i);
     });

@@ -35,7 +35,11 @@ class KitchenIngestRouter {
 
   void start() {
     _sub ??= _transport.events().listen(_onEvent);
-    AppLogger.i('KitchenIngestRouter started for shop=$_shopId');
+    AppLogger.event(
+      'kitchen',
+      'router_started',
+      fields: <String, Object?>{'shop': _shopId},
+    );
   }
 
   Future<void> stop() async {

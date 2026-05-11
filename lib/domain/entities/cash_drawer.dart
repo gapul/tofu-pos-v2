@@ -33,7 +33,7 @@ class CashDrawer {
   /// 全金種の合計金額。
   Money get totalAmount {
     int sum = 0;
-    _counts.forEach((Denomination d, int count) {
+    _counts.forEach((d, count) {
       sum += d.yen * count;
     });
     return Money(sum);
@@ -43,7 +43,7 @@ class CashDrawer {
   /// 負の値で減算。結果が負になる金種があれば StateError。
   CashDrawer apply(Map<Denomination, int> delta) {
     final Map<Denomination, int> newCounts = <Denomination, int>{..._counts};
-    delta.forEach((Denomination d, int diff) {
+    delta.forEach((d, diff) {
       final int next = (newCounts[d] ?? 0) + diff;
       if (next < 0) {
         throw StateError('CashDrawer: $d would go negative ($next)');
@@ -75,7 +75,7 @@ class CashDrawer {
   @override
   int get hashCode {
     int hash = 0;
-    _counts.forEach((Denomination d, int count) {
+    _counts.forEach((d, count) {
       hash = Object.hash(hash, d, count);
     });
     return hash;

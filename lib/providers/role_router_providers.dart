@@ -18,7 +18,7 @@ import 'usecase_providers.dart';
 
 final FutureProvider<ServedToCallRouter?> servedToCallRouterProvider =
     FutureProvider<ServedToCallRouter?>((
-      Ref<AsyncValue<ServedToCallRouter?>> ref,
+      ref,
     ) async {
       final ShopId? shopId = await ref
           .watch(settingsRepositoryProvider)
@@ -39,7 +39,7 @@ final FutureProvider<ServedToCallRouter?> servedToCallRouterProvider =
 final FutureProvider<ProductMasterBroadcastUseCase?>
 productMasterBroadcastUseCaseFutureProvider =
     FutureProvider<ProductMasterBroadcastUseCase?>((
-      Ref<AsyncValue<ProductMasterBroadcastUseCase?>> ref,
+      ref,
     ) async {
       final ShopId? shopId = await ref
           .watch(settingsRepositoryProvider)
@@ -58,7 +58,7 @@ productMasterBroadcastUseCaseFutureProvider =
 final FutureProvider<ProductMasterAutoBroadcaster?>
 productMasterAutoBroadcasterProvider =
     FutureProvider<ProductMasterAutoBroadcaster?>((
-      Ref<AsyncValue<ProductMasterAutoBroadcaster?>> ref,
+      ref,
     ) async {
       final ProductMasterBroadcastUseCase? broadcast = await ref.watch(
         productMasterBroadcastUseCaseFutureProvider.future,
@@ -77,7 +77,7 @@ productMasterAutoBroadcasterProvider =
 // ============== キッチン役のサービス ==============
 
 final Provider<KitchenIngestUseCase> kitchenIngestUseCaseProvider =
-    Provider<KitchenIngestUseCase>((Ref<KitchenIngestUseCase> ref) {
+    Provider<KitchenIngestUseCase>((ref) {
       final KitchenIngestUseCase u = KitchenIngestUseCase(
         repository: ref.watch(kitchenOrderRepositoryProvider),
       );
@@ -87,14 +87,14 @@ final Provider<KitchenIngestUseCase> kitchenIngestUseCaseProvider =
 
 final Provider<ProductMasterIngestUseCase> productMasterIngestUseCaseProvider =
     Provider<ProductMasterIngestUseCase>(
-      (Ref<ProductMasterIngestUseCase> ref) => ProductMasterIngestUseCase(
+      (ref) => ProductMasterIngestUseCase(
         productRepository: ref.watch(productRepositoryProvider),
       ),
     );
 
 final FutureProvider<KitchenIngestRouter?> kitchenIngestRouterProvider =
     FutureProvider<KitchenIngestRouter?>((
-      Ref<AsyncValue<KitchenIngestRouter?>> ref,
+      ref,
     ) async {
       final ShopId? shopId = await ref
           .watch(settingsRepositoryProvider)
@@ -117,14 +117,14 @@ final FutureProvider<KitchenIngestRouter?> kitchenIngestRouterProvider =
 
 final Provider<CallingIngestUseCase> callingIngestUseCaseProvider =
     Provider<CallingIngestUseCase>(
-      (Ref<CallingIngestUseCase> ref) => CallingIngestUseCase(
+      (ref) => CallingIngestUseCase(
         repository: ref.watch(callingOrderRepositoryProvider),
       ),
     );
 
 final FutureProvider<CallingIngestRouter?> callingIngestRouterProvider =
     FutureProvider<CallingIngestRouter?>((
-      Ref<AsyncValue<CallingIngestRouter?>> ref,
+      ref,
     ) async {
       final ShopId? shopId = await ref
           .watch(settingsRepositoryProvider)

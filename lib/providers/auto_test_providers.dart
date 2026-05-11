@@ -12,7 +12,7 @@ import 'usecase_providers.dart';
 
 final Provider<ScenarioContext> scenarioContextProvider =
     Provider<ScenarioContext>(
-      (Ref<ScenarioContext> ref) => ScenarioContext(
+      (ref) => ScenarioContext(
         db: ref.watch(appDatabaseProvider),
         prefs: ref.watch(sharedPreferencesProvider),
         productRepo: ref.watch(productRepositoryProvider),
@@ -34,13 +34,13 @@ final Provider<ScenarioContext> scenarioContextProvider =
     );
 
 final Provider<List<TestScenario>> scenariosProvider =
-    Provider<List<TestScenario>>((Ref<List<TestScenario>> ref) {
+    Provider<List<TestScenario>>((ref) {
       return defaultScenarios();
     });
 
 final Provider<ScenarioRunner> scenarioRunnerProvider =
     Provider<ScenarioRunner>(
-      (Ref<ScenarioRunner> ref) => ScenarioRunner(
+      (ref) => ScenarioRunner(
         scenarios: ref.watch(scenariosProvider),
         context: ref.watch(scenarioContextProvider),
       ),

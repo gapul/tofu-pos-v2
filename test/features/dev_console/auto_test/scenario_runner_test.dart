@@ -115,7 +115,7 @@ void main() {
 
     expect(reports, hasLength(defaultScenarios().length));
     final List<ScenarioReport> failures = reports
-        .where((ScenarioReport r) => !r.result.passed)
+        .where((r) => !r.result.passed)
         .toList();
     expect(
       failures,

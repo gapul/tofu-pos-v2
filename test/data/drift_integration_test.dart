@@ -177,7 +177,7 @@ void main() {
       await logRepo.record(kind: 'c', at: t);
 
       final List<OperationLog> recent = await logRepo.findRecent();
-      expect(recent.map((OperationLog l) => l.kind), <String>['c', 'b', 'a']);
+      expect(recent.map((l) => l.kind), <String>['c', 'b', 'a']);
     },
   );
 

@@ -4,6 +4,7 @@ import '../../domain/entities/order.dart';
 import '../../domain/entities/order_item.dart';
 import '../../domain/enums/order_status.dart';
 import '../../domain/value_objects/money.dart';
+import '../retry/retry_policy.dart';
 import 'cloud_sync_client.dart';
 
 /// Supabase 経由の注文同期実装（仕様書 §8）。
@@ -11,9 +12,17 @@ import 'cloud_sync_client.dart';
 /// `order_lines` テーブル（仕様書 §8.2 の非正規化形式）に upsert する。
 /// 同じ (shop_id, local_order_id, line_no) は冪等に上書きされる。
 class SupabaseCloudSyncClient implements CloudSyncClient {
-  SupabaseCloudSyncClient(this._client);
+  SupabaseCloudSyncClient(
+    this._client, {
+    RetryPolicy retryPolicy = const RetryPolicy(
+      maxAttempts: 3,
+      initialDelay: Duration(milliseconds: 200),
+      maxDelay: Duration(seconds: 2),
+    ),
+  }) : _retry = retryPolicy;
 
   final SupabaseClient _client;
+  final RetryPolicy _retry;
 
   static const String _table = 'order_lines';
 
@@ -61,8 +70,13 @@ class SupabaseCloudSyncClient implements CloudSyncClient {
     if (rows.isEmpty) {
       return;
     }
-    await _client
-        .from(_table)
-        .upsert(rows, onConflict: 'shop_id,local_order_id,line_no');
+    // upsert は冪等なので一時的なネットワークエラーには自動再試行する。
+    // 上位 SyncService 側にも周期再試行があるので、ここは「短時間の瞬断を吸収」
+    // する目的で短いリトライにとどめる。
+    await _retry.run<void>(() async {
+      await _client
+          .from(_table)
+          .upsert(rows, onConflict: 'shop_id,local_order_id,line_no');
+    });
   }
 }

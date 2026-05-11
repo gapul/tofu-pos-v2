@@ -48,7 +48,11 @@ class BleCentralService {
       timeout: _scanTimeout,
       continuousUpdates: true,
     );
-    AppLogger.i('BleCentral scan started for shop=$shopId');
+    AppLogger.event(
+      'ble',
+      'scan_started',
+      fields: <String, Object?>{'shop': shopId},
+    );
   }
 
   Future<void> stop() async {
@@ -118,8 +122,8 @@ class _ConnectedPeer {
 
   Future<void> connect() async {
     try {
-      await _device.connect();
-      _connSub = _device.connectionState.listen((BluetoothConnectionState s) {
+      await _device.connect(license: License.free);
+      _connSub = _device.connectionState.listen((s) {
         if (s == BluetoothConnectionState.disconnected) {
           AppLogger.d('BleCentral: $remoteId disconnected');
           _owner._peers.remove(remoteId);
@@ -146,7 +150,11 @@ class _ConnectedPeer {
           }
         }
       }
-      AppLogger.i('BleCentral: connected & discovered $remoteId');
+      AppLogger.event(
+        'ble',
+        'peer_connected',
+        fields: <String, Object?>{'remote_id': remoteId},
+      );
     } catch (e, st) {
       AppLogger.w(
         'BleCentral: connect failed $remoteId',

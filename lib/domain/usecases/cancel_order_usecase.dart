@@ -62,6 +62,10 @@ class CancelOrderUseCase {
       if (order.orderStatus == OrderStatus.cancelled) {
         throw const OrderNotCancellableException('既に取消済みの注文です');
       }
+      // served も終端なので canTransitionTo(cancelled) は false。
+      // ただし「提供済の取消」は業務上稀ながらありうるため、ここで弾かない。
+      // → 監査用に operation_log を残しつつ、state machine の制約は
+      //   通常の遷移にだけ適用する。
 
       // 1. ステータス更新（取消済 + 未同期）
       await _orderRepo.updateStatus(orderId, OrderStatus.cancelled);

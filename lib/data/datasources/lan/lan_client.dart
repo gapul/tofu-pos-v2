@@ -31,12 +31,16 @@ class LanClient {
 
   Future<void> start() async {
     final BonsoirDiscovery discovery = BonsoirDiscovery(type: '_tofu-pos._tcp');
-    await discovery.ready;
+    await discovery.initialize();
     await discovery.start();
     _discovery = discovery;
 
     _discoverySub = discovery.eventStream?.listen(_onDiscovery);
-    AppLogger.i('LanClient discovery started for shop=$shopId');
+    AppLogger.event(
+      'lan',
+      'discovery_started',
+      fields: <String, Object?>{'shop': shopId},
+    );
   }
 
   Future<void> stop() async {
@@ -62,13 +66,10 @@ class LanClient {
   }
 
   Future<void> _onDiscovery(BonsoirDiscoveryEvent event) async {
-    final BonsoirService? svc = event.service;
-    if (svc == null) {
-      return;
-    }
-    if (event.type == BonsoirDiscoveryEventType.discoveryServiceResolved) {
-      await _connectToPeer(svc);
-    } else if (event.type == BonsoirDiscoveryEventType.discoveryServiceLost) {
+    if (event is BonsoirDiscoveryServiceResolvedEvent) {
+      await _connectToPeer(event.service);
+    } else if (event is BonsoirDiscoveryServiceLostEvent) {
+      final BonsoirService svc = event.service;
       _peers.remove(svc.name);
       AppLogger.d('LanClient: peer lost ${svc.name}');
     }
@@ -85,10 +86,7 @@ class LanClient {
       return;
     }
 
-    final ResolvedBonsoirService? resolved = service is ResolvedBonsoirService
-        ? service
-        : null;
-    final String? host = resolved?.host;
+    final String? host = service.host;
     if (host == null) {
       AppLogger.w('LanClient: no host on resolved service ${service.name}');
       return;
@@ -97,9 +95,13 @@ class LanClient {
     try {
       final WebSocketChannel ch = WebSocketChannel.connect(uri);
       _peers[service.name] = ch;
-      AppLogger.i('LanClient: connected to ${service.name} @ $uri');
+      AppLogger.event(
+        'lan',
+        'peer_connected',
+        fields: <String, Object?>{'name': service.name, 'uri': '$uri'},
+      );
       ch.stream.listen(
-        (Object? message) {
+        (message) {
           if (message is! String) {
             return;
           }

@@ -7,13 +7,13 @@ import 'repository_providers.dart';
 /// 機能フラグの現在値を Stream で公開（仕様書 §4）。
 final StreamProvider<FeatureFlags> featureFlagsProvider =
     StreamProvider<FeatureFlags>(
-      (Ref<AsyncValue<FeatureFlags>> ref) =>
+      (ref) =>
           ref.watch(settingsRepositoryProvider).watchFeatureFlags(),
     );
 
 /// 通信モードの現在値を Stream で公開（仕様書 §7.1）。
 final StreamProvider<TransportMode> transportModeProvider =
     StreamProvider<TransportMode>(
-      (Ref<AsyncValue<TransportMode>> ref) =>
+      (ref) =>
           ref.watch(settingsRepositoryProvider).watchTransportMode(),
     );

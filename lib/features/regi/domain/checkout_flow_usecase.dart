@@ -80,13 +80,14 @@ class CheckoutFlowUseCase {
       throw TransportDeliveryException('注文をキッチンに送信できませんでした: $e');
     }
 
-    // 4. 送信成功 → ステータス更新
-    await _orderRepo.updateStatus(saved.id, OrderStatus.sent);
+    // 4. 送信成功 → ステータス更新（unsent → sent）
+    final OrderStatus next = saved.orderStatus.transitionTo(OrderStatus.sent);
+    await _orderRepo.updateStatus(saved.id, next);
     Telemetry.instance.event(
       'transport.send.order_submitted.ok',
       attrs: <String, Object?>{'order_id': saved.id},
     );
-    return saved.copyWith(orderStatus: OrderStatus.sent);
+    return saved.copyWith(orderStatus: next);
   }
 
   OrderSubmittedEvent _buildEvent(Order order) {

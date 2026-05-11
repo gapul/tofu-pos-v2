@@ -24,7 +24,7 @@ class DriftCallingOrderRepository implements CallingOrderRepository {
   Future<CallingOrder?> findByOrderId(int orderId) async {
     final CallingOrderRow? row =
         await (_db.select(_db.callingOrders)
-              ..where(($CallingOrdersTable t) => t.orderId.equals(orderId)))
+              ..where((t) => t.orderId.equals(orderId)))
             .getSingleOrNull();
     return row == null ? null : _toEntity(row);
   }
@@ -48,7 +48,7 @@ class DriftCallingOrderRepository implements CallingOrderRepository {
             ($CallingOrdersTable t) => OrderingTerm(expression: t.receivedAt),
           ]))
         .watch()
-        .map((List<CallingOrderRow> rows) => rows.map(_toEntity).toList());
+        .map((rows) => rows.map(_toEntity).toList());
   }
 
   @override
@@ -68,7 +68,7 @@ class DriftCallingOrderRepository implements CallingOrderRepository {
   @override
   Future<void> updateStatus(int orderId, CallingStatus status) async {
     await (_db.update(_db.callingOrders)
-          ..where(($CallingOrdersTable t) => t.orderId.equals(orderId)))
+          ..where((t) => t.orderId.equals(orderId)))
         .write(CallingOrdersCompanion(status: Value<String>(status.name)));
   }
 }

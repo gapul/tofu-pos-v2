@@ -44,7 +44,7 @@ class HourlySalesUseCase {
 
     return List<HourlySalesBucket>.generate(
       24,
-      (int h) => HourlySalesBucket(
+      (h) => HourlySalesBucket(
         hour: h,
         totalSales: Money(salesYen[h]),
         orderCount: orderCounts[h],
@@ -55,6 +55,6 @@ class HourlySalesUseCase {
   /// 注文があった時間帯だけ返す簡易版。
   Future<List<HourlySalesBucket>> getActiveHourly({DateTime? forDate}) async {
     final List<HourlySalesBucket> all = await getHourly(forDate: forDate);
-    return all.where((HourlySalesBucket b) => !b.isEmpty).toList();
+    return all.where((b) => !b.isEmpty).toList();
   }
 }

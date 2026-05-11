@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/config/env.dart';
+import '../core/telemetry/pii_redactor.dart';
 import '../core/telemetry/supabase_telemetry_sink.dart';
 import '../core/telemetry/telemetry.dart';
 import '../core/telemetry/telemetry_sink.dart';
@@ -10,19 +11,21 @@ import '../domain/value_objects/shop_id.dart';
 import 'repository_providers.dart';
 
 /// Supabase 接続が利用可能なときだけ Sink を返し、それ以外は Noop。
+///
+/// 送信前に [PiiRedactor] で attrs を redact する（多層防御）。
 final Provider<TelemetrySink> telemetrySinkProvider = Provider<TelemetrySink>((
-  Ref<TelemetrySink> ref,
+  ref,
 ) {
   if (!Env.hasSupabaseCredentials) {
     return const NoopTelemetrySink();
   }
-  return SupabaseTelemetrySink(Supabase.instance.client);
+  return RedactingTelemetrySink(SupabaseTelemetrySink(Supabase.instance.client));
 });
 
 /// アプリ起動時に1回だけ実行する初期化。Telemetry のグローバル状態に
 /// shop / device / role / appVersion を流し込む。
 final FutureProvider<void> telemetryInitProvider = FutureProvider<void>((
-  Ref<AsyncValue<void>> ref,
+  ref,
 ) async {
   final TelemetrySink sink = ref.watch(telemetrySinkProvider);
   if (sink is NoopTelemetrySink) {

@@ -30,7 +30,11 @@ class CallingIngestRouter {
 
   void start() {
     _sub ??= _transport.events().listen(_onEvent);
-    AppLogger.i('CallingIngestRouter started for shop=$_shopId');
+    AppLogger.event(
+      'calling',
+      'router_started',
+      fields: <String, Object?>{'shop': _shopId},
+    );
   }
 
   Future<void> stop() async {

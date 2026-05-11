@@ -5,7 +5,6 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
-import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 
 part 'database.g.dart';
 
@@ -129,17 +128,45 @@ class OperationLogs extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
-  AppDatabase.forTesting(super.executor);
+  AppDatabase.forTesting(super.e);
 
+  /// 現在のスキーマバージョン。
+  ///
+  /// 変更フロー:
+  ///  1. テーブル定義を編集
+  ///  2. このバージョンを +1
+  ///  3. [migration] の onUpgrade に v(N-1) → vN の遷移を追加
+  ///  4. 新規/破壊的変更のテストを `test/data/local/database_migration_test.dart` に追加
+  ///
+  /// 本番データを破壊しないために守ること:
+  ///  - 列追加: `Migrator.addColumn` を使う（DEFAULT を必ず付与）
+  ///  - 列削除/型変更: 中間バージョンで「新列を追加 → データ移行 → 旧列を最後に削除」の2段階
+  ///  - テーブル削除: 原則禁止。data backfill で空にしてから削除すること
+  ///  - 既存ユーザーが居る本番では、決して `m.createAll()` を再実行しない
+  ///    （現在の onCreate は新規端末専用）
   @override
   int get schemaVersion => 1;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (Migrator m) async {
+    onCreate: (m) async {
+      // 新規端末: 全テーブルを作成。
       await m.createAll();
     },
-    beforeOpen: (OpeningDetails details) async {
+    onUpgrade: (m, from, to) async {
+      // v1 が現状の最新。今後の追加は from < N の if-chain で記述する。
+      // 例:
+      //   if (from < 2) {
+      //     await m.addColumn(orders, orders.someNewColumn);
+      //   }
+      //   if (from < 3) {
+      //     await m.create(someNewTable);
+      //   }
+      //
+      // 重要: createAll を onUpgrade で呼ばないこと。既存テーブルが
+      //       重複作成エラーになる。
+    },
+    beforeOpen: (details) async {
       // 外部キー制約を有効化（SQLite はデフォルト無効）。
       // OrderItems → Orders の cascade delete 等が機能するように。
       await customStatement('PRAGMA foreign_keys = ON');
@@ -151,10 +178,6 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final Directory dbFolder = await getApplicationDocumentsDirectory();
     final File file = File(p.join(dbFolder.path, 'tofu_pos.sqlite'));
-
-    if (Platform.isAndroid) {
-      await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
-    }
 
     final String cachebase = (await getTemporaryDirectory()).path;
     sqlite3.tempDirectory = cachebase;

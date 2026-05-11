@@ -6,13 +6,14 @@ import '../core/sync/cloud_sync_client.dart';
 import '../core/sync/supabase_cloud_sync_client.dart';
 import '../core/sync/supabase_realtime_listener.dart';
 import '../core/sync/sync_service.dart';
+import '../core/time/clock.dart';
 import '../domain/value_objects/shop_id.dart';
 import 'connectivity_providers.dart';
 import 'repository_providers.dart';
 
 /// CloudSyncClient: Supabase接続情報があれば本実装、無ければ Noop。
 final Provider<CloudSyncClient> cloudSyncClientProvider =
-    Provider<CloudSyncClient>((Ref<CloudSyncClient> ref) {
+    Provider<CloudSyncClient>((ref) {
       if (Env.hasSupabaseCredentials) {
         return SupabaseCloudSyncClient(Supabase.instance.client);
       }
@@ -22,7 +23,7 @@ final Provider<CloudSyncClient> cloudSyncClientProvider =
 /// SupabaseRealtimeListener: 店舗ID と Supabase 接続情報が揃っていれば購読、無ければ null。
 final FutureProvider<SupabaseRealtimeListener?>
 supabaseRealtimeListenerProvider = FutureProvider<SupabaseRealtimeListener?>((
-  Ref<AsyncValue<SupabaseRealtimeListener?>> ref,
+  ref,
 ) async {
   if (!Env.hasSupabaseCredentials) {
     return null;
@@ -45,7 +46,7 @@ supabaseRealtimeListenerProvider = FutureProvider<SupabaseRealtimeListener?>((
 /// 受信した Realtime イベントを Stream で公開。
 final StreamProvider<RealtimeOrderLineEvent> realtimeOrderLineEventsProvider =
     StreamProvider<RealtimeOrderLineEvent>((
-      Ref<AsyncValue<RealtimeOrderLineEvent>> ref,
+      ref,
     ) async* {
       final SupabaseRealtimeListener? listener = await ref.watch(
         supabaseRealtimeListenerProvider.future,
@@ -59,7 +60,7 @@ final StreamProvider<RealtimeOrderLineEvent> realtimeOrderLineEventsProvider =
 /// SyncService: ライフサイクル付き Provider。
 /// `ref.read(syncServiceProvider).start()` を起動時に1回呼ぶ。
 final Provider<SyncService> syncServiceProvider = Provider<SyncService>((
-  Ref<SyncService> ref,
+  ref,
 ) {
   final SyncService service = SyncService(
     orderRepository: ref.watch(orderRepositoryProvider),
@@ -88,24 +89,27 @@ enum SyncWarningLevel {
 /// 1分間隔で SyncService.lastFailureSince を確認し、
 /// しきい値（デフォルト1時間）を超えたら prolongedFailure を emit する。
 final StreamProvider<SyncWarningLevel> syncWarningProvider =
-    StreamProvider<SyncWarningLevel>((Ref<AsyncValue<SyncWarningLevel>> ref) {
+    StreamProvider<SyncWarningLevel>((ref) {
       final SyncService service = ref.watch(syncServiceProvider);
+      final Clock clock = ref.watch(clockProvider);
       return Stream<SyncWarningLevel>.periodic(
         const Duration(minutes: 1),
-        (_) => _evaluate(service.lastFailureSince),
+        (_) => _evaluate(service.lastFailureSince, clock),
       ).distinct();
     });
 
-SyncWarningLevel _evaluate(DateTime? since) {
+SyncWarningLevel _evaluate(DateTime? since, Clock clock) {
   if (since == null) {
     return SyncWarningLevel.ok;
   }
-  if (DateTime.now().difference(since) >= kSyncFailureWarningThreshold) {
+  if (clock.now().difference(since) >= kSyncFailureWarningThreshold) {
     return SyncWarningLevel.prolongedFailure;
   }
   return SyncWarningLevel.ok;
 }
 
 /// 直接呼び出して即時判定する関数（UIの初回チェック用）。
-SyncWarningLevel evaluateSyncWarningNow(SyncService service) =>
-    _evaluate(service.lastFailureSince);
+SyncWarningLevel evaluateSyncWarningNow(
+  SyncService service, {
+  Clock clock = const SystemClock(),
+}) => _evaluate(service.lastFailureSince, clock);

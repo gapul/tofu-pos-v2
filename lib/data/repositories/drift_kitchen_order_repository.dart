@@ -25,7 +25,7 @@ class DriftKitchenOrderRepository implements KitchenOrderRepository {
   Future<KitchenOrder?> findByOrderId(int orderId) async {
     final KitchenOrderRow? row =
         await (_db.select(_db.kitchenOrders)
-              ..where(($KitchenOrdersTable t) => t.orderId.equals(orderId)))
+              ..where((t) => t.orderId.equals(orderId)))
             .getSingleOrNull();
     return row == null ? null : _toEntity(row);
   }
@@ -49,7 +49,7 @@ class DriftKitchenOrderRepository implements KitchenOrderRepository {
             ($KitchenOrdersTable t) => OrderingTerm(expression: t.receivedAt),
           ]))
         .watch()
-        .map((List<KitchenOrderRow> rows) => rows.map(_toEntity).toList());
+        .map((rows) => rows.map(_toEntity).toList());
   }
 
   @override
@@ -70,7 +70,7 @@ class DriftKitchenOrderRepository implements KitchenOrderRepository {
   @override
   Future<void> updateStatus(int orderId, KitchenStatus status) async {
     await (_db.update(_db.kitchenOrders)
-          ..where(($KitchenOrdersTable t) => t.orderId.equals(orderId)))
+          ..where((t) => t.orderId.equals(orderId)))
         .write(KitchenOrdersCompanion(status: Value<String>(status.name)));
   }
 }

@@ -55,7 +55,7 @@ void main() {
       shopId: 'yakisoba_A',
     );
     final List<String> lines = csv.split('\r\n')
-      ..removeWhere((String l) => l.isEmpty);
+      ..removeWhere((l) => l.isEmpty);
     expect(lines.first, startsWith('order_id,shop_id,'));
     // ヘッダ + 2明細行
     expect(lines.length, 3);
@@ -72,7 +72,7 @@ void main() {
     );
     final List<String> rows = csv
         .split('\r\n')
-        .where((String l) => l.isNotEmpty)
+        .where((l) => l.isNotEmpty)
         .toList();
     final List<String> yakisobaCols = rows[1].split(',');
     final List<String> juiceCols = rows[2].split(',');
@@ -91,7 +91,7 @@ void main() {
     );
     final List<String> rows = csv
         .split('\r\n')
-        .where((String l) => l.isNotEmpty)
+        .where((l) => l.isNotEmpty)
         .toList();
     expect(rows[1], endsWith(',cancelled,true'));
   });
@@ -103,7 +103,7 @@ void main() {
     );
     final List<String> rows = csv
         .split('\r\n')
-        .where((String l) => l.isNotEmpty)
+        .where((l) => l.isNotEmpty)
         .toList();
     for (int i = 1; i < rows.length; i++) {
       expect(rows[i].split(',')[1], 'yakisoba_A');

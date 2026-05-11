@@ -94,7 +94,7 @@ void main() {
     final List<HourlySalesBucket> r = await usecase.getHourly();
     final int totalForDay = r.fold(
       0,
-      (int sum, HourlySalesBucket b) => sum + b.orderCount,
+      (sum, b) => sum + b.orderCount,
     );
     expect(totalForDay, 1);
   });
@@ -104,6 +104,6 @@ void main() {
     await orderRepo.create(_o(id: 2, at: DateTime(2026, 5, 7, 14)));
 
     final List<HourlySalesBucket> r = await usecase.getActiveHourly();
-    expect(r.map((HourlySalesBucket b) => b.hour), <int>[10, 14]);
+    expect(r.map((b) => b.hour), <int>[10, 14]);
   });
 }

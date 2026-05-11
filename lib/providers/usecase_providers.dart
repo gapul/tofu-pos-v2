@@ -17,12 +17,13 @@ import '../domain/usecases/checkout_usecase.dart';
 import '../domain/usecases/daily_reset_usecase.dart';
 import '../domain/usecases/hourly_sales_usecase.dart';
 import '../domain/value_objects/shop_id.dart';
+import '../features/regi/domain/cancel_order_flow_usecase.dart';
 import '../features/regi/domain/checkout_flow_usecase.dart';
 import 'repository_providers.dart';
 
 final Provider<CheckoutUseCase> checkoutUseCaseProvider =
     Provider<CheckoutUseCase>(
-      (Ref<CheckoutUseCase> ref) => CheckoutUseCase(
+      (ref) => CheckoutUseCase(
         unitOfWork: ref.watch(unitOfWorkProvider),
         orderRepository: ref.watch(orderRepositoryProvider),
         productRepository: ref.watch(productRepositoryProvider),
@@ -33,7 +34,7 @@ final Provider<CheckoutUseCase> checkoutUseCaseProvider =
 
 final Provider<CancelOrderUseCase> cancelOrderUseCaseProvider =
     Provider<CancelOrderUseCase>(
-      (Ref<CancelOrderUseCase> ref) => CancelOrderUseCase(
+      (ref) => CancelOrderUseCase(
         unitOfWork: ref.watch(unitOfWorkProvider),
         orderRepository: ref.watch(orderRepositoryProvider),
         productRepository: ref.watch(productRepositoryProvider),
@@ -45,7 +46,7 @@ final Provider<CancelOrderUseCase> cancelOrderUseCaseProvider =
 
 final Provider<CashCloseUseCase> cashCloseUseCaseProvider =
     Provider<CashCloseUseCase>(
-      (Ref<CashCloseUseCase> ref) => CashCloseUseCase(
+      (ref) => CashCloseUseCase(
         orderRepository: ref.watch(orderRepositoryProvider),
         cashDrawerRepository: ref.watch(cashDrawerRepositoryProvider),
       ),
@@ -53,14 +54,14 @@ final Provider<CashCloseUseCase> cashCloseUseCaseProvider =
 
 final Provider<HourlySalesUseCase> hourlySalesUseCaseProvider =
     Provider<HourlySalesUseCase>(
-      (Ref<HourlySalesUseCase> ref) => HourlySalesUseCase(
+      (ref) => HourlySalesUseCase(
         orderRepository: ref.watch(orderRepositoryProvider),
       ),
     );
 
 final Provider<DailyResetUseCase> dailyResetUseCaseProvider =
     Provider<DailyResetUseCase>(
-      (Ref<DailyResetUseCase> ref) => DailyResetUseCase(
+      (ref) => DailyResetUseCase(
         dailyResetRepository: ref.watch(dailyResetRepositoryProvider),
         ticketPoolRepository: ref.watch(ticketNumberPoolRepositoryProvider),
       ),
@@ -75,7 +76,7 @@ final Provider<DailyResetUseCase> dailyResetUseCaseProvider =
 /// 店舗ID または役割が未設定なら Noop を返して安全側に倒す。
 /// `connect()` は [_buildTransport] 内で呼び、ref.onDispose で disconnect する。
 final FutureProvider<Transport> transportProvider = FutureProvider<Transport>((
-  Ref<AsyncValue<Transport>> ref,
+  ref,
 ) async {
   final settings = ref.watch(settingsRepositoryProvider);
   final TransportMode mode = await settings.getTransportMode();
@@ -144,12 +145,33 @@ Future<Transport> _buildTransport({
   }
 }
 
+/// 取消フロー全体（ローカル取消 + Transport 経由の調理中止/取消通知）。
+///
+/// 店舗ID が未設定の状態では使えないため Future で公開する。
+final FutureProvider<CancelOrderFlowUseCase?> cancelOrderFlowUseCaseProvider =
+    FutureProvider<CancelOrderFlowUseCase?>((
+      ref,
+    ) async {
+      final ShopId? shopId = await ref
+          .watch(settingsRepositoryProvider)
+          .getShopId();
+      if (shopId == null) {
+        return null;
+      }
+      final Transport transport = await ref.watch(transportProvider.future);
+      return CancelOrderFlowUseCase(
+        cancelOrderUseCase: ref.watch(cancelOrderUseCaseProvider),
+        transport: transport,
+        shopId: shopId.value,
+      );
+    });
+
 /// 会計フロー全体（保存 + Transport 送信）。
 ///
 /// 店舗ID が未設定の状態では使えないため Future で公開する。
 final FutureProvider<CheckoutFlowUseCase?> checkoutFlowUseCaseProvider =
     FutureProvider<CheckoutFlowUseCase?>((
-      Ref<AsyncValue<CheckoutFlowUseCase?>> ref,
+      ref,
     ) async {
       final ShopId? shopId = await ref
           .watch(settingsRepositoryProvider)

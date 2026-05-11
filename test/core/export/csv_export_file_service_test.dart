@@ -85,7 +85,7 @@ void main() {
     final CsvExportFileService svc = CsvExportFileService(
       getDirectory: () async => tmpDir,
       now: () => DateTime(2026, 5, 7),
-      share: (List<XFile> files, {String? subject}) async {
+      share: (files, {subject}) async {
         shareCalled = true;
         sharedPath = files.single.path;
         sharedSubject = subject;

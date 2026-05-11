@@ -46,7 +46,11 @@ class LanServer {
     final Handler handler = webSocketHandler(_handleClient);
     _httpServer = await shelf_io.serve(handler, InternetAddress.anyIPv4, _port);
     _port = _httpServer!.port;
-    AppLogger.i('LanServer started on port $_port');
+    AppLogger.event(
+      'lan',
+      'server_started',
+      fields: <String, Object?>{'port': _port},
+    );
 
     final BonsoirService service = BonsoirService(
       name: 'tofu-pos-$role-$shopId',
@@ -55,10 +59,17 @@ class LanServer {
       attributes: <String, String>{'shopId': shopId, 'role': role},
     );
     final BonsoirBroadcast broadcast = BonsoirBroadcast(service: service);
-    await broadcast.ready;
+    await broadcast.initialize();
     await broadcast.start();
     _broadcast = broadcast;
-    AppLogger.i('LanServer broadcasting as ${service.name} (${service.type})');
+    AppLogger.event(
+      'lan',
+      'server_broadcasting',
+      fields: <String, Object?>{
+        'name': service.name,
+        'type': service.type,
+      },
+    );
   }
 
   Future<void> stop() async {
@@ -93,7 +104,7 @@ class LanServer {
     AppLogger.d('LanServer: client connected (subprotocol: $subprotocol)');
     _clients.add(channel);
     channel.stream.listen(
-      (Object? message) {
+      (message) {
         if (message is! String) {
           return;
         }

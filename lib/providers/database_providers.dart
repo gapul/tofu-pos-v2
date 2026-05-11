@@ -5,7 +5,7 @@ import '../data/datasources/local/database.dart';
 
 /// アプリ全体で共有する単一の AppDatabase。
 final Provider<AppDatabase> appDatabaseProvider = Provider<AppDatabase>((
-  Ref<AppDatabase> ref,
+  ref,
 ) {
   final AppDatabase db = AppDatabase();
   ref.onDispose(db.close);
@@ -18,7 +18,7 @@ final Provider<AppDatabase> appDatabaseProvider = Provider<AppDatabase>((
 /// overrideWith する想定。直接 `await` させない。
 final Provider<SharedPreferences>
 sharedPreferencesProvider = Provider<SharedPreferences>((
-  Ref<SharedPreferences> ref,
+  ref,
 ) {
   throw UnimplementedError(
     'sharedPreferencesProvider must be overridden in main() with the resolved instance.',

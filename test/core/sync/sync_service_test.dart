@@ -159,7 +159,7 @@ void main() {
 
     final SyncResult r = await service.runOnce();
     expect(r.successCount, 1);
-    expect(client.pushed.map((Order o) => o.id), <int>[a.id]);
+    expect(client.pushed.map((o) => o.id), <int>[a.id]);
 
     final List<Order> unsynced = await orderRepo.findUnsynced();
     expect(unsynced, isEmpty);
@@ -177,4 +177,42 @@ void main() {
     expect(r2.failureCount, 0);
     expect(service.lastFailureSince, isNull);
   });
+
+  test('start() で fire-and-forget された runOnce はタイムアウトで停止し、'
+      '再試行タイマーは動き続ける', () async {
+    // 永遠にハングする client を用意。
+    final _HangingClient hanging = _HangingClient();
+    final SyncService quick = SyncService(
+      orderRepository: orderRepo,
+      settingsRepository: _FakeSettings(ShopId('shop_a')),
+      connectivityMonitor: monitor,
+      client: hanging,
+      retryInterval: const Duration(milliseconds: 50),
+      runOnceTimeout: const Duration(milliseconds: 30),
+    );
+    await orderRepo.create(_makeOrder());
+    quick.start();
+    addTearDown(() async {
+      await quick.stop();
+      hanging.release();
+    });
+
+    // タイマー1回 + タイムアウト1回ぶんを待つ。
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    // ここで例外が外に漏れていなければタイムアウトガードが効いている。
+    expect(true, isTrue);
+  });
+}
+
+class _HangingClient implements CloudSyncClient {
+  final Completer<void> _completer = Completer<void>();
+
+  void release() {
+    if (!_completer.isCompleted) {
+      _completer.complete();
+    }
+  }
+
+  @override
+  Future<void> push(Order order, {required String shopId}) => _completer.future;
 }

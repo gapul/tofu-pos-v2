@@ -78,7 +78,7 @@ void main() {
     await repo.updateSyncStatus(a.id, SyncStatus.synced);
 
     final List<Order> unsynced = await repo.findUnsynced();
-    expect(unsynced.map((Order o) => o.id), <int>[b.id]);
+    expect(unsynced.map((o) => o.id), <int>[b.id]);
   });
 
   test('updateStatus changes order status', () async {

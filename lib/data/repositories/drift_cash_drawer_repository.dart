@@ -39,7 +39,7 @@ class DriftCashDrawerRepository implements CashDrawerRepository {
       for (final MapEntry<Denomination, int> e in delta.entries) {
         final CashDrawerCountRow? row =
             await (_db.select(_db.cashDrawerCounts)..where(
-                  ($CashDrawerCountsTable t) =>
+                  (t) =>
                       t.denomination.equals(e.key.yen),
                 ))
                 .getSingleOrNull();

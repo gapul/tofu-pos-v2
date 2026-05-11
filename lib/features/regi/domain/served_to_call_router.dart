@@ -39,7 +39,7 @@ class ServedToCallRouter {
 
   void start() {
     _sub ??= _transport.events().listen(_onEvent);
-    AppLogger.i('ServedToCallRouter started');
+    AppLogger.event('regi', 'served_to_call_router_started');
   }
 
   Future<void> stop() async {
@@ -71,10 +71,19 @@ class ServedToCallRouter {
 
     try {
       await _transport.send(ev);
-      AppLogger.d('Auto-routed served → call: ticket=${event.ticketNumber}');
+      AppLogger.event(
+        'regi',
+        'auto_route_served_to_call',
+        fields: <String, Object?>{'ticket': event.ticketNumber.value},
+        level: AppLogLevel.debug,
+      );
     } catch (e, st) {
       AppLogger.w(
-        'ServedToCallRouter: forward failed for ticket=${event.ticketNumber}',
+        AppLogger.formatEvent(
+          'regi',
+          'auto_route_failed',
+          <String, Object?>{'ticket': event.ticketNumber.value},
+        ),
         error: e,
         stackTrace: st,
       );

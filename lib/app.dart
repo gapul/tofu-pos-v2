@@ -2,18 +2,70 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/config/env.dart';
+import 'core/config/supabase_bootstrap.dart';
 import 'core/router/app_router.dart';
+import 'core/startup/startup_pipeline.dart';
+import 'core/telemetry/telemetry.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/role_router_providers.dart';
 import 'providers/sync_providers.dart';
 import 'providers/telemetry_providers.dart';
 import 'providers/usecase_providers.dart';
 
-/// アプリ起動直後に1回だけ走る初期化。
+/// アプリ起動直後に1回だけ走る初期化シーケンス。
 ///
-/// - DailyReset（営業日切替の整理券プールリセット）
-/// - SyncService.start（オンライン同期）
-/// - RoleStarter.start（役割別ルーター/サービスの起動）
+/// 順序:
+///  0. Env 検証（Supabase 接続情報の形式チェック。失敗しても続行）
+///  1. Supabase 初期化（iOS の起動 watchdog 回避のため第1フレーム後）
+///  2. Telemetry 初期化（shop / device / role 確定後）
+///  3. DailyReset（営業日切替の整理券プールリセット）
+///  4. SyncService 起動
+///  5. RoleStarter 起動
+///
+/// 個々の失敗は Telemetry に記録して次へ進む（fatal=false）。
+StartupPipeline buildStartupPipeline(WidgetRef ref) {
+  return StartupPipeline(<StartupStep>[
+    StartupStep(
+      name: 'env.validate',
+      run: () async {
+        final EnvValidation result = Env.validate();
+        if (result is EnvInvalid) {
+          // 致命扱いはしない。Supabase 周りは hasSupabaseCredentials の
+          // ガードで自動的に Noop に落ちるため、検証エラーは観測対象に留める。
+          Telemetry.instance.warn(
+            'env.invalid',
+            message: 'Env validation failed',
+            attrs: <String, Object?>{
+              'reasons': result.reasons.join('; '),
+            },
+          );
+        }
+      },
+    ),
+    const StartupStep(
+      name: 'supabase.init',
+      run: initializeSupabaseIfConfigured,
+    ),
+    StartupStep(
+      name: 'telemetry.init',
+      run: () => ref.read(telemetryInitProvider.future),
+    ),
+    StartupStep(
+      name: 'daily_reset',
+      run: () => ref.read(dailyResetUseCaseProvider).runIfNeeded(),
+    ),
+    StartupStep(
+      name: 'sync.start',
+      run: () async => ref.read(syncServiceProvider).start(),
+    ),
+    StartupStep(
+      name: 'role_starter.start',
+      run: () => ref.read(roleStarterProvider).start(),
+    ),
+  ]);
+}
+
 class _StartupInitializer extends ConsumerStatefulWidget {
   const _StartupInitializer({required this.child});
   final Widget child;
@@ -28,14 +80,7 @@ class _StartupInitializerState extends ConsumerState<_StartupInitializer> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // 0. テレメトリの初期化（shop / device / role が確定後に有効化）
-      await ref.read(telemetryInitProvider.future);
-      // 1. 営業日切替チェック → 整理券プールのリセット
-      await ref.read(dailyResetUseCaseProvider).runIfNeeded();
-      // 2. クラウド同期の自動起動
-      ref.read(syncServiceProvider).start();
-      // 3. 役割別のルーター/自動ブロードキャスター起動
-      await ref.read(roleStarterProvider).start();
+      await buildStartupPipeline(ref).run();
     });
   }
 

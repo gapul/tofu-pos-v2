@@ -45,8 +45,13 @@ class KitchenIngestUseCase {
         receivedAt: _now(),
       ),
     );
-    AppLogger.i(
-      'Kitchen ingested order #${ev.orderId} ticket=${ev.ticketNumber}',
+    AppLogger.event(
+      'kitchen',
+      'ingest_submitted',
+      fields: <String, Object?>{
+        'order_id': ev.orderId,
+        'ticket': ev.ticketNumber.value,
+      },
     );
   }
 
@@ -57,14 +62,25 @@ class KitchenIngestUseCase {
   Future<void> ingestCancelled(OrderCancelledEvent ev) async {
     final KitchenOrder? existing = await _repo.findByOrderId(ev.orderId);
     if (existing == null) {
-      AppLogger.w(
-        'Kitchen ingest: cancelled event for unknown order #${ev.orderId}',
+      AppLogger.event(
+        'kitchen',
+        'ingest_cancelled_unknown',
+        fields: <String, Object?>{'order_id': ev.orderId},
+        level: AppLogLevel.warn,
       );
       return;
     }
     final KitchenStatus prev = existing.status;
     await _repo.updateStatus(ev.orderId, KitchenStatus.cancelled);
-    AppLogger.w('Kitchen: order #${ev.orderId} cancelled (was $prev)');
+    AppLogger.event(
+      'kitchen',
+      'ingest_cancelled',
+      fields: <String, Object?>{
+        'order_id': ev.orderId,
+        'prev_status': prev.name,
+      },
+      level: AppLogLevel.warn,
+    );
 
     if (prev != KitchenStatus.pending && prev != KitchenStatus.cancelled) {
       _alerts.add(

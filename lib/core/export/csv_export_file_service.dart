@@ -15,7 +15,7 @@ Future<ShareResult> _defaultShareLauncher(
   List<XFile> files, {
   String? subject,
 }) {
-  return Share.shareXFiles(files, subject: subject);
+  return SharePlus.instance.share(ShareParams(files: files, subject: subject));
 }
 
 /// CsvExportService が組み立てた CSV をファイルに書き出し、OS の共有シートを開く。

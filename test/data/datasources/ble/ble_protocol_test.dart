@@ -134,9 +134,7 @@ void main() {
       );
       // a の途中で b を挟む
       ass.feed(a.first);
-      for (final Uint8List f in b) {
-        ass.feed(f);
-      }
+      b.forEach(ass.feed);
       expect(ass.pendingSeqCount, 1); // a がまだ未完成
       // a を最後まで
       for (int i = 1; i < a.length; i++) {

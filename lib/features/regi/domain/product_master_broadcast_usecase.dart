@@ -57,7 +57,12 @@ class ProductMasterBroadcastUseCase {
 
     try {
       await _transport.send(ev);
-      AppLogger.d('ProductMasterBroadcast: sent ${products.length} products');
+      AppLogger.event(
+        'regi',
+        'product_master_broadcast',
+        fields: <String, Object?>{'count': products.length},
+        level: AppLogLevel.debug,
+      );
     } catch (e, st) {
       // 低緊急: 失敗してもユーザー通知しない（仕様書 §7.2）
       AppLogger.w(

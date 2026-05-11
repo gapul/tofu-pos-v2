@@ -25,7 +25,14 @@ class CallingIngestUseCase {
         receivedAt: _now(),
       ),
     );
-    AppLogger.i('Calling: queued ticket=${ev.ticketNumber}');
+    AppLogger.event(
+      'calling',
+      'ingest_call_number',
+      fields: <String, Object?>{
+        'order_id': ev.orderId,
+        'ticket': ev.ticketNumber.value,
+      },
+    );
   }
 
   /// 取消通知（仕様書 §6.6.6）。既存があれば cancelled に更新、なければ no-op。
@@ -35,7 +42,12 @@ class CallingIngestUseCase {
       return;
     }
     await _repo.updateStatus(ev.orderId, CallingStatus.cancelled);
-    AppLogger.w('Calling: order #${ev.orderId} cancelled');
+    AppLogger.event(
+      'calling',
+      'ingest_cancelled',
+      fields: <String, Object?>{'order_id': ev.orderId},
+      level: AppLogLevel.warn,
+    );
   }
 
   /// マークだけ「呼び出し済み」に変える（仕様書 §6.3 の挙動）。

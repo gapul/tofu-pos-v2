@@ -38,7 +38,7 @@ class DriftProductRepository implements ProductRepository {
       _db.products,
     );
     if (!includeDeleted) {
-      q.where(($ProductsTable t) => t.isDeleted.equals(false));
+      q.where((t) => t.isDeleted.equals(false));
     }
     final List<ProductRow> rows = await q.get();
     return rows.map(_toEntity).toList();
@@ -48,7 +48,7 @@ class DriftProductRepository implements ProductRepository {
   Future<Product?> findById(String id) async {
     final ProductRow? row = await (_db.select(
       _db.products,
-    )..where(($ProductsTable t) => t.id.equals(id))).getSingleOrNull();
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     return row == null ? null : _toEntity(row);
   }
 
@@ -58,10 +58,10 @@ class DriftProductRepository implements ProductRepository {
       _db.products,
     );
     if (!includeDeleted) {
-      q.where(($ProductsTable t) => t.isDeleted.equals(false));
+      q.where((t) => t.isDeleted.equals(false));
     }
     return q.watch().map(
-      (List<ProductRow> rows) => rows.map(_toEntity).toList(),
+      (rows) => rows.map(_toEntity).toList(),
     );
   }
 
@@ -73,7 +73,7 @@ class DriftProductRepository implements ProductRepository {
   @override
   Future<void> markDeleted(String id) async {
     await (_db.update(_db.products)
-          ..where(($ProductsTable t) => t.id.equals(id)))
+          ..where((t) => t.id.equals(id)))
         .write(const ProductsCompanion(isDeleted: Value<bool>(true)));
   }
 
@@ -82,7 +82,7 @@ class DriftProductRepository implements ProductRepository {
     await _db.transaction(() async {
       final ProductRow? row = await (_db.select(
         _db.products,
-      )..where(($ProductsTable t) => t.id.equals(productId))).getSingleOrNull();
+      )..where((t) => t.id.equals(productId))).getSingleOrNull();
       if (row == null) {
         throw StateError('Product not found: $productId');
       }
@@ -91,7 +91,7 @@ class DriftProductRepository implements ProductRepository {
         throw StateError('Stock would go negative: $productId ($next)');
       }
       await (_db.update(_db.products)
-            ..where(($ProductsTable t) => t.id.equals(productId)))
+            ..where((t) => t.id.equals(productId)))
           .write(ProductsCompanion(stock: Value<int>(next)));
     });
   }
@@ -108,7 +108,7 @@ class DriftProductRepository implements ProductRepository {
       for (final ProductRow row in existing) {
         if (!incomingIds.contains(row.id) && !row.isDeleted) {
           await (_db.update(_db.products)
-                ..where(($ProductsTable t) => t.id.equals(row.id)))
+                ..where((t) => t.id.equals(row.id)))
               .write(const ProductsCompanion(isDeleted: Value<bool>(true)));
         }
       }

@@ -34,17 +34,20 @@ class SyncService {
     required ConnectivityMonitor connectivityMonitor,
     required CloudSyncClient client,
     Duration retryInterval = const Duration(minutes: 5),
+    Duration runOnceTimeout = const Duration(seconds: 30),
   }) : _orderRepo = orderRepository,
        _settingsRepo = settingsRepository,
        _connectivity = connectivityMonitor,
        _client = client,
-       _retryInterval = retryInterval;
+       _retryInterval = retryInterval,
+       _runOnceTimeout = runOnceTimeout;
 
   final OrderRepository _orderRepo;
   final SettingsRepository _settingsRepo;
   final ConnectivityMonitor _connectivity;
   final CloudSyncClient _client;
   final Duration _retryInterval;
+  final Duration _runOnceTimeout;
 
   StreamSubscription<ConnectivityStatus>? _connSub;
   Timer? _retryTimer;
@@ -53,14 +56,46 @@ class SyncService {
 
   /// オンライン復帰と周期再試行を起動する。
   void start() {
-    _connSub ??= _connectivity.watch().listen((ConnectivityStatus status) {
+    _connSub ??= _connectivity.watch().listen((status) {
       if (status == ConnectivityStatus.online) {
-        unawaited(runOnce());
+        unawaited(_runOnceGuarded());
       }
     });
     _retryTimer ??= Timer.periodic(_retryInterval, (_) {
-      unawaited(runOnce());
+      unawaited(_runOnceGuarded());
     });
+  }
+
+  /// fire-and-forget 用のラッパー。
+  /// タイムアウトと例外を Telemetry に流して、再試行チェーンを止めない。
+  Future<void> _runOnceGuarded() async {
+    try {
+      await runOnce().timeout(_runOnceTimeout);
+    } on TimeoutException catch (e, st) {
+      AppLogger.w(
+        'Sync runOnce timed out after ${_runOnceTimeout.inSeconds}s',
+        error: e,
+        stackTrace: st,
+      );
+      Telemetry.instance.error(
+        'sync.runOnce.timeout',
+        message: 'runOnce timed out',
+        error: e,
+        stackTrace: st,
+        attrs: <String, Object?>{
+          'timeout_seconds': _runOnceTimeout.inSeconds,
+        },
+      );
+      // 元の runOnce future はバックグラウンドで継続し、完了時に
+      // finally で _running を false に戻す。ここでは何もしない。
+    } catch (e, st) {
+      AppLogger.w('Sync runOnce failed', error: e, stackTrace: st);
+      Telemetry.instance.error(
+        'sync.runOnce.failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   Future<void> stop() async {
@@ -118,14 +153,19 @@ class SyncService {
       }
       if (failure == 0) {
         if (_firstFailureAt != null) {
-          AppLogger.i('Sync recovered after previous failures');
+          AppLogger.event('sync', 'recovered');
           Telemetry.instance.event('sync.recovered');
         }
         _firstFailureAt = null;
       } else {
         _firstFailureAt ??= DateTime.now();
       }
-      AppLogger.d('Sync runOnce: success=$success failure=$failure');
+      AppLogger.event(
+        'sync',
+        'run_once',
+        fields: <String, Object?>{'success': success, 'failure': failure},
+        level: AppLogLevel.debug,
+      );
       Telemetry.instance.event(
         'sync.run',
         attrs: <String, Object?>{'success': success, 'failure': failure},

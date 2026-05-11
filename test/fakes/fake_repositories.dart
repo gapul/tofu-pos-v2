@@ -41,7 +41,7 @@ class InMemoryProductRepository implements ProductRepository {
   @override
   Future<List<Product>> findAll({bool includeDeleted = false}) async {
     return _products.values
-        .where((Product p) => includeDeleted || !p.isDeleted)
+        .where((p) => includeDeleted || !p.isDeleted)
         .toList();
   }
 
@@ -109,11 +109,11 @@ class InMemoryOrderRepository implements OrderRepository {
     int? limit,
     int offset = 0,
   }) async {
-    final List<Order> filtered = _orders.values.where((Order o) {
+    final List<Order> filtered = _orders.values.where((o) {
       if (from != null && o.createdAt.isBefore(from)) return false;
       if (to != null && o.createdAt.isAfter(to)) return false;
       return true;
-    }).toList()..sort((Order a, Order b) => b.createdAt.compareTo(a.createdAt));
+    }).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     final List<Order> sliced = filtered.skip(offset).toList();
     if (limit != null) {
       return sliced.take(limit).toList();
@@ -124,7 +124,7 @@ class InMemoryOrderRepository implements OrderRepository {
   @override
   Future<List<Order>> findUnsynced() async {
     return _orders.values
-        .where((Order o) => o.syncStatus == SyncStatus.notSynced)
+        .where((o) => o.syncStatus == SyncStatus.notSynced)
         .toList();
   }
 
@@ -211,7 +211,7 @@ class InMemoryKitchenOrderRepository implements KitchenOrderRepository {
   Future<List<KitchenOrder>> findAll() async {
     final List<KitchenOrder> all = _orders.values.toList()
       ..sort(
-        (KitchenOrder a, KitchenOrder b) =>
+        (a, b) =>
             a.receivedAt.compareTo(b.receivedAt),
       );
     return all;
@@ -248,7 +248,7 @@ class InMemoryCallingOrderRepository implements CallingOrderRepository {
   Future<List<CallingOrder>> findAll() async {
     final List<CallingOrder> all = _orders.values.toList()
       ..sort(
-        (CallingOrder a, CallingOrder b) =>
+        (a, b) =>
             a.receivedAt.compareTo(b.receivedAt),
       );
     return all;
@@ -299,7 +299,7 @@ class InMemoryOperationLogRepository implements OperationLogRepository {
   Future<List<OperationLog>> findRecent({int limit = 100}) async {
     final List<OperationLog> sorted = <OperationLog>[...records]
       ..sort(
-        (OperationLog a, OperationLog b) =>
+        (a, b) =>
             b.occurredAt.compareTo(a.occurredAt),
       );
     return sorted.take(limit).toList();

@@ -20,10 +20,10 @@ class DriftOrderRepository implements OrderRepository {
   Future<Order> _hydrate(OrderRow row) async {
     final List<OrderItemRow> itemRows = await (_db.select(
       _db.orderItems,
-    )..where(($OrderItemsTable t) => t.orderId.equals(row.id))).get();
+    )..where((t) => t.orderId.equals(row.id))).get();
     final List<OrderItem> items = itemRows
         .map(
-          (OrderItemRow r) => OrderItem(
+          (r) => OrderItem(
             productId: r.productId,
             productName: r.productName,
             priceAtTime: Money(r.priceAtTimeYen),
@@ -75,7 +75,7 @@ class DriftOrderRepository implements OrderRepository {
   Future<Order?> findById(int id) async {
     final OrderRow? row = await (_db.select(
       _db.orders,
-    )..where(($OrdersTable t) => t.id.equals(id))).getSingleOrNull();
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     if (row == null) {
       return null;
     }
@@ -93,10 +93,10 @@ class DriftOrderRepository implements OrderRepository {
       _db.orders,
     );
     if (from != null) {
-      q.where(($OrdersTable t) => t.createdAt.isBiggerOrEqualValue(from));
+      q.where((t) => t.createdAt.isBiggerOrEqualValue(from));
     }
     if (to != null) {
-      q.where(($OrdersTable t) => t.createdAt.isSmallerOrEqualValue(to));
+      q.where((t) => t.createdAt.isSmallerOrEqualValue(to));
     }
     q.orderBy(<OrderClauseGenerator<$OrdersTable>>[
       ($OrdersTable t) =>
@@ -116,7 +116,7 @@ class DriftOrderRepository implements OrderRepository {
   Future<List<Order>> findUnsynced() async {
     final List<OrderRow> rows =
         await (_db.select(_db.orders)..where(
-              ($OrdersTable t) =>
+              (t) =>
                   t.syncStatus.equals(SyncStatus.notSynced.name),
             ))
             .get();
@@ -129,13 +129,13 @@ class DriftOrderRepository implements OrderRepository {
       _db.orders,
     );
     if (from != null) {
-      q.where(($OrdersTable t) => t.createdAt.isBiggerOrEqualValue(from));
+      q.where((t) => t.createdAt.isBiggerOrEqualValue(from));
     }
     if (to != null) {
-      q.where(($OrdersTable t) => t.createdAt.isSmallerOrEqualValue(to));
+      q.where((t) => t.createdAt.isSmallerOrEqualValue(to));
     }
     return q.watch().asyncMap(
-      (List<OrderRow> rows) => Future.wait(rows.map(_hydrate)),
+      (rows) => Future.wait(rows.map(_hydrate)),
     );
   }
 
@@ -186,13 +186,13 @@ class DriftOrderRepository implements OrderRepository {
 
   @override
   Future<void> updateStatus(int id, OrderStatus status) async {
-    await (_db.update(_db.orders)..where(($OrdersTable t) => t.id.equals(id)))
+    await (_db.update(_db.orders)..where((t) => t.id.equals(id)))
         .write(OrdersCompanion(orderStatus: Value<String>(status.name)));
   }
 
   @override
   Future<void> updateSyncStatus(int id, SyncStatus status) async {
-    await (_db.update(_db.orders)..where(($OrdersTable t) => t.id.equals(id)))
+    await (_db.update(_db.orders)..where((t) => t.id.equals(id)))
         .write(OrdersCompanion(syncStatus: Value<String>(status.name)));
   }
 }

@@ -38,6 +38,6 @@ void main() {
     await repo.record(kind: 'c', at: DateTime(2026, 5, 7, 11));
 
     final List<OperationLog> recent = await repo.findRecent(limit: 2);
-    expect(recent.map((OperationLog l) => l.kind), <String>['b', 'c']);
+    expect(recent.map((l) => l.kind), <String>['b', 'c']);
   });
 }
