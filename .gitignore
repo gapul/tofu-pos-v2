@@ -54,3 +54,6 @@ app.*.map.json
 
 # pubspec.lock
 # (アプリは含める、ライブラリは無視するのが慣例。アプリなので含める)
+
+# Supabase CLI 一時ファイル
+supabase/.temp/
