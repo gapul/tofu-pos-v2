@@ -43,4 +43,14 @@ create policy "anon insert"
 
 -- 削除は許可しない（取り扱い注意：fest1日でクリアしないなら別途 cron で）。
 
-alter publication supabase_realtime add table public.device_events;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'device_events'
+  ) then
+    alter publication supabase_realtime add table public.device_events;
+  end if;
+end$$;

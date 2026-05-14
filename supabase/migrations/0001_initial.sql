@@ -82,4 +82,14 @@ create policy "anon update"
 -- order_lines テーブルを有効化する必要がある。
 -- ここでは publication への追加だけ宣言しておく。
 
-alter publication supabase_realtime add table public.order_lines;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'order_lines'
+  ) then
+    alter publication supabase_realtime add table public.order_lines;
+  end if;
+end$$;

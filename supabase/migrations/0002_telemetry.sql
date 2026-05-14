@@ -60,7 +60,17 @@ create policy "anon insert"
 -- Realtime
 -- ===========================================================================
 -- ダッシュボードの Tester タブが postgres_changes で購読する。
-alter publication supabase_realtime add table public.telemetry_events;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'telemetry_events'
+  ) then
+    alter publication supabase_realtime add table public.telemetry_events;
+  end if;
+end$$;
 
 -- ===========================================================================
 -- Retention（任意）
