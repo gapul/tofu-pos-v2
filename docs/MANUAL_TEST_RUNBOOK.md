@@ -100,6 +100,13 @@
 | 自分の送信が自端末にエコーバックされない | loopback dedup が効いて二重処理しない | ☐ |
 | ネット切断 → 復帰 | Realtime チャネル自動再接続、消失なし | ☐ |
 
+> **DevConsole §12「自動テスト」によるペア検証手順**:
+> 1. 両端末を同じ `shop_id` で起動し、TransportMode を `online`（または `localLan`/`bluetooth`）に揃える。
+> 2. **端末A（キッチン役）**で `transport.peer_kitchen.echo_30s` を起動 — 30 秒間、受信した `OrderSubmittedEvent` に `OrderServedEvent` を返す。
+> 3. **端末B（レジ役）**で 5 秒以内に `transport.peer_register.roundtrip_3` を起動 — 3 件を 1s 間隔で送信し、各 echo を 5s 以内に検証。
+> 4. 端末Aで `echoed 3 events`、端末Bで `all 3 roundtrips returned within 5s` が出れば双方向疎通 OK。
+> 5. 失敗時はまず TransportMode・shop_id・(online なら) Supabase creds が揃っているかを確認（揃っていなければシナリオは `SKIP` 表示になる）。
+
 レジ + キッチン（最小）、+ 呼び出し（最大）を **同じ Wi-Fi に接続**。Transport モードを `localLan`。
 
 ### 2.1. パーミッション

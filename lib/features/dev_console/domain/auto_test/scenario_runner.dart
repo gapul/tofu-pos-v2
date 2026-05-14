@@ -37,8 +37,11 @@ class ScenarioRunner {
       await _resetState();
       final ScenarioResult result = await s.run(context);
       sw.stop();
+      final String status = result.skipped
+          ? 'SKIP'
+          : (result.passed ? 'PASS' : 'FAIL');
       AppLogger.i(
-        'Scenario "${s.name}": ${result.passed ? "PASS" : "FAIL"} '
+        'Scenario "${s.name}": $status '
         '— ${result.message} (${sw.elapsed.inMilliseconds}ms)',
       );
       return ScenarioReport(s, result.withDuration(sw.elapsed));

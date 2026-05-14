@@ -33,16 +33,18 @@ import '../ui/error_boundary.dart';
 @visibleForTesting
 String? computeRedirect(AsyncValue<SetupState> setup, String location) {
   final bool isSetupRoute = location.startsWith('/setup');
+  // DevConsole は setup 未完了でも開けるテスト用ルート。リダイレクト対象外。
+  final bool isDevRoute = location.startsWith('/dev');
 
   return setup.when(
     loading: () => null,
-    error: (_, _) => isSetupRoute ? null : '/setup/shop',
+    error: (_, _) => (isSetupRoute || isDevRoute) ? null : '/setup/shop',
     data: (data) {
       if (!data.isComplete) {
         if (location == '/setup/role' && data.shopId == null) {
           return '/setup/shop';
         }
-        return isSetupRoute ? null : '/setup/shop';
+        return (isSetupRoute || isDevRoute) ? null : '/setup/shop';
       }
       // 設定済み: setup ルートはホームへリダイレクト
       if (isSetupRoute) {

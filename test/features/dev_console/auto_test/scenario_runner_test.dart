@@ -114,8 +114,10 @@ void main() {
     final List<ScenarioReport> reports = await runner.runAll().toList();
 
     expect(reports, hasLength(defaultScenarios().length));
+    // skipped は通信経路シナリオで Transport 未注入のため発生する。
+    // 「passed でも skipped でもない」結果のみを失敗扱いにする。
     final List<ScenarioReport> failures = reports
-        .where((r) => !r.result.passed)
+        .where((r) => !r.result.passed && !r.result.skipped)
         .toList();
     expect(
       failures,

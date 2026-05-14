@@ -113,6 +113,17 @@ class _ShopIdScreenState extends ConsumerState<ShopIdScreen> {
                     loading: _saving,
                     onPressed: _saving ? null : _submit,
                   ),
+                  const SizedBox(height: TofuTokens.space4),
+                  // セットアップを完了せずに DevConsole（自動テスト含む）を
+                  // 開けるテスト用入口。実機検証で店舗IDの永続化前に
+                  // 各機能を素早く触りたいときに使う。
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: _saving ? null : () => context.push('/dev'),
+                      icon: const Icon(Icons.code, size: 18),
+                      label: const Text('DevConsole を開く（テスト）'),
+                    ),
+                  ),
                 ],
               ),
             ),

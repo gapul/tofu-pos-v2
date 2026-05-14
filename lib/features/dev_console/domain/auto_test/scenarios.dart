@@ -14,6 +14,7 @@ import '../../../../domain/value_objects/ticket_number.dart';
 import '../../../../domain/value_objects/ticket_number_pool.dart';
 import 'scenario.dart';
 import 'scenario_context.dart';
+import 'transport_scenarios.dart';
 
 /// すべての標準シナリオ。
 List<TestScenario> defaultScenarios() => <TestScenario>[
@@ -27,6 +28,9 @@ List<TestScenario> defaultScenarios() => <TestScenario>[
   _operationLogScenario,
   _hourlyAggregationScenario,
   _csvExportScenario,
+  // 通信経路（online / LAN / BT / peer roundtrip）系。
+  // 前提が満たされなければ ScenarioResult.skip で中立に返る。
+  ...transportScenarios(),
 ];
 
 // === 共通ヘルパ ===

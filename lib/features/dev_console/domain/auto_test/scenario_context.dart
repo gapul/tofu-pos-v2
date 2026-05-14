@@ -1,8 +1,11 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/export/csv_export_service.dart';
 import '../../../../core/sync/sync_service.dart';
+import '../../../../core/transport/transport.dart';
 import '../../../../data/datasources/local/database.dart';
+import '../../../../domain/enums/transport_mode.dart';
 import '../../../../domain/repositories/calling_order_repository.dart';
 import '../../../../domain/repositories/cash_drawer_repository.dart';
 import '../../../../domain/repositories/kitchen_order_repository.dart';
@@ -20,6 +23,11 @@ import '../../../../domain/usecases/hourly_sales_usecase.dart';
 /// シナリオが利用する依存関係をまとめた DTO。
 ///
 /// テスト時はこれをモックで埋めて、シナリオ関数を直接呼べるようにする。
+///
+/// 通信経路系シナリオ（transport.*）のために
+/// [transport] / [transportMode] / [supabaseClient] / [shopId] /
+/// [hasSupabaseCredentials] を **任意フィールド**として持つ。
+/// 既存シナリオは触れないし、テストでも未指定でよい。
 class ScenarioContext {
   const ScenarioContext({
     required this.db,
@@ -39,6 +47,11 @@ class ScenarioContext {
     required this.dailyReset,
     required this.csv,
     required this.sync,
+    this.transport,
+    this.transportMode,
+    this.supabaseClient,
+    this.shopId,
+    this.hasSupabaseCredentials = false,
   });
 
   final AppDatabase db;
@@ -61,4 +74,22 @@ class ScenarioContext {
 
   final CsvExportService csv;
   final SyncService sync;
+
+  // === 通信経路シナリオ用（optional） ===
+
+  /// 現在アクティブな Transport。null の場合は通信系シナリオは skip。
+  final Transport? transport;
+
+  /// 現在の TransportMode。null の場合は skip。
+  final TransportMode? transportMode;
+
+  /// online シナリオでの DB クエリに使う Supabase クライアント。
+  /// テスト時は null で skip。
+  final SupabaseClient? supabaseClient;
+
+  /// shop_id 文字列。null の場合は通信系シナリオは skip。
+  final String? shopId;
+
+  /// Env に Supabase 認証情報が揃っているか（online シナリオの前提）。
+  final bool hasSupabaseCredentials;
 }

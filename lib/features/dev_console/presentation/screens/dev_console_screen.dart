@@ -755,7 +755,9 @@ class _AutoTestSectionState extends ConsumerState<_AutoTestSection> {
       _running = true;
       _results.clear();
     });
-    final ScenarioRunner runner = ref.read(scenarioRunnerProvider);
+    final ScenarioRunner runner = await ref.read(
+      scenarioRunnerProvider.future,
+    );
     await for (final ScenarioReport r in runner.runAll()) {
       if (!mounted) break;
       setState(() => _results[r.scenario.id] = r.result);
@@ -770,7 +772,9 @@ class _AutoTestSectionState extends ConsumerState<_AutoTestSection> {
       _running = true;
       _results.remove(s.id);
     });
-    final ScenarioRunner runner = ref.read(scenarioRunnerProvider);
+    final ScenarioRunner runner = await ref.read(
+      scenarioRunnerProvider.future,
+    );
     final ScenarioReport r = await runner.runOne(s);
     if (!mounted) return;
     setState(() {
@@ -786,7 +790,10 @@ class _AutoTestSectionState extends ConsumerState<_AutoTestSection> {
         .where((r) => r.passed)
         .length;
     final int failed = _results.values
-        .where((r) => !r.passed)
+        .where((r) => !r.passed && !r.skipped)
+        .length;
+    final int skipped = _results.values
+        .where((r) => r.skipped)
         .length;
 
     return _Section(
@@ -821,7 +828,8 @@ class _AutoTestSectionState extends ConsumerState<_AutoTestSection> {
               if (_results.isNotEmpty)
                 Text(
                   '$passed / ${_results.length} pass'
-                  '${failed > 0 ? "  ($failed fail)" : ""}',
+                  '${failed > 0 ? "  ($failed fail)" : ""}'
+                  '${skipped > 0 ? "  ($skipped skip)" : ""}',
                   style: TextStyle(
                     color: failed > 0
                         ? Theme.of(context).colorScheme.error
@@ -862,15 +870,21 @@ class _ScenarioRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color? bg = result == null
         ? null
+        : result!.skipped
+        ? Colors.grey.withValues(alpha: 0.08)
         : result!.passed
         ? Colors.green.withValues(alpha: 0.08)
         : Colors.red.withValues(alpha: 0.10);
     final IconData icon = result == null
         ? Icons.circle_outlined
+        : result!.skipped
+        ? Icons.remove_circle_outline
         : result!.passed
         ? Icons.check_circle
         : Icons.cancel;
     final Color iconColor = result == null
+        ? Colors.grey
+        : result!.skipped
         ? Colors.grey
         : result!.passed
         ? Colors.green
