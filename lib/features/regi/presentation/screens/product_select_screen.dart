@@ -6,21 +6,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/tokens.dart';
+import '../../../../core/ui/alert_banner.dart';
 import '../../../../core/ui/app_header.dart';
+import '../../../../core/ui/format.dart';
 import '../../../../core/ui/status_indicator.dart';
+import '../../../../core/ui/tofu_button.dart';
+import '../../../../core/ui/tofu_chip.dart';
 import '../../../../domain/entities/product.dart';
 import '../../../../domain/value_objects/feature_flags.dart';
 import '../../../../providers/settings_providers.dart';
+import '../../../../providers/sync_providers.dart';
 import '../notifiers/checkout_session.dart';
 import '../notifiers/regi_providers.dart';
 import '../widgets/cart_panel.dart';
 import '../widgets/product_button.dart';
 
-/// 商品選択 + カート画面（仕様書 §6.1.2 / §9.2）。
+/// 商品選択 + カート画面（仕様書 §6.1.2 / §9.2、Figma `03-Register-Products`）。
 ///
-/// レイアウト:
-/// - landscape (768px+): 左に商品グリッド、右にカートパネル
-/// - portrait : 上に商品グリッド、下にカートサマリ + ボトムシートでカート詳細
+/// レイアウト軸:
+/// - landscape (>= 720dp, Figma 1024×768): 左 ProductArea (sync banner +
+///   カテゴリタブ + 商品グリッド) と 右 Cart panel (幅 384dp)
+/// - portrait (< 720dp, Figma 375×812): 上から Header / カテゴリタブ /
+///   商品グリッド / 合計サマリ + 会計ボタン。カート詳細はボトムシート。
+///
+/// 既存業務ロジック (`CheckoutSessionNotifier` / `appRouterProvider`) は
+/// 触らず、表示構造のみ Figma 準拠に再構築している。
 class ProductSelectScreen extends ConsumerStatefulWidget {
   const ProductSelectScreen({super.key});
 
@@ -60,10 +70,12 @@ class _ProductSelectScreenState extends ConsumerState<ProductSelectScreen> {
     final CheckoutSessionNotifier notifier = ref.read(
       checkoutSessionProvider.notifier,
     );
+    final SyncWarningLevel syncLevel =
+        ref.watch(syncWarningProvider).value ?? SyncWarningLevel.ok;
 
     return LayoutBuilder(
       builder: (c, constraints) {
-        final bool wide = constraints.maxWidth >= 768;
+        final bool isWide = constraints.maxWidth >= 720;
         return Scaffold(
           backgroundColor: TofuTokens.bgCanvas,
           appBar: AppHeader(
@@ -77,37 +89,36 @@ class _ProductSelectScreenState extends ConsumerState<ProductSelectScreen> {
           ),
           body: SafeArea(
             child: products.when(
-              data: (data) => wide
-                  ? _LandscapeBody(
-                      products: data,
-                      session: session,
-                      notifier: notifier,
-                      stockEnabled: flags.stockManagement,
-                      recentlyChangedId: _recentlyChangedId,
-                      onAdd: (p) {
-                        unawaited(HapticFeedback.selectionClick());
-                        notifier.addProduct(
-                          p,
-                          maxStock: flags.stockManagement ? p.stock : null,
-                        );
-                        _flashHighlight(p.id);
-                      },
-                    )
-                  : _PortraitBody(
-                      products: data,
-                      session: session,
-                      notifier: notifier,
-                      stockEnabled: flags.stockManagement,
-                      recentlyChangedId: _recentlyChangedId,
-                      onAdd: (p) {
-                        unawaited(HapticFeedback.selectionClick());
-                        notifier.addProduct(
-                          p,
-                          maxStock: flags.stockManagement ? p.stock : null,
-                        );
-                        _flashHighlight(p.id);
-                      },
-                    ),
+              data: (data) {
+                void handleAdd(Product p) {
+                  unawaited(HapticFeedback.selectionClick());
+                  notifier.addProduct(
+                    p,
+                    maxStock: flags.stockManagement ? p.stock : null,
+                  );
+                  _flashHighlight(p.id);
+                }
+
+                return isWide
+                    ? _LandscapeBody(
+                        products: data,
+                        session: session,
+                        notifier: notifier,
+                        stockEnabled: flags.stockManagement,
+                        recentlyChangedId: _recentlyChangedId,
+                        syncLevel: syncLevel,
+                        onAdd: handleAdd,
+                      )
+                    : _PortraitBody(
+                        products: data,
+                        session: session,
+                        notifier: notifier,
+                        stockEnabled: flags.stockManagement,
+                        recentlyChangedId: _recentlyChangedId,
+                        syncLevel: syncLevel,
+                        onAdd: handleAdd,
+                      );
+              },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => _ErrorState(message: '$e'),
             ),
@@ -118,6 +129,10 @@ class _ProductSelectScreenState extends ConsumerState<ProductSelectScreen> {
   }
 }
 
+/// landscape (>= 720dp) 用ボディ。Figma `46:21` (HORIZONTAL) を踏襲。
+///
+/// 左: ProductArea (sync banner + カテゴリタブ + 商品グリッド)
+/// 右: 384dp 固定の `CartPanel` (Figma `Cart`: 384x687)。
 class _LandscapeBody extends StatelessWidget {
   const _LandscapeBody({
     required this.products,
@@ -125,6 +140,7 @@ class _LandscapeBody extends StatelessWidget {
     required this.notifier,
     required this.stockEnabled,
     required this.recentlyChangedId,
+    required this.syncLevel,
     required this.onAdd,
   });
 
@@ -133,23 +149,26 @@ class _LandscapeBody extends StatelessWidget {
   final CheckoutSessionNotifier notifier;
   final bool stockEnabled;
   final String? recentlyChangedId;
+  final SyncWarningLevel syncLevel;
   final ValueChanged<Product> onAdd;
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Expanded(
-          flex: 3,
-          child: _ProductGrid(
+          child: _ProductArea(
             products: products,
             session: session,
             stockEnabled: stockEnabled,
+            syncLevel: syncLevel,
             onAdd: onAdd,
+            compact: false,
           ),
         ),
         SizedBox(
-          width: 380,
+          width: 384,
           child: CartPanel(
             session: session,
             notifier: notifier,
@@ -164,6 +183,7 @@ class _LandscapeBody extends StatelessWidget {
   }
 }
 
+/// portrait (< 720dp) 用ボディ。Figma `436:492` を踏襲。
 class _PortraitBody extends StatelessWidget {
   const _PortraitBody({
     required this.products,
@@ -171,6 +191,7 @@ class _PortraitBody extends StatelessWidget {
     required this.notifier,
     required this.stockEnabled,
     required this.recentlyChangedId,
+    required this.syncLevel,
     required this.onAdd,
   });
 
@@ -179,6 +200,7 @@ class _PortraitBody extends StatelessWidget {
   final CheckoutSessionNotifier notifier;
   final bool stockEnabled;
   final String? recentlyChangedId;
+  final SyncWarningLevel syncLevel;
   final ValueChanged<Product> onAdd;
 
   void _showCartSheet(BuildContext context) {
@@ -216,18 +238,26 @@ class _PortraitBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final int totalQty =
+        session.items.fold<int>(0, (s, it) => s + it.quantity);
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Expanded(
-          child: _ProductGrid(
+          child: _ProductArea(
             products: products,
             session: session,
             stockEnabled: stockEnabled,
+            syncLevel: syncLevel,
             onAdd: onAdd,
+            compact: true,
           ),
         ),
         Container(
-          padding: const EdgeInsets.all(TofuTokens.space5),
+          padding: const EdgeInsets.symmetric(
+            horizontal: TofuTokens.space5,
+            vertical: TofuTokens.space4,
+          ),
           decoration: const BoxDecoration(
             color: TofuTokens.bgCanvas,
             border: Border(top: BorderSide(color: TofuTokens.borderSubtle)),
@@ -237,35 +267,141 @@ class _PortraitBody extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Text(
-                      '${session.items.length}点 / '
-                      '${session.items.fold<int>(0, (s, it) => s + it.quantity)}個',
+                      'カート ${session.items.length}点 / $totalQty個',
                       style: TofuTextStyles.bodySmBold.copyWith(
                         color: TofuTokens.textTertiary,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '¥${session.totalPrice.yen}',
+                      TofuFormat.yen(session.totalPrice),
                       style: TofuTextStyles.h2,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: TofuTokens.space5),
-              FilledButton.icon(
-                onPressed: () => _showCartSheet(context),
-                icon: const Icon(Icons.shopping_cart),
-                label: const Text('カート'),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, TofuTokens.touchPrimary),
-                  backgroundColor: TofuTokens.brandPrimary,
-                  foregroundColor: TofuTokens.brandOnPrimary,
-                  textStyle: TofuTextStyles.bodyLgBold,
-                ),
+              const SizedBox(width: TofuTokens.space4),
+              TofuButton(
+                label: 'カート',
+                icon: Icons.shopping_cart,
+                size: TofuButtonSize.lg,
+                onPressed: session.items.isEmpty
+                    ? null
+                    : () => _showCartSheet(context),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 商品グリッドと付帯要素 (同期警告バナー + カテゴリタブ) をまとめる領域。
+///
+/// Figma `46:22` (landscape ProductArea) / `85:40 + 85:49` (portrait) を統合。
+class _ProductArea extends StatefulWidget {
+  const _ProductArea({
+    required this.products,
+    required this.session,
+    required this.stockEnabled,
+    required this.syncLevel,
+    required this.onAdd,
+    required this.compact,
+  });
+
+  final List<Product> products;
+  final CheckoutSession session;
+  final bool stockEnabled;
+  final SyncWarningLevel syncLevel;
+  final ValueChanged<Product> onAdd;
+  final bool compact;
+
+  @override
+  State<_ProductArea> createState() => _ProductAreaState();
+}
+
+class _ProductAreaState extends State<_ProductArea> {
+  /// 現状 Product にカテゴリ情報がないため、`すべて` のみを選択肢として
+  /// 提示する (Figma の `すべて / 主食 / 飲み物 / デザート` を踏襲しつつ、
+  /// ダミーデータを増やさない構成)。Phase 6 以降でカテゴリ実装時に拡張。
+  int _selectedIndex = 0;
+  static const List<String> _categoryLabels = <String>['すべて'];
+
+  @override
+  Widget build(BuildContext context) {
+    final EdgeInsets pad = widget.compact
+        ? const EdgeInsets.fromLTRB(
+            TofuTokens.space5,
+            TofuTokens.space4,
+            TofuTokens.space5,
+            TofuTokens.space3,
+          )
+        : const EdgeInsets.fromLTRB(
+            TofuTokens.space7,
+            TofuTokens.space5,
+            TofuTokens.space7,
+            TofuTokens.space4,
+          );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        if (widget.syncLevel == SyncWarningLevel.prolongedFailure)
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              pad.left,
+              pad.top,
+              pad.right,
+              TofuTokens.space3,
+            ),
+            child: const AlertBanner(
+              variant: AlertBannerVariant.warning,
+              title: 'クラウド同期失敗',
+              message: '長時間同期できていません。営業は継続できますが復旧を確認してください。',
+            ),
+          ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            pad.left,
+            widget.syncLevel == SyncWarningLevel.prolongedFailure
+                ? 0
+                : pad.top,
+            pad.right,
+            TofuTokens.space3,
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                for (int i = 0; i < _categoryLabels.length; i++) ...<Widget>[
+                  if (i > 0) const SizedBox(width: TofuTokens.space3),
+                  TofuChip(
+                    label: _categoryLabels[i],
+                    selected: _selectedIndex == i,
+                    onTap: () => setState(() => _selectedIndex = i),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: _ProductGrid(
+            products: widget.products,
+            session: widget.session,
+            stockEnabled: widget.stockEnabled,
+            onAdd: widget.onAdd,
+            padding: EdgeInsets.fromLTRB(
+              pad.left,
+              0,
+              pad.right,
+              pad.bottom,
+            ),
           ),
         ),
       ],
@@ -279,12 +415,14 @@ class _ProductGrid extends StatelessWidget {
     required this.session,
     required this.stockEnabled,
     required this.onAdd,
+    required this.padding,
   });
 
   final List<Product> products;
   final CheckoutSession session;
   final bool stockEnabled;
   final ValueChanged<Product> onAdd;
+  final EdgeInsets padding;
 
   @override
   Widget build(BuildContext context) {
@@ -293,21 +431,21 @@ class _ProductGrid extends StatelessWidget {
     }
     return LayoutBuilder(
       builder: (c, constraints) {
-        final int cols = constraints.maxWidth >= 1200
-            ? 5
-            : constraints.maxWidth >= 800
+        final int cols = constraints.maxWidth >= 1000
             ? 4
-            : constraints.maxWidth >= 500
+            : constraints.maxWidth >= 700
+            ? 3
+            : constraints.maxWidth >= 480
             ? 3
             : 2;
         return GridView.builder(
-          padding: const EdgeInsets.all(TofuTokens.space5),
+          padding: padding,
           itemCount: products.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: cols,
-            mainAxisSpacing: TofuTokens.space4,
-            crossAxisSpacing: TofuTokens.space4,
-            childAspectRatio: 1.4,
+            mainAxisSpacing: TofuTokens.space3,
+            crossAxisSpacing: TofuTokens.space3,
+            childAspectRatio: 1.42,
           ),
           itemBuilder: (c, i) {
             final Product p = products[i];

@@ -4,15 +4,24 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
+import '../../../../core/ui/attribute_chip.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/customer_attributes.dart';
 import '../../../../domain/enums/customer_attributes_enums.dart';
 import '../notifiers/checkout_session.dart';
 import '../notifiers/regi_providers.dart';
 
-/// 顧客属性入力画面（仕様書 §6.1.1）。
+/// 顧客属性入力画面（仕様書 §6.1.1、Figma `05-Register-CustomerAttr`）。
 ///
 /// レジ担当の見立てで選ぶ前提のため、すべて任意（未選択 OK）。
+///
+/// レイアウト軸:
+/// - landscape (>= 720dp, Figma 1024×768): 中央寄せ最大幅 960、padding
+///   64h/16v、セクション間 16、フッタ右寄せ 3 ボタン
+/// - portrait (< 720dp, Figma 375×812): フル幅、padding 20h/12v、
+///   セクション間 12、フッタ 3 ボタン (スキップ / 戻る / 次へ)
+///
+/// 既存業務ロジック (`setCustomerAttributes` / `context.go`) はそのまま使用。
 class CustomerAttributesScreen extends ConsumerWidget {
   const CustomerAttributesScreen({super.key});
 
@@ -24,107 +33,222 @@ class CustomerAttributesScreen extends ConsumerWidget {
     );
     final CustomerAttributes attrs = session.customerAttributes;
 
-    return Scaffold(
-      backgroundColor: TofuTokens.bgCanvas,
-      appBar: AppHeader(
-        title: '顧客属性',
-        upcomingTicket: ref.watch(upcomingTicketProvider).value,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-          tooltip: '戻る',
-        ),
-      ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: ListView(
-              padding: const EdgeInsets.all(TofuTokens.space7),
-              children: <Widget>[
-                Text(
-                  '見立てで選んでください（任意）',
-                  style: TofuTextStyles.bodyMd.copyWith(
-                    color: TofuTokens.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: TofuTokens.space7),
-                _Section<CustomerAge>(
-                  title: '年代',
-                  options: CustomerAge.values,
-                  selected: attrs.age,
-                  labelOf: (a) => a.label,
-                  onChanged: (a) => notifier.setCustomerAttributes(
-                    attrs.copyWith(age: a, clearAge: a == null),
-                  ),
-                ),
-                const SizedBox(height: TofuTokens.space7),
-                _Section<CustomerGender>(
-                  title: '性別',
-                  options: CustomerGender.values,
-                  selected: attrs.gender,
-                  labelOf: (g) => g.label,
-                  onChanged: (g) =>
-                      notifier.setCustomerAttributes(
-                        attrs.copyWith(gender: g, clearGender: g == null),
-                      ),
-                ),
-                const SizedBox(height: TofuTokens.space7),
-                _Section<CustomerGroup>(
-                  title: '客層',
-                  options: CustomerGroup.values,
-                  selected: attrs.group,
-                  labelOf: (g) => g.label,
-                  onChanged: (g) =>
-                      notifier.setCustomerAttributes(
-                        attrs.copyWith(group: g, clearGroup: g == null),
-                      ),
-                ),
-                const SizedBox(height: TofuTokens.space11),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: TofuButton(
-                        label: 'スキップ',
-                        variant: TofuButtonVariant.ghost,
-                        onPressed: () => context.go('/regi/products'),
-                      ),
-                    ),
-                    const SizedBox(width: TofuTokens.space5),
-                    Expanded(
-                      flex: 2,
-                      child: TofuButton(
-                        label: '次へ',
-                        icon: Icons.arrow_forward,
-                        size: TofuButtonSize.lg,
-                        onPressed: () => context.go('/regi/products'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+    return LayoutBuilder(
+      builder: (c, constraints) {
+        final bool isWide = constraints.maxWidth >= 720;
+        return Scaffold(
+          backgroundColor: TofuTokens.bgCanvas,
+          appBar: AppHeader(
+            title: '顧客属性',
+            upcomingTicket: ref.watch(upcomingTicketProvider).value,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.pop(),
+              tooltip: '戻る',
             ),
           ),
+          body: SafeArea(
+            child: isWide
+                ? _LandscapeBody(attrs: attrs, notifier: notifier)
+                : _PortraitBody(attrs: attrs, notifier: notifier),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// landscape (>= 720dp) ボディ。Figma `64:84` を踏襲。
+class _LandscapeBody extends StatelessWidget {
+  const _LandscapeBody({required this.attrs, required this.notifier});
+
+  final CustomerAttributes attrs;
+  final CheckoutSessionNotifier notifier;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 960),
+        child: Column(
+          children: <Widget>[
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  TofuTokens.space11,
+                  TofuTokens.space5,
+                  TofuTokens.space11,
+                  TofuTokens.space5,
+                ),
+                children: <Widget>[
+                  const _Hint(),
+                  const SizedBox(height: TofuTokens.space5),
+                  _AgeSection(attrs: attrs, notifier: notifier),
+                  const SizedBox(height: TofuTokens.space5),
+                  _GenderSection(attrs: attrs, notifier: notifier),
+                  const SizedBox(height: TofuTokens.space5),
+                  _GroupSection(attrs: attrs, notifier: notifier),
+                ],
+              ),
+            ),
+            const _FooterBar(
+              padding: EdgeInsets.fromLTRB(
+                TofuTokens.space11,
+                TofuTokens.space4,
+                TofuTokens.space11,
+                TofuTokens.space4,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _Section<T> extends StatelessWidget {
-  const _Section({
-    required this.title,
-    required this.options,
-    required this.selected,
-    required this.labelOf,
-    required this.onChanged,
-  });
+/// portrait (< 720dp) ボディ。Figma `237:50` を踏襲。
+class _PortraitBody extends StatelessWidget {
+  const _PortraitBody({required this.attrs, required this.notifier});
+
+  final CustomerAttributes attrs;
+  final CheckoutSessionNotifier notifier;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              TofuTokens.space6,
+              TofuTokens.space4,
+              TofuTokens.space6,
+              TofuTokens.space4,
+            ),
+            children: <Widget>[
+              const _Hint(),
+              const SizedBox(height: TofuTokens.space4),
+              _AgeSection(attrs: attrs, notifier: notifier),
+              const SizedBox(height: TofuTokens.space4),
+              _GenderSection(attrs: attrs, notifier: notifier),
+              const SizedBox(height: TofuTokens.space4),
+              _GroupSection(attrs: attrs, notifier: notifier),
+            ],
+          ),
+        ),
+        const _FooterBar(
+          padding: EdgeInsets.fromLTRB(
+            TofuTokens.space5,
+            TofuTokens.space3,
+            TofuTokens.space5,
+            TofuTokens.space3,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Hint extends StatelessWidget {
+  const _Hint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      '見立てで選んでください（任意）',
+      style: TofuTextStyles.bodyMd.copyWith(color: TofuTokens.textSecondary),
+    );
+  }
+}
+
+class _AgeSection extends StatelessWidget {
+  const _AgeSection({required this.attrs, required this.notifier});
+
+  final CustomerAttributes attrs;
+  final CheckoutSessionNotifier notifier;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Section(
+      title: '年代',
+      chips: <Widget>[
+        for (final CustomerAge opt in CustomerAge.values)
+          AttributeChip(
+            label: opt.label,
+            selected: attrs.age == opt,
+            onTap: () => notifier.setCustomerAttributes(
+              attrs.copyWith(
+                age: attrs.age == opt ? null : opt,
+                clearAge: attrs.age == opt,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _GenderSection extends StatelessWidget {
+  const _GenderSection({required this.attrs, required this.notifier});
+
+  final CustomerAttributes attrs;
+  final CheckoutSessionNotifier notifier;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Section(
+      title: '性別',
+      chips: <Widget>[
+        for (final CustomerGender opt in CustomerGender.values)
+          AttributeChip(
+            label: opt.label,
+            selected: attrs.gender == opt,
+            kind: AttributeChipKind.gender,
+            onTap: () => notifier.setCustomerAttributes(
+              attrs.copyWith(
+                gender: attrs.gender == opt ? null : opt,
+                clearGender: attrs.gender == opt,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _GroupSection extends StatelessWidget {
+  const _GroupSection({required this.attrs, required this.notifier});
+
+  final CustomerAttributes attrs;
+  final CheckoutSessionNotifier notifier;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Section(
+      title: '客層',
+      chips: <Widget>[
+        for (final CustomerGroup opt in CustomerGroup.values)
+          AttributeChip(
+            label: opt.label,
+            selected: attrs.group == opt,
+            kind: AttributeChipKind.segment,
+            onTap: () => notifier.setCustomerAttributes(
+              attrs.copyWith(
+                group: attrs.group == opt ? null : opt,
+                clearGroup: attrs.group == opt,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.chips});
 
   final String title;
-  final List<T> options;
-  final T? selected;
-  final String Function(T) labelOf;
-  final ValueChanged<T?> onChanged;
+  final List<Widget> chips;
 
   @override
   Widget build(BuildContext context) {
@@ -132,25 +256,56 @@ class _Section<T> extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(title, style: TofuTextStyles.h4),
-        const SizedBox(height: TofuTokens.space4),
+        const SizedBox(height: TofuTokens.space3),
         Wrap(
           spacing: TofuTokens.space3,
           runSpacing: TofuTokens.space3,
-          children: <Widget>[
-            for (final T opt in options)
-              ChoiceChip(
-                label: Text(labelOf(opt)),
-                selected: selected == opt,
-                showCheckmark: false,
-                onSelected: (sel) => onChanged(sel ? opt : null),
-                labelPadding: const EdgeInsets.symmetric(
-                  horizontal: TofuTokens.space4,
-                  vertical: TofuTokens.space3,
-                ),
-              ),
-          ],
+          children: chips,
         ),
       ],
+    );
+  }
+}
+
+/// フッタの操作バー。Figma `64:123` / `237:89`。
+///
+/// 並び (右寄せ): スキップ (ghost) / 戻る (secondary) / 次へ (primary lg)。
+class _FooterBar extends StatelessWidget {
+  const _FooterBar({required this.padding});
+
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding,
+      decoration: const BoxDecoration(
+        color: TofuTokens.bgCanvas,
+        border: Border(top: BorderSide(color: TofuTokens.borderSubtle)),
+      ),
+      child: Row(
+        children: <Widget>[
+          TofuButton(
+            label: 'スキップ',
+            variant: TofuButtonVariant.ghost,
+            onPressed: () => context.go('/regi/products'),
+          ),
+          const Spacer(),
+          TofuButton(
+            label: '戻る',
+            icon: Icons.arrow_back,
+            variant: TofuButtonVariant.secondary,
+            onPressed: () => context.pop(),
+          ),
+          const SizedBox(width: TofuTokens.space3),
+          TofuButton(
+            label: '次へ',
+            icon: Icons.arrow_forward,
+            size: TofuButtonSize.lg,
+            onPressed: () => context.go('/regi/products'),
+          ),
+        ],
+      ),
     );
   }
 }
