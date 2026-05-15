@@ -9,6 +9,7 @@ import '../core/sync/sync_service.dart';
 import '../core/time/clock.dart';
 import '../domain/value_objects/shop_id.dart';
 import 'connectivity_providers.dart';
+import 'database_providers.dart';
 import 'repository_providers.dart';
 
 /// CloudSyncClient: Supabase接続情報があれば本実装、無ければ Noop。
@@ -77,6 +78,7 @@ final Provider<SyncService> syncServiceProvider = Provider<SyncService>((
     settingsRepository: ref.watch(settingsRepositoryProvider),
     connectivityMonitor: ref.watch(connectivityMonitorProvider),
     client: ref.watch(cloudSyncClientProvider),
+    prefs: ref.watch(sharedPreferencesProvider),
     clock: ref.watch(clockProvider),
   );
   ref.onDispose(service.stop);

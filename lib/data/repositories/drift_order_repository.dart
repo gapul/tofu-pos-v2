@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../core/error/app_exceptions.dart';
 import '../../domain/entities/customer_attributes.dart';
 import '../../domain/entities/order.dart';
 import '../../domain/entities/order_item.dart';
@@ -189,9 +190,40 @@ class DriftOrderRepository implements OrderRepository {
   }
 
   @override
-  Future<void> updateStatus(int id, OrderStatus status) async {
-    await (_db.update(_db.orders)..where((t) => t.id.equals(id)))
-        .write(OrdersCompanion(orderStatus: Value<String>(status.name)));
+  Future<void> updateStatus(
+    int id,
+    OrderStatus status, {
+    bool allowTerminalOverride = false,
+  }) async {
+    // 状態遷移は OrderStatus.canTransitionTo に従って検証する（仕様書 §5.2）。
+    // SELECT → assert → UPDATE をトランザクションで包んで他セッションとの
+    // race を防ぐ。ただし行ロック相当はないので、SQLite 単一接続の前提に乗る。
+    await _db.transaction(() async {
+      final OrderRow? row = await (_db.select(
+        _db.orders,
+      )..where((t) => t.id.equals(id))).getSingleOrNull();
+      if (row == null) {
+        // 未知 ID は no-op（既存契約を維持）。
+        return;
+      }
+      final OrderStatus current = OrderStatus.values.byName(row.orderStatus);
+      if (current == status) {
+        // 同一状態は no-op（UPDATE をスキップ）。
+        return;
+      }
+      final bool allowed =
+          current.canTransitionTo(status) ||
+          (allowTerminalOverride && status == OrderStatus.cancelled);
+      if (!allowed) {
+        throw InvalidStateTransitionException(
+          'OrderStatus #$id: ${current.name} → ${status.name} は許可されていません',
+          from: current.name,
+          to: status.name,
+        );
+      }
+      await (_db.update(_db.orders)..where((t) => t.id.equals(id)))
+          .write(OrdersCompanion(orderStatus: Value<String>(status.name)));
+    });
   }
 
   @override

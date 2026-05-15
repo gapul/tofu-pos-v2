@@ -96,4 +96,36 @@ void main() {
     final TicketNumberPool pool = await poolRepo.load();
     expect(pool.peekNext(), const TicketNumber(1));
   });
+
+  group('operation log (§6.6)', () {
+    test('records daily_reset when reset actually runs', () async {
+      final InMemoryOperationLogRepository logRepo =
+          InMemoryOperationLogRepository();
+      final DailyResetUseCase u = DailyResetUseCase(
+        dailyResetRepository: dailyResetRepo,
+        ticketPoolRepository: poolRepo,
+        operationLogRepository: logRepo,
+        now: () => DateTime(2026, 5, 7),
+      );
+      final bool didReset = await u.runIfNeeded();
+      expect(didReset, isTrue);
+      expect(logRepo.records, hasLength(1));
+      expect(logRepo.records.single.kind, 'daily_reset');
+    });
+
+    test('no log when reset is skipped (same day)', () async {
+      dailyResetRepo.lastResetDate = DateTime(2026, 5, 7);
+      final InMemoryOperationLogRepository logRepo =
+          InMemoryOperationLogRepository();
+      final DailyResetUseCase u = DailyResetUseCase(
+        dailyResetRepository: dailyResetRepo,
+        ticketPoolRepository: poolRepo,
+        operationLogRepository: logRepo,
+        now: () => DateTime(2026, 5, 7, 14),
+      );
+      final bool didReset = await u.runIfNeeded();
+      expect(didReset, isFalse);
+      expect(logRepo.records, isEmpty);
+    });
+  });
 }

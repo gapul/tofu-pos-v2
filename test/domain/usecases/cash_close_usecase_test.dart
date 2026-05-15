@@ -197,4 +197,54 @@ void main() {
       expect(d.amountDiff, const Money(200));
     });
   });
+
+  group('recordCashClose — operation log (§6.6)', () {
+    test('appends a cash_close entry with summary + diff', () async {
+      final InMemoryOperationLogRepository logRepo =
+          InMemoryOperationLogRepository();
+      final CashCloseUseCase u = CashCloseUseCase(
+        orderRepository: orderRepo,
+        cashDrawerRepository: cashRepo,
+        operationLogRepository: logRepo,
+        now: () => today,
+      );
+
+      final DailySummary summary = DailySummary(
+        date: DateTime(2026, 5, 7),
+        totalSales: const Money(12345),
+        orderCount: 7,
+        cancelledCount: 1,
+        unsyncedCount: 2,
+      );
+      final CashCloseDifference diff = u.computeDifference(
+        theoretical: CashDrawer(<Denomination, int>{
+          const Denomination(1000): 5,
+        }),
+        actual: CashDrawer(<Denomination, int>{
+          const Denomination(1000): 4,
+        }),
+      );
+      await u.recordCashClose(summary: summary, difference: diff);
+
+      expect(logRepo.records, hasLength(1));
+      expect(logRepo.records.single.kind, 'cash_close');
+      expect(logRepo.records.single.detailJson, contains('"total_sales_yen":12345'));
+      expect(logRepo.records.single.detailJson, contains('"difference_yen":-1000'));
+    });
+
+    test('no-op when operation log repo is not injected', () async {
+      final InMemoryOperationLogRepository logRepo =
+          InMemoryOperationLogRepository();
+      await usecase.recordCashClose(
+        summary: DailySummary(
+          date: DateTime(2026, 5, 7),
+          totalSales: Money.zero,
+          orderCount: 0,
+          cancelledCount: 0,
+          unsyncedCount: 0,
+        ),
+      );
+      expect(logRepo.records, isEmpty);
+    });
+  });
 }

@@ -8,6 +8,7 @@ import 'core/router/app_router.dart';
 import 'core/startup/startup_pipeline.dart';
 import 'core/telemetry/telemetry.dart';
 import 'core/theme/app_theme.dart';
+import 'providers/repository_providers.dart';
 import 'providers/role_router_providers.dart';
 import 'providers/sync_providers.dart';
 import 'providers/telemetry_providers.dart';
@@ -54,6 +55,16 @@ StartupPipeline buildStartupPipeline(WidgetRef ref) {
     StartupStep(
       name: 'daily_reset',
       run: () => ref.read(dailyResetUseCaseProvider).runIfNeeded(),
+    ),
+    StartupStep(
+      name: 'ticket_pool.flush_pending',
+      // 補償 release の失敗で積まれた pending を起動時に消化する。
+      // 失敗しても fatal ではない（次回起動で再試行される）。
+      run: () async {
+        await ref
+            .read(ticketNumberPoolRepositoryProvider)
+            .flushPendingReleases();
+      },
     ),
     StartupStep(
       name: 'sync.start',

@@ -58,6 +58,27 @@ class TransportDeliveryException extends AppException {
   String get kind => 'TransportDeliveryException';
 }
 
+/// 不正な状態遷移（OrderStatus 等の state machine 違反）。
+class InvalidStateTransitionException extends AppException {
+  const InvalidStateTransitionException(
+    super.message, {
+    required this.from,
+    required this.to,
+  });
+
+  /// 現在状態（例: 'served'）。
+  final String from;
+
+  /// 試行された遷移先（例: 'sent'）。
+  final String to;
+
+  @override
+  String get kind => 'InvalidStateTransitionException';
+
+  @override
+  String toString() => '$kind: $message (from=$from, to=$to)';
+}
+
 /// 設定が未完了で操作不可（店舗ID未設定等）。
 class SetupIncompleteException extends AppException {
   const SetupIncompleteException(super.message);

@@ -166,4 +166,88 @@ void main() {
     expect(o1.ticketNumber.value, 1);
     expect(o2.ticketNumber.value, 2);
   });
+
+  group('operation log (§6.6)', () {
+    test('records checkout when operation log repo is injected', () async {
+      final InMemoryOperationLogRepository logRepo =
+          InMemoryOperationLogRepository();
+      final CheckoutUseCase u = CheckoutUseCase(
+        unitOfWork: InMemoryUnitOfWork(),
+        orderRepository: orderRepo,
+        productRepository: productRepo,
+        cashDrawerRepository: cashRepo,
+        ticketPoolRepository: poolRepo,
+        operationLogRepository: logRepo,
+        now: () => DateTime(2026, 5, 7, 12),
+      );
+
+      final Order saved = await u.execute(
+        draft: makeDraft(),
+        flags: FeatureFlags.allOff,
+      );
+
+      expect(logRepo.records, hasLength(1));
+      expect(logRepo.records.single.kind, 'checkout');
+      expect(logRepo.records.single.targetId, saved.id.toString());
+    });
+
+    test('no checkout log when execute fails', () async {
+      final InMemoryOperationLogRepository logRepo =
+          InMemoryOperationLogRepository();
+      final CheckoutUseCase u = CheckoutUseCase(
+        unitOfWork: InMemoryUnitOfWork(),
+        orderRepository: orderRepo,
+        productRepository: productRepo,
+        cashDrawerRepository: cashRepo,
+        ticketPoolRepository: poolRepo,
+        operationLogRepository: logRepo,
+      );
+      // 在庫不足で失敗するケース。
+      const CheckoutDraft draft = CheckoutDraft(
+        items: <OrderItem>[
+          OrderItem(
+            productId: 'p1',
+            productName: 'Yakisoba',
+            priceAtTime: Money(400),
+            quantity: 100, // > 10
+          ),
+        ],
+      );
+      await expectLater(
+        u.execute(
+          draft: draft,
+          flags: const FeatureFlags(stockManagement: true),
+        ),
+        throwsA(isA<InsufficientStockException>()),
+      );
+      expect(logRepo.records, isEmpty);
+    });
+  });
+
+  group('整理券補償の失敗時の挙動 (#2 永続ロスト防止)', () {
+    test('UoW 失敗時の release 補償も失敗したら pending キューに積まれる', () async {
+      // 在庫不足で UoW を落とす + release を 1 回失敗させる
+      poolRepo.failReleaseOnce = Exception('disk full');
+      const CheckoutDraft draft = CheckoutDraft(
+        items: <OrderItem>[
+          OrderItem(
+            productId: 'p1',
+            productName: 'Yakisoba',
+            priceAtTime: Money(400),
+            quantity: 100, // > 10
+          ),
+        ],
+      );
+      await expectLater(
+        usecase.execute(
+          draft: draft,
+          flags: const FeatureFlags(stockManagement: true),
+        ),
+        throwsA(isA<InsufficientStockException>()),
+      );
+      // 補償 release が失敗 → pending に積まれている
+      final pending = await poolRepo.pendingReleases();
+      expect(pending.map((t) => t.value).toList(), <int>[1]);
+    });
+  });
 }

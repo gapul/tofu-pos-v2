@@ -1,10 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tofu_pos/core/connectivity/connectivity_monitor.dart';
 import 'package:tofu_pos/core/connectivity/connectivity_status.dart';
 import 'package:tofu_pos/core/sync/cloud_sync_client.dart';
 import 'package:tofu_pos/core/sync/sync_service.dart';
+import 'package:tofu_pos/core/telemetry/telemetry.dart';
+import 'package:tofu_pos/core/telemetry/telemetry_event.dart';
+import 'package:tofu_pos/core/telemetry/telemetry_sink.dart';
 import 'package:tofu_pos/domain/entities/order.dart';
 import 'package:tofu_pos/domain/entities/order_item.dart';
 import 'package:tofu_pos/domain/enums/device_role.dart';
@@ -261,6 +265,84 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 60));
     expect(quietClient.pushed.length, before);
   });
+
+  group('前回クラッシュ検出 (#4)', () {
+    tearDown(Telemetry.instance.reset);
+
+    test(
+      '前回 started != completed の prefs で起動すると WARN telemetry が発火する',
+      () async {
+        // 前回プロセスが「開始したが完了しなかった」状態を再現
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          'sync.lastStartedToken': 'tokenA',
+          'sync.lastCompletedToken': 'tokenB', // 不一致
+        });
+        final SharedPreferences prefs =
+            await SharedPreferences.getInstance();
+        final _RecordingSink sink = _RecordingSink();
+        Telemetry.instance.configure(
+          sink: sink,
+          shopId: 'shop_a',
+          deviceId: 'd1',
+          deviceRole: 'register',
+        );
+
+        final SyncService svc = SyncService(
+          orderRepository: orderRepo,
+          settingsRepository: _FakeSettings(ShopId('shop_a')),
+          connectivityMonitor: monitor,
+          client: client,
+          prefs: prefs,
+        );
+        await svc.runOnce();
+
+        final warns = sink.enqueued
+            .where((e) => e.kind == 'sync.previous_run.incomplete')
+            .toList();
+        expect(warns, hasLength(1));
+        expect(warns.first.level, TelemetryLevel.warn);
+        // started key は消費される（次回は通知しない）
+        expect(prefs.getString('sync.lastStartedToken'), isNot('tokenA'));
+      },
+    );
+
+    test('前回 started == completed なら通知しない', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'sync.lastStartedToken': 'tokenSame',
+        'sync.lastCompletedToken': 'tokenSame',
+      });
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final _RecordingSink sink = _RecordingSink();
+      Telemetry.instance.configure(
+        sink: sink,
+        shopId: 'shop_a',
+        deviceId: 'd1',
+        deviceRole: 'register',
+      );
+
+      final SyncService svc = SyncService(
+        orderRepository: orderRepo,
+        settingsRepository: _FakeSettings(ShopId('shop_a')),
+        connectivityMonitor: monitor,
+        client: client,
+        prefs: prefs,
+      );
+      await svc.runOnce();
+
+      expect(
+        sink.enqueued.where((e) => e.kind == 'sync.previous_run.incomplete'),
+        isEmpty,
+      );
+    });
+  });
+}
+
+class _RecordingSink implements TelemetrySink {
+  final List<TelemetryEvent> enqueued = <TelemetryEvent>[];
+  @override
+  void enqueue(TelemetryEvent event) => enqueued.add(event);
+  @override
+  Future<void> flush() async {}
 }
 
 class _HangingClient implements CloudSyncClient {

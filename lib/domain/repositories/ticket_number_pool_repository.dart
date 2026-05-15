@@ -21,4 +21,16 @@ abstract interface class TicketNumberPoolRepository {
   /// 日次リセット用。プールを完全初期化する（使用中・バッファ含めて空）。
   /// 並行する allocate / release とも直列化される。
   Future<void> reset();
+
+  /// 補償用の release が失敗したときに「あとで解放するべき番号」を積むキュー。
+  /// 起動時に [flushPendingReleases] が消化する。
+  Future<void> enqueuePendingRelease(TicketNumber number);
+
+  /// 現在キューに積まれている未処理 release の一覧（テスト・診断用）。
+  Future<List<TicketNumber>> pendingReleases();
+
+  /// 起動時に呼ばれ、キューに積まれている release を順次実行する。
+  /// 1 件でも消化に失敗したら次回まで残す（ロスト防止）。
+  /// 戻り値: 消化に成功した件数。
+  Future<int> flushPendingReleases();
 }

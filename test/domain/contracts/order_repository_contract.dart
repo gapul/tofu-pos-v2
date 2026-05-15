@@ -87,11 +87,12 @@ void runOrderRepositoryContract(
       expect(ids.contains(b.id), isTrue);
     });
 
-    test('updateStatus persists the new status', () async {
+    test('updateStatus persists the new status (valid transition)', () async {
+      // unsent → sent は state machine 上の許可遷移。
       final Order saved = await repo.create(makeOrder());
-      await repo.updateStatus(saved.id, OrderStatus.served);
+      await repo.updateStatus(saved.id, OrderStatus.sent);
       final Order? loaded = await repo.findById(saved.id);
-      expect(loaded!.orderStatus, OrderStatus.served);
+      expect(loaded!.orderStatus, OrderStatus.sent);
     });
 
     test('updateSyncStatus persists the new sync status', () async {
@@ -102,7 +103,50 @@ void runOrderRepositoryContract(
     });
 
     test('updateStatus on unknown id does not throw', () async {
-      await repo.updateStatus(999999, OrderStatus.served);
+      // 未知 ID は no-op（既存契約）。
+      await repo.updateStatus(999999, OrderStatus.sent);
+    });
+
+    test('updateStatus rejects invalid state transition', () async {
+      // unsent → served は state machine 上の不正遷移。
+      final Order saved = await repo.create(makeOrder());
+      await expectLater(
+        repo.updateStatus(saved.id, OrderStatus.served),
+        throwsA(predicate<Object>(
+          (e) => e.runtimeType.toString() ==
+              'InvalidStateTransitionException',
+        )),
+      );
+      // 状態は元のまま。
+      final Order? loaded = await repo.findById(saved.id);
+      expect(loaded!.orderStatus, OrderStatus.unsent);
+    });
+
+    test('updateStatus from terminal (cancelled) is rejected', () async {
+      // cancelled → sent は終端からの遷移。
+      final Order saved = await repo.create(makeOrder());
+      await repo.updateStatus(saved.id, OrderStatus.cancelled);
+      await expectLater(
+        repo.updateStatus(saved.id, OrderStatus.sent),
+        throwsA(predicate<Object>(
+          (e) => e.runtimeType.toString() ==
+              'InvalidStateTransitionException',
+        )),
+      );
+    });
+
+    test('allowTerminalOverride permits served → cancelled', () async {
+      // 業務上稀な「提供済の事後取消」は override で許可される。
+      final Order saved = await repo.create(makeOrder());
+      await repo.updateStatus(saved.id, OrderStatus.sent);
+      await repo.updateStatus(saved.id, OrderStatus.served);
+      await repo.updateStatus(
+        saved.id,
+        OrderStatus.cancelled,
+        allowTerminalOverride: true,
+      );
+      final Order? loaded = await repo.findById(saved.id);
+      expect(loaded!.orderStatus, OrderStatus.cancelled);
     });
 
     test('updateSyncStatus on unknown id does not throw', () async {

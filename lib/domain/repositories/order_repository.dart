@@ -24,6 +24,20 @@ abstract interface class OrderRepository {
   /// 新規注文を保存し、採番された注文IDを持つ Order を返す。
   Future<Order> create(Order order);
 
-  Future<void> updateStatus(int id, OrderStatus status);
+  /// 注文ステータスを更新する。
+  ///
+  /// 既定では `OrderStatus.canTransitionTo` に従って状態遷移を検証する。
+  /// 不正遷移時は `InvalidStateTransitionException` を投げる
+  /// （未知 ID は no-op、同一状態は no-op）。
+  ///
+  /// [allowTerminalOverride] = true のときは、終端状態（served / cancelled）
+  /// からの遷移も許可する。業務上稀にある「提供済の事後取消」等、
+  /// 監査ログ（operation_log）と併用して使うこと。
+  Future<void> updateStatus(
+    int id,
+    OrderStatus status, {
+    bool allowTerminalOverride = false,
+  });
+
   Future<void> updateSyncStatus(int id, SyncStatus status);
 }

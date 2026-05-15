@@ -46,4 +46,48 @@ void main() {
     expect(pool.maxNumber, 50);
     expect(pool.bufferSize, 5);
   });
+
+  group('pending release queue (補償失敗のロスト防止)', () {
+    test('enqueuePendingRelease stores number; pendingReleases reads it back',
+        () async {
+      await repo.enqueuePendingRelease(const TicketNumber(7));
+      await repo.enqueuePendingRelease(const TicketNumber(12));
+      // 重複は de-dup される
+      await repo.enqueuePendingRelease(const TicketNumber(7));
+
+      final List<TicketNumber> pending = await repo.pendingReleases();
+      expect(
+        pending.map((t) => t.value).toList(),
+        <int>[7, 12],
+      );
+    });
+
+    test('flushPendingReleases releases queued numbers and clears the queue',
+        () async {
+      // 事前に 5 を発番（in_use にしておく）
+      TicketNumberPool pool = TicketNumberPool.empty();
+      final issued = pool.issue();
+      pool = issued.pool; // 1 in use
+      // 2 を強制 in_use にするため、もう1回発行
+      final issued2 = pool.issue();
+      pool = issued2.pool; // 1, 2 in use
+      await repo.save(pool);
+
+      // 2 を pending に積む（補償失敗を想定）
+      await repo.enqueuePendingRelease(const TicketNumber(2));
+
+      final int processed = await repo.flushPendingReleases();
+      expect(processed, 1);
+
+      // キューは空になる
+      expect(await repo.pendingReleases(), isEmpty);
+      // 2 は in_use から外れている
+      final TicketNumberPool after = await repo.load();
+      expect(after.inUseNumbers, <int>{1});
+    });
+
+    test('flushPendingReleases on empty queue is a no-op', () async {
+      expect(await repo.flushPendingReleases(), 0);
+    });
+  });
 }

@@ -144,12 +144,26 @@ class InMemoryOrderRepository implements OrderRepository {
   }
 
   @override
-  Future<void> updateStatus(int id, OrderStatus status) async {
+  Future<void> updateStatus(
+    int id,
+    OrderStatus status, {
+    bool allowTerminalOverride = false,
+  }) async {
     final Order? o = _orders[id];
-    if (o != null) {
-      _orders[id] = o.copyWith(orderStatus: status);
-      _controller.add(_orders.values.toList());
+    if (o == null) return;
+    if (o.orderStatus == status) return; // no-op
+    final bool allowed =
+        o.orderStatus.canTransitionTo(status) ||
+        (allowTerminalOverride && status == OrderStatus.cancelled);
+    if (!allowed) {
+      throw InvalidStateTransitionException(
+        'OrderStatus #$id: ${o.orderStatus.name} → ${status.name} は許可されていません',
+        from: o.orderStatus.name,
+        to: status.name,
+      );
     }
+    _orders[id] = o.copyWith(orderStatus: status);
+    _controller.add(_orders.values.toList());
   }
 
   @override
@@ -236,6 +250,16 @@ class InMemoryTicketPoolRepository implements TicketNumberPoolRepository {
   @override
   Future<void> release(TicketNumber number) {
     return _synchronized<void>(() async {
+      final Object? fail = failReleaseOnce;
+      if (fail != null) {
+        failReleaseOnce = null;
+        if (fail is Exception || fail is Error) {
+          // テスト用: 任意の Object をフックとして throw できるようにする。
+          // ignore: only_throw_errors
+          throw fail;
+        }
+        throw StateError(fail.toString());
+      }
       _pool = _pool.release(number);
     });
   }
@@ -245,6 +269,41 @@ class InMemoryTicketPoolRepository implements TicketNumberPoolRepository {
     return _synchronized<void>(() async {
       _pool = _pool.reset();
     });
+  }
+
+  final List<int> _pending = <int>[];
+
+  /// テストから release を強制的に失敗させたいときに差し込むフック。
+  /// 設定された値は次の release() 呼び出しで throw され、その後クリアされる。
+  Object? failReleaseOnce;
+
+  @override
+  Future<void> enqueuePendingRelease(TicketNumber number) async {
+    if (!_pending.contains(number.value)) {
+      _pending.add(number.value);
+    }
+  }
+
+  @override
+  Future<List<TicketNumber>> pendingReleases() async {
+    return <TicketNumber>[for (final int v in _pending) TicketNumber(v)];
+  }
+
+  @override
+  Future<int> flushPendingReleases() async {
+    final List<int> snapshot = List<int>.of(_pending);
+    if (snapshot.isEmpty) return 0;
+    int processed = 0;
+    for (final int v in snapshot) {
+      try {
+        await release(TicketNumber(v));
+        _pending.remove(v);
+        processed++;
+      } catch (_) {
+        // 残す
+      }
+    }
+    return processed;
   }
 }
 

@@ -39,6 +39,9 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
 
   static const String _kPool = 'ticketPool';
 
+  /// 補償 release 失敗時の未処理キュー。`int` の配列を JSON 文字列で保存。
+  static const String _kPendingReleases = 'ticketPool.pendingReleases';
+
   @override
   Future<TicketNumberPool> load() async {
     final String? raw = _prefs.getString(_kPool);
@@ -148,5 +151,118 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
       final TicketNumberPool pool = await load();
       await save(pool.reset());
     });
+  }
+
+  @override
+  Future<void> enqueuePendingRelease(TicketNumber number) {
+    return _synchronized<void>(() async {
+      final List<int> current = _readPendingRaw();
+      if (current.contains(number.value)) return;
+      current.add(number.value);
+      await _writePendingRaw(current);
+      AppLogger.event(
+        'ticket_pool',
+        'pending_release.enqueued',
+        fields: <String, Object?>{
+          'ticket_number': number.value,
+          'queue_size': current.length,
+        },
+      );
+      Telemetry.instance.warn(
+        'ticket_pool.pending_release.enqueued',
+        attrs: <String, Object?>{
+          'ticket_number': number.value,
+          'queue_size': current.length,
+        },
+      );
+    });
+  }
+
+  @override
+  Future<List<TicketNumber>> pendingReleases() async {
+    final List<int> current = _readPendingRaw();
+    return <TicketNumber>[
+      for (final int v in current) TicketNumber(v),
+    ];
+  }
+
+  @override
+  Future<int> flushPendingReleases() async {
+    final List<int> snapshot = _readPendingRaw();
+    if (snapshot.isEmpty) return 0;
+    int processed = 0;
+    final List<int> remaining = <int>[];
+    for (final int value in snapshot) {
+      try {
+        await release(TicketNumber(value));
+        processed++;
+      } catch (e, st) {
+        // 個別 release の失敗は次回 flush に持ち越し。残量はログ + telemetry で可視化。
+        remaining.add(value);
+        AppLogger.w(
+          'TicketPool: pending release flush failed for #$value',
+          error: e,
+          stackTrace: st,
+        );
+        Telemetry.instance.error(
+          'ticket_pool.pending_release.flush_failed',
+          error: e,
+          stackTrace: st,
+          attrs: <String, Object?>{'ticket_number': value},
+        );
+      }
+    }
+    // 残りを永続化。空なら key を削除して clean に。
+    await _synchronized<void>(() async {
+      // flush 中に enqueue されたぶんを失わないように merge する。
+      final List<int> latest = _readPendingRaw();
+      final Set<int> merged = <int>{...remaining};
+      for (final v in latest) {
+        if (!snapshot.contains(v)) merged.add(v);
+      }
+      await _writePendingRaw(merged.toList()..sort());
+    });
+    if (processed > 0) {
+      Telemetry.instance.event(
+        'ticket_pool.pending_release.flushed',
+        attrs: <String, Object?>{
+          'processed': processed,
+          'remaining': remaining.length,
+        },
+      );
+    }
+    return processed;
+  }
+
+  List<int> _readPendingRaw() {
+    final String? raw = _prefs.getString(_kPendingReleases);
+    if (raw == null || raw.isEmpty) return <int>[];
+    try {
+      final dynamic decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return decoded.whereType<num>().map((n) => n.toInt()).toList();
+      }
+    } catch (e, st) {
+      // 壊れていたら捨てる。pending は本質的に「念のため積む」キューなので
+      // 失った場合の影響は「番号がバッファに戻らない」だけ（日次リセットで清掃される）。
+      AppLogger.w(
+        'TicketPool: pending releases JSON corrupted; dropping',
+        error: e,
+        stackTrace: st,
+      );
+      Telemetry.instance.warn(
+        'ticket_pool.pending_release.corrupted',
+        attrs: <String, Object?>{'error': e.toString()},
+      );
+    }
+    return <int>[];
+  }
+
+  Future<void> _writePendingRaw(List<int> values) async {
+    if (values.isEmpty) {
+      await _prefs.remove(_kPendingReleases);
+      return;
+    }
+    await _prefs.setString(_kPendingReleases, jsonEncode(values));
   }
 }

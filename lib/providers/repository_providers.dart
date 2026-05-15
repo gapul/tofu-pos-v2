@@ -40,8 +40,10 @@ final Provider<OrderRepository> orderRepositoryProvider =
 
 final Provider<CashDrawerRepository> cashDrawerRepositoryProvider =
     Provider<CashDrawerRepository>(
-      (ref) =>
-          DriftCashDrawerRepository(ref.watch(appDatabaseProvider)),
+      (ref) => DriftCashDrawerRepository(
+        ref.watch(appDatabaseProvider),
+        operationLogRepository: ref.watch(operationLogRepositoryProvider),
+      ),
     );
 
 final Provider<SettingsRepository> settingsRepositoryProvider =

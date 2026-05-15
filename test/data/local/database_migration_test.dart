@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tofu_pos/data/datasources/local/database.dart';
@@ -12,9 +13,9 @@ import 'package:tofu_pos/data/datasources/local/database.dart';
 /// 現状は schema_versions tooling を有効化していないため、
 /// onUpgrade の単体テストはこのファイルでは行わない（future work）。
 void main() {
-  test('schemaVersion は 1（更新時はテストも更新する）', () async {
+  test('schemaVersion は 2（更新時はテストも更新する）', () async {
     final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
-    expect(db.schemaVersion, 1);
+    expect(db.schemaVersion, 2);
     await db.close();
   });
 
@@ -42,5 +43,47 @@ void main() {
     expect(await db.select(db.callingOrders).get(), isEmpty);
     expect(await db.select(db.operationLogs).get(), isEmpty);
     await db.close();
+  });
+
+  group('v2: kitchen/calling.orderId に orders(id) FK が効く (#3)', () {
+    test('存在しない orderId で kitchen_orders に insert すると FK 違反', () async {
+      final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      // FK enforce が ON であることを保証。
+      await db.customStatement('PRAGMA foreign_keys = ON');
+
+      // 親 orders が空の状態で kitchen_orders に直挿入 → FK 違反
+      await expectLater(
+        db.into(db.kitchenOrders).insert(
+              KitchenOrdersCompanion.insert(
+                orderId: const Value(999),
+                ticketNumber: 1,
+                itemsJson: '[]',
+                status: 'waiting',
+                receivedAt: DateTime(2026, 5, 8),
+              ),
+            ),
+        throwsA(anything),
+      );
+    });
+
+    test('存在しない orderId で calling_orders に insert すると FK 違反', () async {
+      final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+      await db.customStatement('PRAGMA foreign_keys = ON');
+
+      await expectLater(
+        db.into(db.callingOrders).insert(
+              CallingOrdersCompanion.insert(
+                orderId: const Value(999),
+                ticketNumber: 1,
+                status: 'waiting',
+                receivedAt: DateTime(2026, 5, 8),
+              ),
+            ),
+        throwsA(anything),
+      );
+    });
   });
 }

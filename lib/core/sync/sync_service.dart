@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:meta/meta.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/entities/order.dart';
 import '../../domain/enums/sync_status.dart';
@@ -36,6 +37,7 @@ class SyncService {
     required SettingsRepository settingsRepository,
     required ConnectivityMonitor connectivityMonitor,
     required CloudSyncClient client,
+    SharedPreferences? prefs,
     Clock clock = const SystemClock(),
     Duration retryInterval = const Duration(minutes: 5),
     Duration runOnceTimeout = const Duration(seconds: 30),
@@ -43,6 +45,7 @@ class SyncService {
        _settingsRepo = settingsRepository,
        _connectivity = connectivityMonitor,
        _client = client,
+       _prefs = prefs,
        _clock = clock,
        _retryInterval = retryInterval,
        _runOnceTimeout = runOnceTimeout;
@@ -51,9 +54,20 @@ class SyncService {
   final SettingsRepository _settingsRepo;
   final ConnectivityMonitor _connectivity;
   final CloudSyncClient _client;
+  final SharedPreferences? _prefs;
   final Clock _clock;
   final Duration _retryInterval;
   final Duration _runOnceTimeout;
+
+  /// 「最後に開始した run のトークン」を永続化するキー。
+  /// 起動時に [_kLastCompletedToken] と比較し、不一致なら前回クラッシュとみなす。
+  static const String _kLastStartedToken = 'sync.lastStartedToken';
+
+  /// 「最後に正常終了した run のトークン」を永続化するキー。
+  static const String _kLastCompletedToken = 'sync.lastCompletedToken';
+
+  /// 起動直後に 1 度だけ「前回クラッシュ」チェックを行うためのフラグ。
+  bool _crashCheckPerformed = false;
 
   StreamSubscription<ConnectivityStatus>? _connSub;
   Timer? _retryTimer;
@@ -132,14 +146,58 @@ class SyncService {
     _runToken = null;
   }
 
+  /// 前回プロセスで「開始したが完了しなかった runOnce」がいたかどうかを検出する。
+  /// 検出時は WARN ログと telemetry を出し、prefs から started を消す
+  /// （次回 runOnce が始まれば新しい started が書かれる）。
+  void _detectPreviousCrash() {
+    final SharedPreferences? prefs = _prefs;
+    if (prefs == null) return;
+    final String? started = prefs.getString(_kLastStartedToken);
+    final String? completed = prefs.getString(_kLastCompletedToken);
+    if (started == null) return; // 初回起動 or 前回が綺麗に終わった
+    if (started == completed) return; // 前回も正常終了
+    AppLogger.w(
+      'Sync: previous run did not complete (started=$started, completed=$completed)',
+    );
+    Telemetry.instance.warn(
+      'sync.previous_run.incomplete',
+      attrs: <String, Object?>{
+        'last_started_token': started,
+        'last_completed_token': completed ?? '',
+      },
+    );
+    // started を消すことで「以前のクラッシュを 1 回だけ通知する」を担保。
+    unawaited(prefs.remove(_kLastStartedToken));
+  }
+
+  Future<void> _writeToken(String key, String value) async {
+    try {
+      await _prefs?.setString(key, value);
+    } catch (e, st) {
+      // prefs 書き込み失敗は致命ではない（idempotency_key で重複は吸収される）。
+      AppLogger.w('Sync: failed to persist $key', error: e, stackTrace: st);
+    }
+  }
+
   /// 1回だけ同期を試みる。並行起動はガード。
   Future<SyncResult> runOnce() async {
     if (_running) {
       return const SyncResult(successCount: 0, failureCount: 0);
     }
+    // 初回起動時に「前回開始 != 前回成功」なら前回クラッシュとみなして通知する。
+    // 二重発火そのものは idempotency_key で吸収できるが、
+    // 「気付けるようにする」のがここの目的（仕様書 §8.2 の長期失敗観測の補助）。
+    if (!_crashCheckPerformed) {
+      _crashCheckPerformed = true;
+      _detectPreviousCrash();
+    }
     _running = true;
     final Object myToken = Object();
     _runToken = myToken;
+    // 開始トークンを永続化（成功で同じ値が completed に書かれる）。
+    final String tokenId = '${_clock.now().microsecondsSinceEpoch}'
+        '_${identityHashCode(myToken)}';
+    unawaited(_writeToken(_kLastStartedToken, tokenId));
     try {
       if (_connectivity.current != ConnectivityStatus.online) {
         return const SyncResult(successCount: 0, failureCount: 0);
@@ -207,6 +265,10 @@ class SyncService {
         'sync.run',
         attrs: <String, Object?>{'success': success, 'failure': failure},
       );
+      // 正常終了（全件失敗でも runOnce 自体は完了）。completed トークンを更新。
+      // タイムアウトや例外で抜けた場合は finally でも completed を書かないため、
+      // 次回起動で「started != completed」が検出される。
+      unawaited(_writeToken(_kLastCompletedToken, tokenId));
       return SyncResult(successCount: success, failureCount: failure);
     } finally {
       // _runOnceGuarded のタイムアウトで token がすり替わっていたら

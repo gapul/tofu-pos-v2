@@ -1,11 +1,16 @@
+import 'dart:convert';
+
 import '../../core/error/app_exceptions.dart';
 import '../../core/logging/app_logger.dart';
+import '../../core/telemetry/telemetry.dart';
+import '../entities/operation_log.dart';
 import '../entities/order.dart';
 import '../entities/order_item.dart';
 import '../entities/product.dart';
 import '../enums/order_status.dart';
 import '../enums/sync_status.dart';
 import '../repositories/cash_drawer_repository.dart';
+import '../repositories/operation_log_repository.dart';
 import '../repositories/order_repository.dart';
 import '../repositories/product_repository.dart';
 import '../repositories/ticket_number_pool_repository.dart';
@@ -38,12 +43,14 @@ class CheckoutUseCase {
     required ProductRepository productRepository,
     required CashDrawerRepository cashDrawerRepository,
     required TicketNumberPoolRepository ticketPoolRepository,
+    OperationLogRepository? operationLogRepository,
     DateTime Function() now = DateTime.now,
   }) : _uow = unitOfWork,
        _orderRepo = orderRepository,
        _productRepo = productRepository,
        _cashRepo = cashDrawerRepository,
        _poolRepo = ticketPoolRepository,
+       _logRepo = operationLogRepository,
        _now = now;
 
   final UnitOfWork _uow;
@@ -51,6 +58,7 @@ class CheckoutUseCase {
   final ProductRepository _productRepo;
   final CashDrawerRepository _cashRepo;
   final TicketNumberPoolRepository _poolRepo;
+  final OperationLogRepository? _logRepo;
   final DateTime Function() _now;
 
   Future<Order> execute({
@@ -116,6 +124,21 @@ class CheckoutUseCase {
           await _cashRepo.apply(delta);
         }
 
+        // 6. 操作ログを記録（信用ベース監査の根拠、§6.6）
+        if (_logRepo != null) {
+          await _logRepo.record(
+            kind: OperationKind.checkout,
+            targetId: saved.id.toString(),
+            detailJson: jsonEncode(<String, Object?>{
+              'ticket_number': saved.ticketNumber.value,
+              'final_price_yen': saved.finalPrice.yen,
+              'item_count': saved.items.length,
+              'received_cash_yen': saved.receivedCash.yen,
+            }),
+            at: _now(),
+          );
+        }
+
         return saved;
       });
     } catch (e, st) {
@@ -124,11 +147,32 @@ class CheckoutUseCase {
       try {
         await _poolRepo.release(ticket);
       } catch (releaseErr, releaseSt) {
-        AppLogger.w(
+        // 補償失敗は番号が永続的に in_use のまま残るリスクがある。
+        // 致命級として可視化し、再試行キューに積んで起動時に消化させる。
+        AppLogger.e(
           'CheckoutUseCase: ticket release compensation failed for #${ticket.value}',
           error: releaseErr,
           stackTrace: releaseSt,
         );
+        Telemetry.instance.error(
+          'ticket_pool.release.compensation_failed',
+          message: 'checkout',
+          error: releaseErr,
+          stackTrace: releaseSt,
+          attrs: <String, Object?>{
+            'ticket_number': ticket.value,
+            'context': 'checkout',
+          },
+        );
+        try {
+          await _poolRepo.enqueuePendingRelease(ticket);
+        } catch (enqueueErr, enqueueSt) {
+          AppLogger.e(
+            'CheckoutUseCase: failed to enqueue pending release for #${ticket.value}',
+            error: enqueueErr,
+            stackTrace: enqueueSt,
+          );
+        }
       }
       // 元の例外をそのまま再 throw
       Error.throwWithStackTrace(e, st);

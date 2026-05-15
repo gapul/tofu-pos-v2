@@ -37,6 +37,7 @@ final Provider<CheckoutUseCase> checkoutUseCaseProvider =
         productRepository: ref.watch(productRepositoryProvider),
         cashDrawerRepository: ref.watch(cashDrawerRepositoryProvider),
         ticketPoolRepository: ref.watch(ticketNumberPoolRepositoryProvider),
+        operationLogRepository: ref.watch(operationLogRepositoryProvider),
       ),
     );
 
@@ -57,6 +58,7 @@ final Provider<CashCloseUseCase> cashCloseUseCaseProvider =
       (ref) => CashCloseUseCase(
         orderRepository: ref.watch(orderRepositoryProvider),
         cashDrawerRepository: ref.watch(cashDrawerRepositoryProvider),
+        operationLogRepository: ref.watch(operationLogRepositoryProvider),
       ),
     );
 
@@ -72,6 +74,7 @@ final Provider<DailyResetUseCase> dailyResetUseCaseProvider =
       (ref) => DailyResetUseCase(
         dailyResetRepository: ref.watch(dailyResetRepositoryProvider),
         ticketPoolRepository: ref.watch(ticketNumberPoolRepositoryProvider),
+        operationLogRepository: ref.watch(operationLogRepositoryProvider),
       ),
     );
 
