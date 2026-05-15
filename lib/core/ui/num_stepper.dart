@@ -10,6 +10,9 @@ import '../theme/tokens.dart';
 /// `[-] [value] [+]` の 3 ピース。POS 用途で 56dp 以上のタップターゲットを
 /// 確保し、長押しで連続増減 (130ms 周期 + 加速) する。
 ///
+/// 中央数値表示はタップで TextField モードに切り替わり、物理キーボードから
+/// 直接入力できる。Enter / Tab / フォーカス外で確定、ESC で取り消し。
+///
 /// 既存 `NumericStepper` の上位互換 (同 API + size/compact 拡張)。
 enum TofuNumStepperSize {
   /// 44dp 高 / 中央テキスト bodyLgBold。狭い行 (テーブル列等)。
@@ -57,10 +60,29 @@ class _TofuNumStepperState extends State<TofuNumStepper> {
   Timer? _holdTimer;
   int _holdAccel = 1;
 
+  bool _isEditing = false;
+  late final TextEditingController _textCtrl = TextEditingController();
+  late final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChanged);
+  }
+
   @override
   void dispose() {
     _holdTimer?.cancel();
+    _focusNode.removeListener(_onFocusChanged);
+    _focusNode.dispose();
+    _textCtrl.dispose();
     super.dispose();
+  }
+
+  void _onFocusChanged() {
+    if (!_focusNode.hasFocus && _isEditing) {
+      _commit();
+    }
   }
 
   void _bump(int delta) {
@@ -97,6 +119,47 @@ class _TofuNumStepperState extends State<TofuNumStepper> {
   void _stopHold() {
     _holdTimer?.cancel();
     _holdTimer = null;
+  }
+
+  void _beginEdit() {
+    if (!widget.enabled || _isEditing) {
+      return;
+    }
+    _textCtrl.text = widget.value.toString();
+    _textCtrl.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _textCtrl.text.length,
+    );
+    setState(() => _isEditing = true);
+    // フォーカス確定は次フレームで（AnimatedSwitcher の build を待つ）。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _focusNode.requestFocus();
+      }
+    });
+  }
+
+  void _commit() {
+    if (!_isEditing) {
+      return;
+    }
+    final String raw = _textCtrl.text.trim();
+    int? parsed = int.tryParse(raw);
+    if (parsed == null) {
+      // 不正値は破棄、現在値に戻すだけ。
+      setState(() => _isEditing = false);
+      return;
+    }
+    parsed = parsed.clamp(widget.min, widget.max);
+    setState(() => _isEditing = false);
+    if (parsed != widget.value) {
+      unawaited(HapticFeedback.selectionClick());
+      widget.onChanged(parsed);
+    }
+  }
+
+  void _cancel() {
+    setState(() => _isEditing = false);
   }
 
   ({double height, TextStyle valueStyle, double iconSize, double minTextWidth})
@@ -142,6 +205,25 @@ class _TofuNumStepperState extends State<TofuNumStepper> {
         : '$shown${widget.suffix}';
     final bool canDec = widget.enabled && widget.value > widget.min;
     final bool canInc = widget.enabled && widget.value < widget.max;
+    final bool signed = widget.min < 0;
+
+    final Color valueColor = widget.enabled
+        ? TofuTokens.textPrimary
+        : TofuTokens.textDisabled;
+
+    final Widget centerChild = _isEditing
+        ? _buildEditor(
+            key: const ValueKey<String>('edit'),
+            metrics: m,
+            valueColor: valueColor,
+            signed: signed,
+          )
+        : _buildDisplay(
+            key: const ValueKey<String>('view'),
+            metrics: m,
+            text: text,
+            valueColor: valueColor,
+          );
 
     final Widget stepper = Row(
       mainAxisSize: MainAxisSize.min,
@@ -151,7 +233,7 @@ class _TofuNumStepperState extends State<TofuNumStepper> {
           height: m.height,
           iconSize: m.iconSize,
           isLeft: true,
-          enabled: canDec,
+          enabled: canDec && !_isEditing,
           onTap: () => _bump(-1),
           onLongPressStart: () => _startHold(-1),
           onLongPressEnd: _stopHold,
@@ -160,7 +242,6 @@ class _TofuNumStepperState extends State<TofuNumStepper> {
           height: m.height,
           constraints: BoxConstraints(minWidth: m.minTextWidth),
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: TofuTokens.space4),
           decoration: const BoxDecoration(
             color: TofuTokens.bgCanvas,
             border: Border(
@@ -168,14 +249,9 @@ class _TofuNumStepperState extends State<TofuNumStepper> {
               bottom: BorderSide(color: TofuTokens.borderSubtle),
             ),
           ),
-          child: Text(
-            text,
-            style: m.valueStyle.copyWith(
-              color: widget.enabled
-                  ? TofuTokens.textPrimary
-                  : TofuTokens.textDisabled,
-            ),
-            textAlign: TextAlign.center,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 120),
+            child: centerChild,
           ),
         ),
         _StepBtn(
@@ -183,7 +259,7 @@ class _TofuNumStepperState extends State<TofuNumStepper> {
           height: m.height,
           iconSize: m.iconSize,
           isLeft: false,
-          enabled: canInc,
+          enabled: canInc && !_isEditing,
           onTap: () => _bump(1),
           onLongPressStart: () => _startHold(1),
           onLongPressEnd: _stopHold,
@@ -211,6 +287,99 @@ class _TofuNumStepperState extends State<TofuNumStepper> {
       ],
     );
   }
+
+  Widget _buildDisplay({
+    required Key key,
+    required ({
+      double height,
+      TextStyle valueStyle,
+      double iconSize,
+      double minTextWidth,
+    })
+    metrics,
+    required String text,
+    required Color valueColor,
+  }) {
+    return InkWell(
+      key: key,
+      onTap: widget.enabled ? _beginEdit : null,
+      child: Container(
+        height: metrics.height,
+        constraints: BoxConstraints(minWidth: metrics.minTextWidth),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: TofuTokens.space4),
+        child: Text(
+          text,
+          style: metrics.valueStyle.copyWith(color: valueColor),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditor({
+    required Key key,
+    required ({
+      double height,
+      TextStyle valueStyle,
+      double iconSize,
+      double minTextWidth,
+    })
+    metrics,
+    required Color valueColor,
+    required bool signed,
+  }) {
+    final List<TextInputFormatter> formatters = <TextInputFormatter>[
+      FilteringTextInputFormatter.allow(
+        signed ? RegExp(r'^-?\d*') : RegExp(r'\d*'),
+      ),
+    ];
+    return SizedBox(
+      key: key,
+      height: metrics.height,
+      width: metrics.minTextWidth + 24,
+      child: Shortcuts(
+        shortcuts: const <ShortcutActivator, Intent>{
+          SingleActivator(LogicalKeyboardKey.escape): _CancelIntent(),
+        },
+        child: Actions(
+          actions: <Type, Action<Intent>>{
+            _CancelIntent: CallbackAction<_CancelIntent>(
+              onInvoke: (_) {
+                _cancel();
+                return null;
+              },
+            ),
+          },
+          child: TextField(
+            controller: _textCtrl,
+            focusNode: _focusNode,
+            autofocus: true,
+            textAlign: TextAlign.center,
+            keyboardType: TextInputType.numberWithOptions(signed: signed),
+            inputFormatters: formatters,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _commit(),
+            onEditingComplete: _commit,
+            style: metrics.valueStyle.copyWith(color: valueColor),
+            decoration: const InputDecoration(
+              isDense: true,
+              border: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: TofuTokens.space2,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CancelIntent extends Intent {
+  const _CancelIntent();
 }
 
 class _StepBtn extends StatelessWidget {

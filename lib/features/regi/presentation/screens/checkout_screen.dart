@@ -292,9 +292,9 @@ class _LeftPane extends StatelessWidget {
       _SummaryCard(session: session),
       const SizedBox(height: TofuTokens.space5),
       _DiscountSection(session: session, notifier: notifier),
-      if (flags.cashManagement) ...<Widget>[
+      if (flags.cashManagement && session.changeCash.yen > 0) ...<Widget>[
         const SizedBox(height: TofuTokens.space5),
-        _CashManagementSection(session: session, notifier: notifier),
+        _ChangeSuggestionCard(changeYen: session.changeCash.yen),
       ],
       const SizedBox(height: TofuTokens.space11),
     ];
@@ -762,10 +762,10 @@ class _RightPane extends StatelessWidget {
             insufficient: insufficient,
             change: change,
           ),
-          // 金種管理ON時：お釣りの最少枚数組合せを提案（仕様書 §6.3）
-          if (flags.cashManagement && change.yen > 0) ...<Widget>[
+          // 金種管理ON時：預り金（金種別）ステッパー
+          if (flags.cashManagement) ...<Widget>[
             const SizedBox(height: TofuTokens.space4),
-            _ChangeSuggestionCard(changeYen: change.yen),
+            _CashManagementSection(session: session, notifier: notifier),
           ],
           const SizedBox(height: TofuTokens.space5),
           if (!flags.cashManagement) ...<Widget>[
