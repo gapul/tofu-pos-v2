@@ -44,6 +44,80 @@ void main() {
     await db.close();
   });
 
+  group('purgeShopScopedData', () {
+    test('全店舗スコープのテーブル（products 含む）が空になる', () async {
+      final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      await db
+          .into(db.products)
+          .insert(
+            ProductsCompanion.insert(
+              id: 'p1',
+              name: 'たこ焼き',
+              priceYen: 500,
+            ),
+          );
+      await db
+          .into(db.orders)
+          .insert(
+            OrdersCompanion.insert(
+              ticketNumber: 1,
+              createdAt: DateTime(2026, 5, 8),
+              orderStatus: 'submitted',
+              syncStatus: 'pending',
+            ),
+          );
+      await db
+          .into(db.kitchenOrders)
+          .insert(
+            KitchenOrdersCompanion.insert(
+              orderId: const Value(1),
+              ticketNumber: 1,
+              itemsJson: '[]',
+              status: 'waiting',
+              receivedAt: DateTime(2026, 5, 8),
+            ),
+          );
+      await db
+          .into(db.callingOrders)
+          .insert(
+            CallingOrdersCompanion.insert(
+              orderId: const Value(1),
+              ticketNumber: 1,
+              status: 'waiting',
+              receivedAt: DateTime(2026, 5, 8),
+            ),
+          );
+      await db
+          .into(db.cashDrawerCounts)
+          .insert(
+            CashDrawerCountsCompanion.insert(
+              denomination: const Value(1000),
+              count: const Value(5),
+            ),
+          );
+      await db
+          .into(db.operationLogs)
+          .insert(
+            OperationLogsCompanion.insert(
+              kind: 'product_master_update',
+              occurredAt: DateTime(2026, 5, 8),
+            ),
+          );
+
+      await db.purgeShopScopedData();
+
+      expect(await db.select(db.products).get(), isEmpty);
+      expect(await db.select(db.orders).get(), isEmpty);
+      expect(await db.select(db.orderItems).get(), isEmpty);
+      expect(await db.select(db.kitchenOrders).get(), isEmpty);
+      expect(await db.select(db.callingOrders).get(), isEmpty);
+      expect(await db.select(db.cashDrawerCounts).get(), isEmpty);
+      expect(await db.select(db.operationLogs).get(), isEmpty);
+    });
+  });
+
   group('v3: kitchen/calling.orderId の FK は撤回されている', () {
     // v2 で FK を入れたが、端末間でテーブル所有が異なるイベントソース構成
     // のため (キッチン端末に親 orders 行が無い) 必ず FK 違反となり、

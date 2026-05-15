@@ -1,11 +1,18 @@
+import 'package:drift/drift.dart' show Value;
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tofu_pos/data/datasources/local/database.dart';
 import 'package:tofu_pos/domain/enums/device_role.dart';
 import 'package:tofu_pos/domain/enums/transport_mode.dart';
 import 'package:tofu_pos/domain/repositories/settings_repository.dart';
+import 'package:tofu_pos/domain/repositories/ticket_number_pool_repository.dart';
 import 'package:tofu_pos/domain/value_objects/feature_flags.dart';
 import 'package:tofu_pos/domain/value_objects/shop_id.dart';
+import 'package:tofu_pos/domain/value_objects/ticket_number_pool.dart';
 import 'package:tofu_pos/features/startup/presentation/notifiers/setup_notifier.dart';
+import 'package:tofu_pos/providers/database_providers.dart';
 import 'package:tofu_pos/providers/repository_providers.dart';
 
 /// セットアップフローのテストに必要な分だけ実装した Fake。
@@ -86,15 +93,48 @@ class _FakeSettingsRepository implements SettingsRepository {
   Future<void> setUserName(String? value) async {}
 }
 
-ProviderContainer _makeContainer(_FakeSettingsRepository repo) {
+/// テスト用のミニマル ticket pool repository。reset 回数を観測するだけ。
+class _FakeTicketPoolRepository implements TicketNumberPoolRepository {
+  int resetCount = 0;
+
+  @override
+  Future<void> reset() async {
+    resetCount += 1;
+  }
+
+  @override
+  Future<TicketNumberPool> load() async => TicketNumberPool.empty();
+
+  @override
+  Future<void> save(TicketNumberPool pool) async {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      super.noSuchMethod(invocation);
+}
+
+ProviderContainer _makeContainer(
+  _FakeSettingsRepository repo, {
+  AppDatabase? db,
+  _FakeTicketPoolRepository? ticketPool,
+}) {
   return ProviderContainer(
     overrides: [
       settingsRepositoryProvider.overrideWithValue(repo),
+      if (db != null) appDatabaseProvider.overrideWithValue(db),
+      if (ticketPool != null)
+        ticketNumberPoolRepositoryProvider.overrideWithValue(ticketPool),
     ],
   );
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
+
   group('SetupNotifier (AsyncNotifier)', () {
     test('build 直後は AsyncLoading', () {
       final ProviderContainer container = _makeContainer(
@@ -208,6 +248,119 @@ void main() {
         container.read(setupNotifierProvider).requireValue.isComplete,
         isTrue,
       );
+    });
+
+    test('ログアウト → 別 shop_id で再ログインすると purge と pool reset が走る', () async {
+      // 前提: 既にログイン中だったが clearShop でログアウトした状態を再現する。
+      // 旧実装は repo.getShopId()==null との比較だったので shopChanged=false に
+      // なって purge がスキップされていた。lastKnownShopId 経由で検出する。
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'lastKnownShopId': 'shopA',
+      });
+
+      final _FakeSettingsRepository repo = _FakeSettingsRepository();
+      final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      // 前店舗のデータを 1 行ずつ入れて、purge で消えることを確認する。
+      await db
+          .into(db.products)
+          .insert(
+            ProductsCompanion.insert(
+              id: 'p1',
+              name: 'たこ焼き',
+              priceYen: 500,
+            ),
+          );
+      await db
+          .into(db.callingOrders)
+          .insert(
+            CallingOrdersCompanion.insert(
+              orderId: const Value(1),
+              ticketNumber: 1,
+              status: 'waiting',
+              receivedAt: DateTime(2026, 5, 8),
+            ),
+          );
+
+      final _FakeTicketPoolRepository pool = _FakeTicketPoolRepository();
+      final ProviderContainer container = _makeContainer(
+        repo,
+        db: db,
+        ticketPool: pool,
+      );
+      addTearDown(container.dispose);
+
+      await container.read(setupNotifierProvider.future);
+      await container
+          .read(setupNotifierProvider.notifier)
+          .saveShopId(ShopId('shopB'));
+
+      expect(await db.select(db.products).get(), isEmpty);
+      expect(await db.select(db.callingOrders).get(), isEmpty);
+      expect(pool.resetCount, 1);
+
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('lastKnownShopId'), 'shopB');
+    });
+
+    test('同一 shop_id で再ログインしたら purge は走らない', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'lastKnownShopId': 'shopA',
+      });
+
+      final _FakeSettingsRepository repo = _FakeSettingsRepository();
+      final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      await db
+          .into(db.products)
+          .insert(
+            ProductsCompanion.insert(
+              id: 'p1',
+              name: 'たこ焼き',
+              priceYen: 500,
+            ),
+          );
+
+      final _FakeTicketPoolRepository pool = _FakeTicketPoolRepository();
+      final ProviderContainer container = _makeContainer(
+        repo,
+        db: db,
+        ticketPool: pool,
+      );
+      addTearDown(container.dispose);
+
+      await container.read(setupNotifierProvider.future);
+      await container
+          .read(setupNotifierProvider.notifier)
+          .saveShopId(ShopId('shopA'));
+
+      // 同一 shop_id への再ログインではローカルデータは保持する。
+      expect((await db.select(db.products).get()).length, 1);
+      expect(pool.resetCount, 0);
+    });
+
+    test('clearShop は lastKnownShopId を保持する（次回再ログインで検出するため）', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final _FakeSettingsRepository repo = _FakeSettingsRepository();
+      final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+      final ProviderContainer container = _makeContainer(
+        repo,
+        db: db,
+        ticketPool: _FakeTicketPoolRepository(),
+      );
+      addTearDown(container.dispose);
+
+      await container.read(setupNotifierProvider.future);
+      final SetupNotifier n = container.read(setupNotifierProvider.notifier);
+
+      await n.saveShopId(ShopId('shopA'));
+      await n.clearShop();
+
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('lastKnownShopId'), 'shopA');
     });
   });
 

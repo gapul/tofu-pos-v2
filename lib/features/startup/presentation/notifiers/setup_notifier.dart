@@ -80,23 +80,44 @@ class SetupNotifier extends AsyncNotifier<SetupState> {
     }
   }
 
+  /// ログアウト後も保持する「最後にログインしていた shop_id」。
+  /// `clearShop()` は触らないので、次回ログイン時の比較に使える。
+  /// これにより「ログアウト → 別 shop_id 再ログイン」でも purge が走る。
+  static const String _kLastKnownShopId = 'lastKnownShopId';
+
   Future<void> saveShopId(ShopId shopId) async {
     // 別店舗の shopId に切り替わる場合は前店舗のローカルデータをパージ
     // （仕様: 異なる shop_id への上書きは前店舗の注文・キッチン/呼出・会計
     //  ・操作ログ・整理券プールを全削除する。同一 shop_id 再ログインでは保持）。
+    //
+    // 注意: 旧実装は `_repo.getShopId()` (= 現在ログイン中の shop_id) と比較
+    //       していたが、ログアウト時に `clearShopId()` で null にしているため
+    //       「ログアウト → 別店舗ログイン」で shopChanged=false になり、
+    //       前店舗のデータがそのまま残る不具合があった。
+    //       SharedPreferences の `lastKnownShopId` で最終ログイン店舗を別途
+    //       覚えておき、それと比較することで再ログイン経路でも purge が走る。
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? lastKnown = prefs.getString(_kLastKnownShopId);
     final ShopId? before = await _repo.getShopId();
-    final bool shopChanged = before != null && before.value != shopId.value;
+    final bool shopChanged =
+        lastKnown != null && lastKnown.isNotEmpty && lastKnown != shopId.value;
 
     // 初回 shop_id 設定時、旧スキーマ（プレフィクスなし）の店舗依存キーを
     // 新スキーマ（`key:<shopId>`）にリネーム移行する。複数 shop_id 切替で
     // 番号衝突や日次リセット誤判定を起こさないため、確実に 1 回だけ行う。
-    if (before == null) {
+    // 「初回」判定は lastKnownShopId 未設定で代用する（クリーンインストール
+    // 直後 = lastKnownShopId 空、を意味する）。
+    if (before == null && lastKnown == null) {
       await _migrateLegacyShopScopedKeys(shopId.value);
     }
 
     await _repo.setShopId(shopId);
+    await prefs.setString(_kLastKnownShopId, shopId.value);
 
     if (shopChanged) {
+      AppLogger.i(
+        'SetupNotifier: shop change detected: $lastKnown -> ${shopId.value}, purging shop-scoped data',
+      );
       try {
         await ref.read(appDatabaseProvider).purgeShopScopedData();
         await ref.read(ticketNumberPoolRepositoryProvider).reset();

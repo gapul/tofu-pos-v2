@@ -309,9 +309,12 @@ class AppDatabase extends _$AppDatabase {
   /// 削除順序: 子から順に。OrderItems は Orders に CASCADE が張られているが、
   /// 念のため明示的に順序を守る。
   ///
-  /// 残すもの: 設定 (SettingsRepository) / 商品マスタ (Products) / 端末ID。
-  /// 商品マスタは店舗を跨いで共有しても害が少なく、再ログイン直後に
-  /// レジ側からブロードキャストされて上書きされる前提。
+  /// 残すもの: 設定 (SettingsRepository) / 端末ID。
+  ///
+  /// 商品マスタ (Products) は店舗ごとに別物なので必ず削除する。
+  /// 旧コメントでは「商品マスタは保持」としていたが、別店舗にログインした
+  /// 直後に前店舗の商品が UI に見えてしまう不具合があったため削除対象に追加。
+  /// 再ログイン直後はレジ側からブロードキャストされて再投入される前提。
   Future<void> purgeShopScopedData() async {
     await transaction(() async {
       await customStatement('DELETE FROM order_items');
@@ -320,6 +323,7 @@ class AppDatabase extends _$AppDatabase {
       await customStatement('DELETE FROM cash_drawer_counts');
       await customStatement('DELETE FROM operation_logs');
       await customStatement('DELETE FROM orders');
+      await customStatement('DELETE FROM products');
     });
   }
 }
