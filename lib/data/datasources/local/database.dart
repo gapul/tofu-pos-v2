@@ -300,6 +300,28 @@ class AppDatabase extends _$AppDatabase {
       ''',
     );
   }
+
+  /// 店舗固有のローカルデータを全削除する（仕様書 §3 ログイン店舗変更時）。
+  ///
+  /// 用途: 端末で別店舗にログインし直したとき、前店舗の注文・キッチン/呼び出し
+  /// 行・会計ログ・操作ログがそのまま残り、UI に表示されてしまうのを防ぐ。
+  ///
+  /// 削除順序: 子から順に。OrderItems は Orders に CASCADE が張られているが、
+  /// 念のため明示的に順序を守る。
+  ///
+  /// 残すもの: 設定 (SettingsRepository) / 商品マスタ (Products) / 端末ID。
+  /// 商品マスタは店舗を跨いで共有しても害が少なく、再ログイン直後に
+  /// レジ側からブロードキャストされて上書きされる前提。
+  Future<void> purgeShopScopedData() async {
+    await transaction(() async {
+      await customStatement('DELETE FROM order_items');
+      await customStatement('DELETE FROM kitchen_orders');
+      await customStatement('DELETE FROM calling_orders');
+      await customStatement('DELETE FROM cash_drawer_counts');
+      await customStatement('DELETE FROM operation_logs');
+      await customStatement('DELETE FROM orders');
+    });
+  }
 }
 
 LazyDatabase _openConnection() {

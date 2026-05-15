@@ -103,8 +103,8 @@ void main() {
     expect(find.text('お呼び出し'), findsOneWidget);
     expect(find.text('お受け取りください'), findsOneWidget);
 
-    // 「閉じる（呼び出し済みへ）」ボタンが出るので押す。
-    await tester.tap(find.text('閉じる（呼び出し済みへ）'));
+    // 右下「呼び出し済み」ボタン押下で markCalled される。
+    await tester.tap(find.text('呼び出し済み'));
     await tester.pumpAndSettle();
 
     // ダイアログが閉じている。

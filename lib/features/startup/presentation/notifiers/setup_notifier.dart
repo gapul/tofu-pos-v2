@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/logging/app_logger.dart';
 import '../../../../domain/enums/device_role.dart';
 import '../../../../domain/repositories/settings_repository.dart';
 import '../../../../domain/value_objects/shop_id.dart';
+import '../../../../providers/database_providers.dart';
 import '../../../../providers/repository_providers.dart';
+import '../../../../providers/sync_providers.dart';
 
 /// 初期設定の現在状態（仕様書 §3）。
 ///
@@ -50,19 +53,45 @@ class SetupNotifier extends AsyncNotifier<SetupState> {
   }
 
   Future<void> saveShopId(ShopId shopId) async {
+    // 別店舗の shopId に切り替わる場合は前店舗のローカルデータをパージ
+    // （仕様: 異なる shop_id への上書きは前店舗の注文・キッチン/呼出・会計
+    //  ・操作ログ・整理券プールを全削除する。同一 shop_id 再ログインでは保持）。
+    final ShopId? before = await _repo.getShopId();
+    final bool shopChanged = before != null && before.value != shopId.value;
+
     await _repo.setShopId(shopId);
+
+    if (shopChanged) {
+      try {
+        await ref.read(appDatabaseProvider).purgeShopScopedData();
+        await ref.read(ticketNumberPoolRepositoryProvider).reset();
+      } catch (e, st) {
+        AppLogger.e(
+          'SetupNotifier: purge shop-scoped data failed on shop change',
+          error: e,
+          stackTrace: st,
+        );
+      }
+      // PeerPresence は接続中の shopId をコンストラクタで握っているので
+      // shopId 変更時は invalidate して作り直す。
+      ref.invalidate(peerPresenceServiceProvider);
+    }
+
     final SetupState current = state.value ?? SetupState.empty;
     state = AsyncData<SetupState>(current.copyWith(shopId: shopId));
   }
 
   Future<void> saveRole(DeviceRole role) async {
     await _repo.setDeviceRole(role);
+    // 役割変更時はバッジ表示の role を更新するため presence を作り直す。
+    ref.invalidate(peerPresenceServiceProvider);
     final SetupState current = state.value ?? SetupState.empty;
     state = AsyncData<SetupState>(current.copyWith(role: role));
   }
 
   Future<void> clearRole() async {
     await _repo.clearDeviceRole();
+    ref.invalidate(peerPresenceServiceProvider);
     final SetupState current = state.value ?? SetupState.empty;
     state = AsyncData<SetupState>(current.copyWith(clearRole: true));
   }
@@ -71,6 +100,7 @@ class SetupNotifier extends AsyncNotifier<SetupState> {
   /// 役割や機能フラグ等は保持される。
   Future<void> clearShop() async {
     await _repo.clearShopId();
+    ref.invalidate(peerPresenceServiceProvider);
     final SetupState current = state.value ?? SetupState.empty;
     state = AsyncData<SetupState>(current.copyWith(clearShop: true));
   }

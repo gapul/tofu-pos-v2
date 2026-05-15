@@ -609,7 +609,9 @@ class _SmallTicketCard extends StatelessWidget {
 
 // ---------------------------------------------------------------------------
 // 全画面呼び出しダイアログ: 整理券番号を顧客向けに巨大表示。
-// 上部寄せ + 3 秒で自動的に閉じる（閉じた時点で markCalled 扱い）。
+// 上部寄せ。**自動 close は廃止**: 右下「呼び出し済み」ボタンを押した場合のみ
+// markCalled する (pop(true))。barrierDismissible で閉じた場合は markCalled
+// しない (pop(false))。
 // ---------------------------------------------------------------------------
 class _FullScreenCallDialog extends StatefulWidget {
   const _FullScreenCallDialog({required this.order});
@@ -620,27 +622,13 @@ class _FullScreenCallDialog extends StatefulWidget {
 }
 
 class _FullScreenCallDialogState extends State<_FullScreenCallDialog> {
-  static const Duration _autoClose = Duration(seconds: 3);
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer(_autoClose, () {
-      if (!mounted) return;
-      Navigator.of(context).pop(true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Dialog.fullscreen(
+    return PopScope<bool>(
+      // ハードウェアバック等で閉じた場合は markCalled しない。
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) {},
+      child: Dialog.fullscreen(
       backgroundColor: TofuTokens.brandPrimary,
       child: SafeArea(
         child: Stack(
@@ -692,20 +680,32 @@ class _FullScreenCallDialogState extends State<_FullScreenCallDialog> {
                 ],
               ),
             ),
-            // 手動で閉じる用の小型ボタン (タイマー切れる前に閉じたい時)
+            // 「呼び出し済み」ボタン: 押下時のみ markCalled する。
             Positioned(
               right: TofuTokens.space7,
               bottom: TofuTokens.space7,
               child: TofuButton(
-                label: '今すぐ閉じる',
+                label: '呼び出し済み',
+                icon: Icons.check_circle,
+                variant: TofuButtonVariant.primary,
+                onPressed: () => Navigator.of(context).pop(true),
+              ),
+            ),
+            // 単に閉じるだけのサブボタン（誤操作のリカバリ用）。
+            Positioned(
+              left: TofuTokens.space7,
+              bottom: TofuTokens.space7,
+              child: TofuButton(
+                label: '閉じる',
                 icon: Icons.close,
                 variant: TofuButtonVariant.ghost,
-                onPressed: () => Navigator.of(context).pop(true),
+                onPressed: () => Navigator.of(context).pop(false),
               ),
             ),
           ],
         ),
       ),
+    ),
     );
   }
 }
