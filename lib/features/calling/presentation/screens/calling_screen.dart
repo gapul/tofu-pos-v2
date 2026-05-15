@@ -120,10 +120,12 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
         title: '呼び出し',
         // /regi/calling から push されたときだけ戻るボタンを出す。
         // 呼び出し役の役割ホームとして開いているときは戻り先がないので非表示。
-        leading: context.canPop()
+        // go_router 不在の widget test でも安全に動くよう Navigator.canPop で判定。
+        leading: Navigator.of(context).canPop()
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: context.pop,
+                onPressed: () =>
+                    context.canPop() ? context.pop() : Navigator.pop(context),
                 tooltip: '戻る',
               )
             : null,
