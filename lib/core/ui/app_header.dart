@@ -36,6 +36,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
     this.actions = const <Widget>[],
     this.showStatus = true,
     this.leading,
+    this.onTicketTap,
   });
 
   /// ブランド/役割名。固定値 (「レジ」「キッチン」「呼び出し」「設定」「初期設定」)。
@@ -54,6 +55,21 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
   final List<Widget> actions;
   final bool showStatus;
   final Widget? leading;
+
+  /// `ticket` / `upcomingTicket` バッジをタップしたときの動作。
+  /// レジ端末で「次回番号」をタップ → 呼び出し画面プレビューを開く等で利用。
+  final VoidCallback? onTicketTap;
+
+  Widget _ticketBadge({required Widget child}) {
+    if (onTicketTap == null) {
+      return child;
+    }
+    return InkWell(
+      onTap: onTicketTap,
+      borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
+      child: child,
+    );
+  }
 
   /// Figma: landscape 89dp / portrait 81dp。
   /// `preferredSize` は build フェーズ前に Scaffold から呼ばれるため
@@ -109,17 +125,21 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
                 ),
               ),
               if (ticket != null)
-                widget.TicketNumber(
-                  number: ticket!.toString(),
-                  label: '整理券',
-                  size: widget.TicketNumberSize.sm,
+                _ticketBadge(
+                  child: widget.TicketNumber(
+                    number: ticket!.toString(),
+                    label: '整理券',
+                    size: widget.TicketNumberSize.sm,
+                  ),
                 )
               else if (upcomingTicket != null)
-                widget.TicketNumber(
-                  number: upcomingTicket!.toString(),
-                  label: '次回',
-                  size: widget.TicketNumberSize.sm,
-                  emphasized: false,
+                _ticketBadge(
+                  child: widget.TicketNumber(
+                    number: upcomingTicket!.toString(),
+                    label: '次回',
+                    size: widget.TicketNumberSize.sm,
+                    emphasized: false,
+                  ),
                 ),
               if (rightSide.isNotEmpty) ...<Widget>[
                 const SizedBox(width: TofuTokens.space5),
@@ -171,17 +191,21 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
                 ),
               ),
               if (ticket != null)
-                widget.TicketNumber(
-                  number: ticket!.toString(),
-                  label: '整理券',
-                  size: widget.TicketNumberSize.xs,
+                _ticketBadge(
+                  child: widget.TicketNumber(
+                    number: ticket!.toString(),
+                    label: '整理券',
+                    size: widget.TicketNumberSize.xs,
+                  ),
                 )
               else if (upcomingTicket != null)
-                widget.TicketNumber(
-                  number: upcomingTicket!.toString(),
-                  label: '次回',
-                  size: widget.TicketNumberSize.xs,
-                  emphasized: false,
+                _ticketBadge(
+                  child: widget.TicketNumber(
+                    number: upcomingTicket!.toString(),
+                    label: '次回',
+                    size: widget.TicketNumberSize.xs,
+                    emphasized: false,
+                  ),
                 ),
               if (rightSide.isNotEmpty) ...<Widget>[
                 const SizedBox(width: TofuTokens.space3),

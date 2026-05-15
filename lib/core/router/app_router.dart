@@ -157,6 +157,17 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((
         },
       ),
       GoRoute(
+        // レジ端末から呼び出し画面プレビューを開く（戻るで元に戻る）
+        path: '/regi/calling',
+        pageBuilder: (c, s) => TofuTransitions.fadeThroughPage(
+          key: s.pageKey,
+          child: const ErrorBoundary(
+            label: 'route:/regi/calling',
+            child: CallingScreen(),
+          ),
+        ),
+      ),
+      GoRoute(
         path: '/regi/history',
         pageBuilder: (c, s) => TofuTransitions.fadeThroughPage(
           key: s.pageKey,

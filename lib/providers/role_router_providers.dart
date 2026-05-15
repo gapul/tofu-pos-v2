@@ -194,6 +194,18 @@ class RoleStarter {
           productMasterAutoBroadcasterProvider.future,
         );
         b?.start();
+        // レジ端末でも呼び出しイベントを受信して呼び出し画面プレビュー
+        // (整理券タップで開く /regi/calling) に表示できるよう、
+        // CallingIngestRouter を裏で走らせる。
+        final CallingIngestRouter? c = await ref.read(
+          callingIngestRouterProvider.future,
+        );
+        c?.start();
+        final DeviceEventsBackfill? bf =
+            await ref.read(deviceEventsBackfillProvider.future);
+        if (c != null && bf != null) {
+          await bf.run(onEvent: c.handleEvent);
+        }
       case DeviceRole.kitchen:
         final KitchenIngestRouter? r = await ref.read(
           kitchenIngestRouterProvider.future,

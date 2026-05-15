@@ -47,6 +47,7 @@ class CustomerAttributesScreen extends ConsumerWidget {
           appBar: AppHeader(
             title: 'レジ',
             upcomingTicket: ref.watch(upcomingTicketProvider).value,
+            onTicketTap: () => context.push('/regi/calling'),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () => context.canPop() ? context.pop() : context.go('/'),

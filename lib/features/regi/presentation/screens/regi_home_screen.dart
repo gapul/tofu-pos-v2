@@ -30,6 +30,7 @@ class RegiHomeScreen extends ConsumerWidget {
       appBar: AppHeader(
         title: 'レジ',
         upcomingTicket: upcoming.value,
+        onTicketTap: () => context.push('/regi/calling'),
         actions: <Widget>[
           IconButton(
             tooltip: '注文履歴',

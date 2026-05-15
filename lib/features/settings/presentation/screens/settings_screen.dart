@@ -20,7 +20,10 @@ import '../../../../domain/enums/device_role.dart';
 import '../../../../domain/enums/transport_mode.dart';
 import '../../../../domain/value_objects/feature_flags.dart';
 import '../../../../providers/repository_providers.dart';
+import '../../../../providers/role_router_providers.dart';
 import '../../../../providers/settings_providers.dart';
+import '../../../../providers/sync_providers.dart';
+import '../../../../providers/usecase_providers.dart';
 import '../../../regi/presentation/notifiers/regi_providers.dart';
 import '../../../startup/presentation/notifiers/setup_notifier.dart';
 
@@ -195,6 +198,25 @@ class _TransportSection extends ConsumerWidget {
                     }),
                   ),
               ],
+            ),
+          ),
+          const SizedBox(height: TofuTokens.space3),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TofuButton(
+              label: 'サーバーに再接続',
+              icon: Icons.refresh,
+              variant: TofuButtonVariant.secondary,
+              onPressed: () async {
+                // Transport / Realtime / RoleStarter を作り直す。
+                ref.invalidate(transportProvider);
+                ref.invalidate(supabaseRealtimeListenerProvider);
+                await ref.read(roleStarterProvider).start();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('サーバーに再接続しました')),
+                );
+              },
             ),
           ),
         ],
