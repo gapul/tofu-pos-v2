@@ -97,6 +97,27 @@ class CallNumberEvent extends TransportEvent {
   bool get isHighPriority => true;
 }
 
+/// 呼び出し完了通知（呼び出し → 全端末、低緊急）。
+///
+/// 呼び出し端末で「呼び出し済」マークを付けたタイミングで発行する。
+/// 主目的はサーバ側監査と他端末の状態同期。
+@immutable
+class CallCompletedEvent extends TransportEvent {
+  const CallCompletedEvent({
+    required super.shopId,
+    required super.eventId,
+    required super.occurredAt,
+    required this.orderId,
+    required this.ticketNumber,
+  });
+
+  final int orderId;
+  final TicketNumber ticketNumber;
+
+  @override
+  bool get isHighPriority => false;
+}
+
 /// 注文取消通知（レジ → キッチン／呼び出し、高緊急）。
 ///
 /// キッチン側ではこれを「調理中止」として扱う（§6.6.5）。

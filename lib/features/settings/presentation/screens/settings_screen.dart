@@ -208,14 +208,25 @@ class _TransportSection extends ConsumerWidget {
               icon: Icons.refresh,
               variant: TofuButtonVariant.secondary,
               onPressed: () async {
-                // Transport / Realtime / RoleStarter を作り直す。
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('未送信データをアップロード中…')),
+                );
+                // 1. 先に未同期データをサーバへ push（再接続より優先）
+                try {
+                  await ref.read(syncServiceProvider).runOnce();
+                } catch (_) {
+                  // 失敗は telemetry に既に出ている。再接続は続行する。
+                }
+                // 2. Transport / Realtime / RoleStarter を作り直す
                 ref.invalidate(transportProvider);
                 ref.invalidate(supabaseRealtimeListenerProvider);
                 await ref.read(roleStarterProvider).start();
                 if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('サーバーに再接続しました')),
-                );
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
+                    const SnackBar(content: Text('サーバーに再接続しました')),
+                  );
               },
             ),
           ),

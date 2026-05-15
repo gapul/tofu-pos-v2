@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/enums/device_role.dart';
 import '../../domain/enums/transport_mode.dart';
 import '../../domain/value_objects/ticket_number.dart' as vo;
+import '../../providers/repository_providers.dart';
+import '../../providers/role_router_providers.dart';
 import '../../providers/settings_providers.dart';
 import '../../providers/sync_providers.dart';
+import '../../features/calling/presentation/notifiers/calling_providers.dart';
+import '../../features/kitchen/presentation/notifiers/kitchen_providers.dart';
+import '../../providers/usecase_providers.dart';
+import '../sync/refresh_from_server.dart';
 import '../theme/tokens.dart';
 import 'status_indicator.dart';
 import 'ticket_number.dart' as widget;
@@ -95,6 +102,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
 
     final List<Widget> rightSide = <Widget>[
       if (showStatus) ..._statusIndicators(mode, warn),
+      _RefreshButton(),
       ...actions,
     ];
 
@@ -161,6 +169,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
 
     final List<Widget> rightSide = <Widget>[
       if (showStatus) ..._statusIndicators(mode, warn),
+      _RefreshButton(),
       ...actions,
     ];
 
@@ -269,6 +278,59 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
       out.add(items[i]);
     }
     return out;
+  }
+}
+
+/// ヘッダーに常設する「再読み込み」アイコン。
+///
+/// 押下動作:
+///  1. SyncService.runOnce で未送信データを先に push
+///  2. Transport / Realtime / RoleStarter を作り直す（再 backfill 含む）
+///  3. 役割に応じて関連 provider を invalidate（UI 即時反映）
+class _RefreshButton extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return IconButton(
+      tooltip: 'サーバから再読み込み',
+      icon: const Icon(Icons.refresh),
+      onPressed: () => _refresh(context, ref),
+    );
+  }
+
+  Future<void> _refresh(BuildContext context, WidgetRef ref) async {
+    final ScaffoldMessengerState? messenger = ScaffoldMessenger.maybeOf(context);
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('再読み込み中…'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    // 1. 未送信データを先に push
+    try {
+      await ref.read(syncServiceProvider).runOnce();
+    } catch (_) {
+      // 失敗は telemetry に既に流れている。継続。
+    }
+    // 2. Transport / RoleStarter 再起動 + 役割別 backfill
+    ref.invalidate(transportProvider);
+    ref.invalidate(supabaseRealtimeListenerProvider);
+    await ref.read(roleStarterProvider).start();
+    // 3. 役割別の表示 provider を invalidate
+    final DeviceRole? role =
+        await ref.read(settingsRepositoryProvider).getDeviceRole();
+    switch (role) {
+      case DeviceRole.kitchen:
+        await RefreshFromServer.kitchen(ref);
+        ref.invalidate(kitchenOrdersProvider);
+      case DeviceRole.calling:
+        await RefreshFromServer.calling(ref);
+        ref.invalidate(callingOrdersProvider);
+      case DeviceRole.register:
+      case null:
+        break;
+    }
   }
 }
 

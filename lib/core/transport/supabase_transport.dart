@@ -221,6 +221,7 @@ class SupabaseTransport implements Transport {
       OrderSubmittedEvent() => 'order_submitted',
       OrderServedEvent() => 'order_served',
       CallNumberEvent() => 'call_number',
+      CallCompletedEvent() => 'call_completed',
       OrderCancelledEvent() => 'order_cancelled',
       ProductMasterUpdateEvent() => 'product_master_update',
     };
@@ -245,6 +246,14 @@ class SupabaseTransport implements Transport {
           'ticket_number': ticketNumber.value,
         },
       CallNumberEvent(:final int orderId, :final TicketNumber ticketNumber) =>
+        <String, Object?>{
+          'order_id': orderId,
+          'ticket_number': ticketNumber.value,
+        },
+      CallCompletedEvent(
+        :final int orderId,
+        :final TicketNumber ticketNumber,
+      ) =>
         <String, Object?>{
           'order_id': orderId,
           'ticket_number': ticketNumber.value,
@@ -316,6 +325,15 @@ class SupabaseTransport implements Transport {
         case 'call_number':
           if (orderId == null || ticket == null) return null;
           return CallNumberEvent(
+            shopId: shopId,
+            eventId: eventId,
+            occurredAt: occurredAt,
+            orderId: orderId,
+            ticketNumber: TicketNumber(ticket),
+          );
+        case 'call_completed':
+          if (orderId == null || ticket == null) return null;
+          return CallCompletedEvent(
             shopId: shopId,
             eventId: eventId,
             occurredAt: occurredAt,

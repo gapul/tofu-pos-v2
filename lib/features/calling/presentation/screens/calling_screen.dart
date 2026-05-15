@@ -5,8 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
+import '../../../../core/logging/app_logger.dart';
 import '../../../../core/sync/refresh_from_server.dart';
+import '../../../../core/transport/transport.dart';
+import '../../../../core/transport/transport_event.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/lordicon.dart';
@@ -15,7 +19,10 @@ import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/calling_order.dart';
 import '../../../../domain/enums/calling_status.dart';
+import '../../../../domain/value_objects/shop_id.dart';
 import '../../../../providers/repository_providers.dart';
+import '../../../../providers/settings_providers.dart';
+import '../../../../providers/usecase_providers.dart';
 import '../notifiers/calling_providers.dart';
 
 /// 呼び出し画面（仕様書 §6.3 / §9.5 / Figma `08-Caller-Home`）。
@@ -43,6 +50,9 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
         .read(callingOrderRepositoryProvider)
         .updateStatus(order.orderId, CallingStatus.called);
 
+    // サーバ側監査と他端末状態同期のため CallCompletedEvent を送信。
+    unawaited(_broadcastCallCompleted(order));
+
     if (!mounted) {
       return;
     }
@@ -60,6 +70,31 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
         duration: const Duration(seconds: 6),
       ),
     );
+  }
+
+  Future<void> _broadcastCallCompleted(CallingOrder order) async {
+    try {
+      final Transport transport =
+          await ref.read(transportProvider.future);
+      final ShopId? shopId =
+          await ref.read(settingsRepositoryProvider).getShopId();
+      if (shopId == null) return;
+      await transport.send(
+        CallCompletedEvent(
+          shopId: shopId.value,
+          eventId: const Uuid().v4(),
+          occurredAt: DateTime.now(),
+          orderId: order.orderId,
+          ticketNumber: order.ticketNumber,
+        ),
+      );
+    } catch (e, st) {
+      AppLogger.w(
+        'CallingScreen: broadcast call_completed failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   Future<void> _showFullScreen(CallingOrder order) async {
