@@ -99,6 +99,11 @@ class _ShopIdScreenState extends ConsumerState<ShopIdScreen> {
                     TofuTokens.space10, // 48
                   );
 
+            // Figma: portrait itemSpacing=24, landscape itemSpacing=32
+            final double sectionGap = isWide
+                ? TofuTokens.space8 // 32
+                : TofuTokens.space7; // 24
+
             return SingleChildScrollView(
               child: Center(
                 child: ConstrainedBox(
@@ -114,7 +119,7 @@ class _ShopIdScreenState extends ConsumerState<ShopIdScreen> {
                           style: TofuTextStyles.h2,
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: TofuTokens.space7),
+                        SizedBox(height: sectionGap),
                         // サブタイトル
                         Text(
                           '同店舗の端末群を識別する文字列を\n入力してください',
@@ -123,7 +128,7 @@ class _ShopIdScreenState extends ConsumerState<ShopIdScreen> {
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: TofuTokens.space7),
+                        SizedBox(height: sectionGap),
                         // フォーム frame: ラベル + 入力 + helper + ボタン
                         _StoreIdForm(
                           controller: _controller,

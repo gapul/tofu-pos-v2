@@ -91,6 +91,11 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
                     TofuTokens.space8, // 32
                   );
 
+            // Figma: portrait itemSpacing=24, landscape itemSpacing=48
+            final double sectionGap = isWide
+                ? TofuTokens.space10 // 48
+                : TofuTokens.space7; // 24
+
             return SingleChildScrollView(
               child: Center(
                 child: ConstrainedBox(
@@ -105,7 +110,7 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
                           style: TofuTextStyles.h2,
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: TofuTokens.space7),
+                        SizedBox(height: sectionGap),
                         Text(
                           'この端末の役割を選んでください',
                           style: TofuTextStyles.bodySm.copyWith(
@@ -113,7 +118,7 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: TofuTokens.space7),
+                        SizedBox(height: sectionGap),
                         // 役割カード群 (vertical, spacing 12)
                         for (int i = 0; i < _options.length; i++) ...<Widget>[
                           if (i > 0) const SizedBox(height: TofuTokens.space4),
@@ -129,7 +134,7 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
                                   ),
                           ),
                         ],
-                        const SizedBox(height: TofuTokens.space7),
+                        SizedBox(height: sectionGap),
                         TofuButton(
                           label: '決定',
                           icon: Icons.check,

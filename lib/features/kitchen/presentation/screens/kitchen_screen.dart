@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/error/app_exceptions.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../../core/ui/alert_banner.dart';
+import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/format.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
@@ -17,11 +19,17 @@ import '../../domain/kitchen_alert.dart';
 import '../../domain/mark_served_usecase.dart';
 import '../notifiers/kitchen_providers.dart';
 
-/// キッチン画面（仕様書 §6.2 / §9.4）。
+/// キッチン画面（仕様書 §6.2 / §9.4 / Figma `07-Kitchen-Home`）。
 ///
-/// - 未調理 / 提供完了の双方を同一画面で参照できる（タブ）
-/// - 「提供完了」直後は Undo SnackBar を出す
-/// - 取消通知（cancelledMidProcess）受信時は赤背景バナー
+/// Figma レイアウト:
+///   - landscape (id 436:503, 1024×768): 左ペイン「未調理」(620w) + 右ペイン
+///     「提供済」(404w, bgSurface tinted)。Horizontal 2 カラム。
+///   - portrait  (id 436:504, 375×812):  Header + TabBar + 縦リスト。
+///
+/// 業務要件:
+///   - `kitchenOrdersProvider` を購読し、pending / done / cancelled を分離
+///   - `MarkServedUseCase.execute/undo` で提供完了 / 取消し
+///   - `kitchenAlertsProvider` を購読し、取消通知時に AlertBanner を表示
 class KitchenScreen extends ConsumerStatefulWidget {
   const KitchenScreen({super.key});
 
@@ -116,56 +124,38 @@ class _KitchenScreenState extends ConsumerState<KitchenScreen>
 
     return Scaffold(
       backgroundColor: TofuTokens.bgCanvas,
+      appBar: const AppHeader(title: 'キッチン'),
       body: SafeArea(
+        top: false,
         child: Column(
           children: <Widget>[
-            _Header(tabController: _tab),
             if (_activeAlert != null)
-              _AlertBanner(
-                alert: _activeAlert!,
-                onDismiss: () => setState(() => _activeAlert = null),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  TofuTokens.space5,
+                  TofuTokens.space4,
+                  TofuTokens.space5,
+                  0,
+                ),
+                child: AlertBanner(
+                  variant: AlertBannerVariant.danger,
+                  title: '注文取消（整理券 ${_activeAlert!.ticketNumber}）',
+                  message: _alertMessage(_activeAlert!),
+                  actionLabel: '了解',
+                  onAction: () => setState(() => _activeAlert = null),
+                  onClose: () => setState(() => _activeAlert = null),
+                ),
               ),
             Expanded(
               child: orders.when(
-                data: (all) {
-                  final List<KitchenOrder> pending = all
-                      .where(
-                        (o) => o.status == KitchenStatus.pending,
-                      )
-                      .toList();
-                  final List<KitchenOrder> done = all
-                      .where(
-                        (o) =>
-                            o.status == KitchenStatus.done ||
-                            o.status == KitchenStatus.cancelled,
-                      )
-                      .toList()
-                      .reversed
-                      .take(50)
-                      .toList();
-                  return TabBarView(
-                    controller: _tab,
-                    children: <Widget>[
-                      _OrderList(
-                        orders: pending,
-                        onAction: _markServed,
-                        emptyMessage: '未調理の注文はありません',
-                        emptyIcon: Icons.check_circle_outline,
-                      ),
-                      _OrderList(
-                        orders: done,
-                        onAction: null,
-                        emptyMessage: '提供完了の履歴はまだありません',
-                        emptyIcon: Icons.history,
-                      ),
-                    ],
-                  );
-                },
+                data: (all) => _buildBody(context, all),
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => StatusIndicator.custom(
-                  label: '注文の取得に失敗: $e',
-                  icon: Icons.error_outline,
-                  tone: StatusIndicatorTone.danger,
+                error: (e, _) => Center(
+                  child: StatusIndicator.custom(
+                    label: '注文の取得に失敗: $e',
+                    icon: Icons.error_outline,
+                    tone: StatusIndicatorTone.danger,
+                  ),
                 ),
               ),
             ),
@@ -174,173 +164,287 @@ class _KitchenScreenState extends ConsumerState<KitchenScreen>
       ),
     );
   }
-}
 
-class _Header extends StatelessWidget {
-  const _Header({required this.tabController});
-  final TabController tabController;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: TofuTokens.bgCanvas,
-        border: Border(bottom: BorderSide(color: TofuTokens.borderSubtle)),
-      ),
-      child: Column(
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              TofuTokens.space5,
-              TofuTokens.space5,
-              TofuTokens.space5,
-              TofuTokens.space2,
-            ),
-            child: Row(
-              children: <Widget>[
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: TofuTokens.brandPrimary,
-                    borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
-                  ),
-                  child: const Icon(
-                    Icons.restaurant,
-                    color: TofuTokens.brandOnPrimary,
-                  ),
-                ),
-                const SizedBox(width: TofuTokens.space4),
-                const Text('キッチン', style: TofuTextStyles.h3),
-              ],
-            ),
-          ),
-          TabBar(
-            controller: tabController,
-            tabs: const <Tab>[
-              Tab(icon: Icon(Icons.restaurant_menu), text: '未調理'),
-              Tab(icon: Icon(Icons.done_all), text: '提供完了'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AlertBanner extends StatelessWidget {
-  const _AlertBanner({required this.alert, required this.onDismiss});
-  final KitchenAlert alert;
-  final VoidCallback onDismiss;
-
-  @override
-  Widget build(BuildContext context) {
+  String _alertMessage(KitchenAlert alert) {
     final String wasLabel = switch (alert.previousStatus) {
       KitchenStatus.done => '提供完了済',
       _ => '調理中',
     };
-    return Container(
-      width: double.infinity,
-      color: TofuTokens.dangerBgStrong,
-      padding: const EdgeInsets.symmetric(
-        horizontal: TofuTokens.space5,
-        vertical: TofuTokens.space5,
-      ),
-      child: Row(
-        children: <Widget>[
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: TofuTokens.brandOnPrimary,
-            size: 32,
-          ),
-          const SizedBox(width: TofuTokens.space4),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  '注文取消（整理券 ${alert.ticketNumber}）',
-                  style: TofuTextStyles.h4.copyWith(
-                    color: TofuTokens.brandOnPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '$wasLabel の注文がレジで取消されました。現物の処分が必要です。',
-                  style: TofuTextStyles.bodyMd.copyWith(
-                    color: TofuTokens.brandOnPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: TofuTokens.space5),
-          TofuButton(label: '了解', onPressed: onDismiss),
-        ],
-      ),
-    );
+    return '$wasLabel の注文がレジで取消されました。現物の処分が必要です。';
   }
-}
 
-class _OrderList extends StatelessWidget {
-  const _OrderList({
-    required this.orders,
-    required this.onAction,
-    required this.emptyMessage,
-    required this.emptyIcon,
-  });
+  Widget _buildBody(BuildContext context, List<KitchenOrder> all) {
+    final List<KitchenOrder> pending = all
+        .where((o) => o.status == KitchenStatus.pending)
+        .toList();
+    // Figma 「提供済」(右ペイン): 直近を上から、cancelled も含む。
+    final List<KitchenOrder> done = all
+        .where(
+          (o) =>
+              o.status == KitchenStatus.done ||
+              o.status == KitchenStatus.cancelled,
+        )
+        .toList()
+        .reversed
+        .take(50)
+        .toList();
 
-  final List<KitchenOrder> orders;
-  final Future<void> Function(int orderId)? onAction;
-  final String emptyMessage;
-  final IconData emptyIcon;
-
-  @override
-  Widget build(BuildContext context) {
-    if (orders.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(emptyIcon, size: 64, color: TofuTokens.textDisabled),
-            const SizedBox(height: TofuTokens.space5),
-            Text(
-              emptyMessage,
-              style: TofuTextStyles.h4.copyWith(color: TofuTokens.textTertiary),
-            ),
-          ],
-        ),
-      );
-    }
     return LayoutBuilder(
       builder: (c, constraints) {
-        final int cols = constraints.maxWidth >= 1200
-            ? 4
-            : constraints.maxWidth >= 800
-            ? 3
-            : constraints.maxWidth >= 500
-            ? 2
-            : 1;
-        return GridView.builder(
-          padding: const EdgeInsets.all(TofuTokens.space5),
-          itemCount: orders.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: cols,
-            mainAxisSpacing: TofuTokens.space4,
-            crossAxisSpacing: TofuTokens.space4,
-          ),
-          itemBuilder: (c, i) =>
-              _OrderCard(order: orders[i], onAction: onAction),
+        final bool wide = constraints.maxWidth >= 720;
+        if (wide) {
+          // Figma landscape (436:503): 左右 2 ペイン構成。
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Expanded(
+                flex: 620,
+                child: _PendingPane(
+                  orders: pending,
+                  onAction: _markServed,
+                ),
+              ),
+              Expanded(
+                flex: 404,
+                child: _ServedPane(orders: done),
+              ),
+            ],
+          );
+        }
+        // Figma portrait (436:504): タブで pending / done を切替。
+        return Column(
+          children: <Widget>[
+            Material(
+              color: TofuTokens.bgCanvas,
+              child: TabBar(
+                controller: _tab,
+                labelColor: TofuTokens.brandPrimary,
+                unselectedLabelColor: TofuTokens.textTertiary,
+                indicatorColor: TofuTokens.brandPrimary,
+                tabs: <Tab>[
+                  Tab(text: '未調理 (${pending.length})'),
+                  Tab(text: '提供済 (${done.length})'),
+                ],
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tab,
+                children: <Widget>[
+                  _PendingPane(
+                    orders: pending,
+                    onAction: _markServed,
+                    isPortrait: true,
+                  ),
+                  _ServedPane(orders: done, isPortrait: true),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
   }
 }
 
-class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order, required this.onAction});
+// ---------------------------------------------------------------------------
+// Pending pane (Figma 73:82): 「未調理 / 5件」+ 横並び OrderCard グリッド
+// ---------------------------------------------------------------------------
+class _PendingPane extends StatelessWidget {
+  const _PendingPane({
+    required this.orders,
+    required this.onAction,
+    this.isPortrait = false,
+  });
+
+  final List<KitchenOrder> orders;
+  final Future<void> Function(int orderId) onAction;
+  final bool isPortrait;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: TofuTokens.bgCanvas,
+      padding: const EdgeInsets.symmetric(
+        horizontal: TofuTokens.space6,
+        vertical: TofuTokens.space7,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (!isPortrait)
+            _PaneTitle(
+              title: '未調理',
+              count: orders.length,
+              accent: TofuTokens.brandPrimary,
+            ),
+          if (!isPortrait) const SizedBox(height: TofuTokens.space4),
+          Expanded(
+            child: orders.isEmpty
+                ? const _EmptyState(
+                    label: '未調理の注文はありません',
+                    icon: Icons.check_circle_outline,
+                  )
+                : LayoutBuilder(
+                    builder: (c, constraints) {
+                      // Figma: 280w カード横並び。可能な列数で詰める。
+                      final int cols = (constraints.maxWidth / 296)
+                          .floor()
+                          .clamp(1, 4);
+                      return GridView.builder(
+                        padding: EdgeInsets.zero,
+                        itemCount: orders.length,
+                        gridDelegate:
+                            SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: cols,
+                          mainAxisSpacing: TofuTokens.space4,
+                          crossAxisSpacing: TofuTokens.space4,
+                          childAspectRatio: 280 / 220,
+                        ),
+                        itemBuilder: (c, i) => _PendingCard(
+                          order: orders[i],
+                          onAction: () => onAction(orders[i].orderId),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Served pane (Figma 73:155): bgSurface 背景 + 縦リスト 356×96 のミニカード
+// ---------------------------------------------------------------------------
+class _ServedPane extends StatelessWidget {
+  const _ServedPane({required this.orders, this.isPortrait = false});
+
+  final List<KitchenOrder> orders;
+  final bool isPortrait;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: TofuTokens.bgSurface,
+      padding: const EdgeInsets.symmetric(
+        horizontal: TofuTokens.space6,
+        vertical: TofuTokens.space7,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (!isPortrait)
+            _PaneTitle(
+              title: '提供済',
+              subtitle: '直近 / ${orders.length}件',
+              accent: TofuTokens.textTertiary,
+            ),
+          if (!isPortrait) const SizedBox(height: TofuTokens.space4),
+          Expanded(
+            child: orders.isEmpty
+                ? const _EmptyState(
+                    label: '提供済の履歴はまだありません',
+                    icon: Icons.history,
+                  )
+                : ListView.separated(
+                    padding: EdgeInsets.zero,
+                    itemCount: orders.length,
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: TofuTokens.space3),
+                    itemBuilder: (c, i) => _ServedCard(order: orders[i]),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pane title (Figma 73:83 / 73:156): ラベル + 件数 (補足テキスト)
+// ---------------------------------------------------------------------------
+class _PaneTitle extends StatelessWidget {
+  const _PaneTitle({
+    required this.title,
+    required this.accent,
+    this.count,
+    this.subtitle,
+  });
+  final String title;
+  final Color accent;
+  final int? count;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: <Widget>[
+        Container(
+          width: 4,
+          height: 24,
+          decoration: BoxDecoration(
+            color: accent,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: TofuTokens.space3),
+        Text(title, style: TofuTextStyles.h4),
+        const SizedBox(width: TofuTokens.space3),
+        if (count != null)
+          Text(
+            '${count!}件',
+            style: TofuTextStyles.bodySmBold.copyWith(
+              color: TofuTokens.textTertiary,
+            ),
+          ),
+        if (subtitle != null)
+          Text(
+            subtitle!,
+            style: TofuTextStyles.bodySm.copyWith(
+              color: TofuTokens.textTertiary,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.label, required this.icon});
+  final String label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(icon, size: 64, color: TofuTokens.textDisabled),
+          const SizedBox(height: TofuTokens.space5),
+          Text(
+            label,
+            style: TofuTextStyles.h4.copyWith(color: TofuTokens.textTertiary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pending card (Figma 73:87, 280×208): bgSurface + brandPrimary 太枠
+//   - 整理券番号 + 経過時間
+//   - 注文行リスト
+//   - 「提供完了」ボタン
+// ---------------------------------------------------------------------------
+class _PendingCard extends StatelessWidget {
+  const _PendingCard({required this.order, required this.onAction});
   final KitchenOrder order;
-  final Future<void> Function(int orderId)? onAction;
+  final VoidCallback onAction;
 
   List<({String name, int qty})> _parseItems() {
     try {
@@ -372,107 +476,151 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isPending = order.status == KitchenStatus.pending;
     final bool isCancelled = order.status == KitchenStatus.cancelled;
     final List<({String name, int qty})> items = _parseItems();
 
-    final Color borderColor = isCancelled
-        ? TofuTokens.dangerBorder
-        : (isPending ? TofuTokens.brandPrimary : TofuTokens.borderSubtle);
-
     return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: TofuTokens.space5,
+        vertical: TofuTokens.space4,
+      ),
       decoration: BoxDecoration(
-        color: isCancelled ? TofuTokens.dangerBg : TofuTokens.bgCanvas,
+        color: isCancelled ? TofuTokens.dangerBg : TofuTokens.bgSurface,
         borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
         border: Border.all(
-          color: borderColor,
-          width: isCancelled ? 2 : TofuTokens.strokeHairline,
+          color: isCancelled
+              ? TofuTokens.dangerBorder
+              : TofuTokens.brandPrimary,
+          width: TofuTokens.strokeThick,
         ),
-        boxShadow: isPending ? TofuTokens.elevationSm : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: TofuTokens.space5,
-              vertical: TofuTokens.space4,
-            ),
-            decoration: BoxDecoration(
-              color: isCancelled
-                  ? TofuTokens.dangerBgStrong
-                  : (isPending
-                        ? TofuTokens.brandPrimary
-                        : TofuTokens.bgSurface),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(TofuTokens.radiusLg),
-                topRight: Radius.circular(TofuTokens.radiusLg),
+          Row(
+            children: <Widget>[
+              Text(
+                order.ticketNumber.toString(),
+                style: TofuTextStyles.numberLg.copyWith(
+                  color: isCancelled
+                      ? TofuTokens.dangerText
+                      : TofuTokens.brandPrimary,
+                ),
               ),
-            ),
-            child: Row(
-              children: <Widget>[
-                Text(
-                  order.ticketNumber.toString(),
-                  style: TofuTextStyles.numberLg.copyWith(
-                    color: (isPending || isCancelled)
-                        ? TofuTokens.brandOnPrimary
-                        : TofuTokens.textPrimary,
-                  ),
+              const Spacer(),
+              Text(
+                TofuFormat.relativeFromNow(order.receivedAt),
+                style: TofuTextStyles.bodySmBold.copyWith(
+                  color: TofuTokens.textTertiary,
                 ),
-                const Spacer(),
-                Text(
-                  TofuFormat.relativeFromNow(order.receivedAt),
-                  style: TofuTextStyles.bodySmBold.copyWith(
-                    color: (isPending || isCancelled)
-                        ? TofuTokens.brandOnPrimary
-                        : TofuTokens.textTertiary,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
+          const SizedBox(height: TofuTokens.space3),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(TofuTokens.space4),
-              child: ListView(
-                children: <Widget>[
-                  if (isCancelled)
-                    const StatusIndicator.custom(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: <Widget>[
+                if (isCancelled)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: TofuTokens.space2),
+                    child: StatusIndicator.custom(
                       label: '取消',
                       icon: Icons.block,
                       tone: StatusIndicatorTone.danger,
+                      dense: true,
                     ),
-                  for (final ({String name, int qty}) it in items)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              it.name,
-                              style: TofuTextStyles.bodyLg,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                  ),
+                for (final ({String name, int qty}) it in items)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            it.name,
+                            style: TofuTextStyles.bodyMd,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          Text('×${it.qty}', style: TofuTextStyles.bodyLgBold),
-                        ],
-                      ),
+                        ),
+                        Text('×${it.qty}', style: TofuTextStyles.bodyMdBold),
+                      ],
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
-          if (onAction != null && !isCancelled)
-            Padding(
-              padding: const EdgeInsets.all(TofuTokens.space4),
-              child: TofuButton(
-                label: '提供完了',
-                icon: Icons.done_all,
-                size: TofuButtonSize.lg,
-                fullWidth: true,
-                onPressed: () => onAction!(order.orderId),
-              ),
+          if (!isCancelled) ...<Widget>[
+            const SizedBox(height: TofuTokens.space3),
+            TofuButton(
+              label: '提供完了',
+              icon: Icons.done_all,
+              size: TofuButtonSize.lg,
+              fullWidth: true,
+              onPressed: onAction,
             ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Served card (Figma 73:160, 356×96): 縦リストのコンパクト表示
+// ---------------------------------------------------------------------------
+class _ServedCard extends StatelessWidget {
+  const _ServedCard({required this.order});
+  final KitchenOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isCancelled = order.status == KitchenStatus.cancelled;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: TofuTokens.space5,
+        vertical: TofuTokens.space4,
+      ),
+      decoration: BoxDecoration(
+        color: isCancelled ? TofuTokens.dangerBg : TofuTokens.bgCanvas,
+        borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+        border: Border.all(
+          color: isCancelled
+              ? TofuTokens.dangerBorder
+              : TofuTokens.borderSubtle,
+        ),
+      ),
+      child: Row(
+        children: <Widget>[
+          Text(
+            order.ticketNumber.toString(),
+            style: TofuTextStyles.numberMd.copyWith(
+              color: isCancelled
+                  ? TofuTokens.dangerText
+                  : TofuTokens.textPrimary,
+            ),
+          ),
+          const SizedBox(width: TofuTokens.space4),
+          if (isCancelled)
+            const StatusIndicator.custom(
+              label: '取消',
+              icon: Icons.block,
+              tone: StatusIndicatorTone.danger,
+              dense: true,
+            )
+          else
+            const StatusIndicator.custom(
+              label: '提供済',
+              icon: Icons.check_circle,
+              tone: StatusIndicatorTone.success,
+            ),
+          const Spacer(),
+          Text(
+            TofuFormat.relativeFromNow(order.receivedAt),
+            style: TofuTextStyles.bodySm.copyWith(
+              color: TofuTokens.textTertiary,
+            ),
+          ),
         ],
       ),
     );

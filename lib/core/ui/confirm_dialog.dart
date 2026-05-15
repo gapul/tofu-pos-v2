@@ -70,18 +70,18 @@ class TofuConfirmDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: TofuTokens.bgCanvas,
       shape: RoundedRectangleBorder(
-        // Figma cornerRadius 24 == radiusXl
-        borderRadius: BorderRadius.circular(TofuTokens.radiusXl),
+        // Figma cornerRadius 24 == radius2xl
+        borderRadius: BorderRadius.circular(TofuTokens.radius2xl),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
         child: Padding(
           // Figma padding: top32 / right32 / bottom24 / left32
           padding: const EdgeInsets.fromLTRB(
-            TofuTokens.space7, // 32
-            TofuTokens.space7, // 32
-            TofuTokens.space7, // 32
-            TofuTokens.space6, // 24
+            TofuTokens.space8, // 32
+            TofuTokens.space8, // 32
+            TofuTokens.space8, // 32
+            TofuTokens.space7, // 24
           ),
           child: Column(
             // Figma layoutMode VERTICAL, itemSpacing 24

@@ -43,6 +43,10 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
   final bool showStatus;
   final Widget? leading;
 
+  /// Figma: landscape 89dp / portrait 81dp。
+  /// `preferredSize` は build フェーズ前に Scaffold から呼ばれるため
+  /// `MediaQuery` を参照できず、両 orientation で同一値を返さざるを得ない。
+  /// 大きい方の 89 を採用し、portrait 時の 8dp 余剰は許容する。
   @override
   Size get preferredSize => const Size.fromHeight(89);
 
