@@ -10,6 +10,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/confirm_dialog.dart';
 import '../../../../core/ui/format.dart';
+import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/pane_title.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
@@ -135,7 +136,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
     return Scaffold(
       backgroundColor: TofuTokens.bgCanvas,
       appBar: AppHeader(
-        title: '注文履歴',
+        title: 'レジ',
         leading: IconButton(
           icon: const TofuIcon(TofuIconName.chevronLeft),
           onPressed: () => context.pop(),
@@ -143,7 +144,12 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: LayoutBuilder(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const PageTitle(title: '注文履歴'),
+            Expanded(
+              child: LayoutBuilder(
           builder: (c, constraints) {
             final bool wide = constraints.maxWidth >= 720;
             return Padding(
@@ -181,6 +187,9 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
               ),
             );
           },
+              ),
+            ),
+          ],
         ),
       ),
     );

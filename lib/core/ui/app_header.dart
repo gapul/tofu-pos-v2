@@ -20,7 +20,12 @@ import 'ticket_number.dart' as widget;
 /// レジ向け共通ヘッダー (仕様書 §9.1):
 ///  - 整理券番号の常時表示
 ///  - 同期状態 / 通信モードの StatusIndicator バッジ
-///  - 戻る / タイトル領域
+///  - 戻る / ブランド名領域
+///
+/// PR-1 (Figma 構造変更) 以降、[title] の意味は「ブランド/役割名」固定:
+///   レジ / キッチン / 呼び出し / 設定 / 初期設定
+/// 画面固有のタイトル (会計 / 顧客属性 / 商品選択 等) は body 冒頭の
+/// `PageTitle` (`lib/core/ui/page_title.dart`) で描画する。
 class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
   const AppHeader({
     required this.title,
@@ -32,6 +37,8 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
     this.leading,
   });
 
+  /// ブランド/役割名。固定値 (「レジ」「キッチン」「呼び出し」「設定」「初期設定」)。
+  /// 画面固有名はここに入れず、body 上部の `PageTitle` へ移譲する。
   final String title;
 
   /// 確定済み注文の整理券番号 (あれば)。

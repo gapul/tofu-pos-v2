@@ -51,8 +51,8 @@ void main() {
     await tester.pump();
     while (tester.takeException() != null) {}
 
-    // AppHeader title
-    expect(find.text('呼び出し'), findsOneWidget);
+    // AppHeader (brand) と body の PageTitle で 2 箇所に出る。
+    expect(find.text('呼び出し'), findsNWidgets(2));
     // 2 ペイン見出し（新 UI では「呼び出し済み」→「呼び出し済」に短縮）
     expect(find.text('呼び出し前'), findsOneWidget);
     expect(find.text('呼び出し済'), findsOneWidget);

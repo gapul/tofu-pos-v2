@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/attribute_chip.dart';
+import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/customer_attributes.dart';
 import '../../../../domain/enums/customer_attributes_enums.dart';
@@ -39,7 +40,7 @@ class CustomerAttributesScreen extends ConsumerWidget {
         return Scaffold(
           backgroundColor: TofuTokens.bgCanvas,
           appBar: AppHeader(
-            title: '顧客属性',
+            title: 'レジ',
             upcomingTicket: ref.watch(upcomingTicketProvider).value,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
@@ -48,9 +49,17 @@ class CustomerAttributesScreen extends ConsumerWidget {
             ),
           ),
           body: SafeArea(
-            child: isWide
-                ? _LandscapeBody(attrs: attrs, notifier: notifier)
-                : _PortraitBody(attrs: attrs, notifier: notifier),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const PageTitle(title: '顧客属性'),
+                Expanded(
+                  child: isWide
+                      ? _LandscapeBody(attrs: attrs, notifier: notifier)
+                      : _PortraitBody(attrs: attrs, notifier: notifier),
+                ),
+              ],
+            ),
           ),
         );
       },

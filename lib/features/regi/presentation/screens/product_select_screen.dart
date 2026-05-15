@@ -9,6 +9,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/alert_banner.dart';
 import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/format.dart';
+import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../core/ui/tofu_chip.dart';
@@ -79,7 +80,7 @@ class _ProductSelectScreenState extends ConsumerState<ProductSelectScreen> {
         return Scaffold(
           backgroundColor: TofuTokens.bgCanvas,
           appBar: AppHeader(
-            title: '商品選択',
+            title: 'レジ',
             upcomingTicket: ref.watch(upcomingTicketProvider).value,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
@@ -88,7 +89,12 @@ class _ProductSelectScreenState extends ConsumerState<ProductSelectScreen> {
             ),
           ),
           body: SafeArea(
-            child: products.when(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const PageTitle(title: '商品選択'),
+                Expanded(
+                  child: products.when(
               data: (data) {
                 void handleAdd(Product p) {
                   unawaited(HapticFeedback.selectionClick());
@@ -121,6 +127,9 @@ class _ProductSelectScreenState extends ConsumerState<ProductSelectScreen> {
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => _ErrorState(message: '$e'),
+                  ),
+                ),
+              ],
             ),
           ),
         );

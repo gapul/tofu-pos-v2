@@ -11,6 +11,8 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/alert_banner.dart';
 import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/format.dart';
+import '../../../../core/ui/lordicon.dart';
+import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/kitchen_order.dart';
@@ -129,6 +131,15 @@ class _KitchenScreenState extends ConsumerState<KitchenScreen>
         top: false,
         child: Column(
           children: <Widget>[
+            const PageTitle(
+              title: 'キッチン',
+              leading: Lordicon(
+                name: 'chef-hat',
+                fallbackIcon: Icons.restaurant,
+                size: 28,
+                semanticLabel: 'キッチン',
+              ),
+            ),
             if (_activeAlert != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(

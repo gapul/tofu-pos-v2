@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/format.dart';
+import '../../../../core/ui/lordicon.dart';
+import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/calling_order.dart';
@@ -80,7 +82,20 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
       appBar: const AppHeader(title: '呼び出し'),
       body: SafeArea(
         top: false,
-        child: orders.when(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const PageTitle(
+              title: '呼び出し',
+              leading: Lordicon(
+                name: 'bell',
+                fallbackIcon: Icons.notifications_active,
+                size: 28,
+                semanticLabel: '呼び出し',
+              ),
+            ),
+            Expanded(
+              child: orders.when(
           data: (all) {
             final List<CallingOrder> pending = all
                 .where((o) => o.status == CallingStatus.pending)
@@ -137,6 +152,9 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
               tone: StatusIndicatorTone.danger,
             ),
           ),
+        ),
+            ),
+          ],
         ),
       ),
     );

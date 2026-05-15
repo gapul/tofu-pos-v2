@@ -10,6 +10,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/format.dart';
 import '../../../../core/ui/num_stepper.dart';
+import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/order.dart';
@@ -114,7 +115,7 @@ class CheckoutScreen extends ConsumerWidget {
         return Scaffold(
           backgroundColor: TofuTokens.bgCanvas,
           appBar: AppHeader(
-            title: '会計',
+            title: 'レジ',
             upcomingTicket: ref.watch(upcomingTicketProvider).value,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
@@ -123,21 +124,29 @@ class CheckoutScreen extends ConsumerWidget {
             ),
           ),
           body: SafeArea(
-            child: wide
-                ? _LandscapeLayout(
-                    session: session,
-                    notifier: notifier,
-                    flags: flags,
-                    confirming: confirming,
-                    onConfirm: onConfirm,
-                  )
-                : _PortraitLayout(
-                    session: session,
-                    notifier: notifier,
-                    flags: flags,
-                    confirming: confirming,
-                    onConfirm: onConfirm,
-                  ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const PageTitle(title: 'お会計'),
+                Expanded(
+                  child: wide
+                      ? _LandscapeLayout(
+                          session: session,
+                          notifier: notifier,
+                          flags: flags,
+                          confirming: confirming,
+                          onConfirm: onConfirm,
+                        )
+                      : _PortraitLayout(
+                          session: session,
+                          notifier: notifier,
+                          flags: flags,
+                          confirming: confirming,
+                          onConfirm: onConfirm,
+                        ),
+                ),
+              ],
+            ),
           ),
         );
       },

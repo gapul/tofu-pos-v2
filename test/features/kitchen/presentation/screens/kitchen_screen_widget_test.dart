@@ -38,8 +38,8 @@ void main() {
     await tester.pump();
     while (tester.takeException() != null) {}
 
-    // AppHeader title。
-    expect(find.text('キッチン'), findsOneWidget);
+    // AppHeader (brand) と body の PageTitle で 2 箇所に出る。
+    expect(find.text('キッチン'), findsNWidgets(2));
     // 新 UI では「未調理」「提供済」をペイン見出し + タブ見出しで併用する。
     // 件数付き Tab ラベル（"未調理 (0)") と PaneTitle "未調理" の両方が描画される。
     expect(find.text('未調理'), findsAtLeastNWidgets(1));

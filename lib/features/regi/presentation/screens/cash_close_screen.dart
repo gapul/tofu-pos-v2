@@ -10,6 +10,7 @@ import '../../../../core/ui/alert_banner.dart';
 import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/format.dart';
 import '../../../../core/ui/num_stepper.dart';
+import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/pane_title.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
@@ -104,7 +105,7 @@ class _CashCloseScreenState extends ConsumerState<CashCloseScreen> {
     return Scaffold(
       backgroundColor: TofuTokens.bgCanvas,
       appBar: AppHeader(
-        title: 'レジ締め',
+        title: 'レジ',
         leading: IconButton(
           icon: const TofuIcon(TofuIconName.chevronLeft),
           onPressed: () => context.pop(),
@@ -119,7 +120,12 @@ class _CashCloseScreenState extends ConsumerState<CashCloseScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: FutureBuilder<DailySummary>(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const PageTitle(title: 'レジ締め'),
+            Expanded(
+              child: FutureBuilder<DailySummary>(
           future: _summaryFuture,
           builder: (c, snap) {
             if (!snap.hasData) {
@@ -176,6 +182,9 @@ class _CashCloseScreenState extends ConsumerState<CashCloseScreen> {
               },
             );
           },
+              ),
+            ),
+          ],
         ),
       ),
     );

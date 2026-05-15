@@ -66,8 +66,9 @@ void main() {
     await tester.pump();
     while (tester.takeException() != null) {}
 
-    // ヘッダーのタイトル。
-    expect(find.text('会計'), findsOneWidget);
+    // AppHeader はブランド固定「レジ」、画面固有タイトルは PageTitle で「お会計」。
+    expect(find.text('レジ'), findsOneWidget);
+    expect(find.text('お会計'), findsOneWidget);
     // 注文内容の見出しと商品名。
     expect(find.text('注文内容'), findsAtLeastNWidgets(1));
     expect(find.text('湯豆腐'), findsOneWidget);

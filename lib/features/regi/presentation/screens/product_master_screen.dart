@@ -11,6 +11,7 @@ import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/confirm_dialog.dart';
 import '../../../../core/ui/format.dart';
 import '../../../../core/ui/num_stepper.dart';
+import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/pane_title.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
@@ -91,7 +92,7 @@ class _ProductMasterScreenState extends ConsumerState<ProductMasterScreen> {
     return Scaffold(
       backgroundColor: TofuTokens.bgCanvas,
       appBar: AppHeader(
-        title: '商品マスタ',
+        title: '設定',
         showStatus: false,
         leading: IconButton(
           icon: const TofuIcon(TofuIconName.chevronLeft),
@@ -100,7 +101,12 @@ class _ProductMasterScreenState extends ConsumerState<ProductMasterScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: products.when(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const PageTitle(title: '商品マスタ'),
+            Expanded(
+              child: products.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(
             child: StatusIndicator.custom(
@@ -158,6 +164,9 @@ class _ProductMasterScreenState extends ConsumerState<ProductMasterScreen> {
               },
             );
           },
+              ),
+            ),
+          ],
         ),
       ),
     );
