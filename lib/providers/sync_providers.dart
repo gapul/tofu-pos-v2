@@ -216,7 +216,7 @@ final FutureProvider<MasterDataCloudSync?> masterDataCloudSyncProvider =
         cashClient: SupabaseCashDrawerSyncClient(client),
         shopId: shopId.value,
       );
-      sync.start();
+      await sync.start();
       ref.onDispose(sync.stop);
       return sync;
     });

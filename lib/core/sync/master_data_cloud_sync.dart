@@ -51,8 +51,15 @@ class MasterDataCloudSync {
 
   bool get isStarted => _started;
 
-  void start() {
+  /// 起動時に呼ぶ。
+  ///
+  /// 1. Supabase から商品マスタと釣銭スナップショットを pull
+  /// 2. 取得できた分でローカル DB を上書き (クラウド優先)
+  ///    - 0 件のときはローカル温存 (初回セットアップで誤って空にしないため)
+  /// 3. watch + 定期 push を開始
+  Future<void> start() async {
     if (_started) return;
+    await _bootstrapFromCloud();
     _productSub = _productRepo
         .watchAll(includeDeleted: true)
         .listen((_) => _scheduleProductPush());
@@ -63,9 +70,58 @@ class MasterDataCloudSync {
     });
     _started = true;
     AppLogger.i('MasterDataCloudSync started (shop=$_shopId)');
-    // 起動直後に 1 回送る (新しい端末が立ち上がった時点で最新を上げる)
+    // bootstrap で取り込んだ後、念のため 1 回 push して updated_at を更新
     unawaited(_pushProductsNow());
     unawaited(_pushCashNow());
+  }
+
+  Future<void> _bootstrapFromCloud() async {
+    // 商品マスタを pull → ローカル上書き
+    try {
+      final products = await _productClient.pull(shopId: _shopId);
+      if (products.isNotEmpty) {
+        await _productRepo.replaceAll(products);
+        AppLogger.event(
+          'sync',
+          'products_bootstrapped',
+          fields: <String, Object?>{'count': products.length},
+          level: AppLogLevel.info,
+        );
+      } else {
+        AppLogger.i(
+          'MasterDataCloudSync: cloud has 0 products, keeping local',
+        );
+      }
+    } catch (e, st) {
+      AppLogger.w(
+        'MasterDataCloudSync: product bootstrap failed (keeping local)',
+        error: e,
+        stackTrace: st,
+      );
+    }
+    // 釣銭スナップショットを pull → ローカル上書き
+    try {
+      final drawer = await _cashClient.pull(shopId: _shopId);
+      if (drawer != null) {
+        await _cashRepo.replace(drawer);
+        AppLogger.event(
+          'sync',
+          'cash_drawer_bootstrapped',
+          fields: <String, Object?>{'total_yen': drawer.totalAmount.yen},
+          level: AppLogLevel.info,
+        );
+      } else {
+        AppLogger.i(
+          'MasterDataCloudSync: cloud has no cash_drawer, keeping local',
+        );
+      }
+    } catch (e, st) {
+      AppLogger.w(
+        'MasterDataCloudSync: cash_drawer bootstrap failed (keeping local)',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   Future<void> stop() async {

@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../domain/entities/product.dart';
+import '../../domain/value_objects/money.dart';
 import '../logging/app_logger.dart';
 import '../retry/retry_policy.dart';
 
@@ -20,6 +21,41 @@ class SupabaseProductSyncClient {
   final RetryPolicy _retry;
 
   static const String _table = 'products';
+
+  /// Supabase から該当店舗の商品マスタを全件取得する。
+  /// is_deleted=true も含めて返す (受け取り側が論理削除を尊重するため)。
+  /// クラウド未投入で 0 件のときは空リストを返す。
+  Future<List<Product>> pull({required String shopId}) async {
+    try {
+      final List<Map<String, dynamic>> rows = await _retry.run<List<Map<String, dynamic>>>(() async {
+        final result = await _client
+            .from(_table)
+            .select(
+              'product_id, name, price_yen, stock, display_color, is_deleted',
+            )
+            .eq('shop_id', shopId);
+        return List<Map<String, dynamic>>.from(result as List);
+      });
+      return <Product>[
+        for (final Map<String, dynamic> r in rows)
+          Product(
+            id: r['product_id'] as String,
+            name: r['name'] as String,
+            price: Money((r['price_yen'] as num).toInt()),
+            stock: (r['stock'] as num?)?.toInt() ?? 0,
+            displayColor: (r['display_color'] as num?)?.toInt(),
+            isDeleted: (r['is_deleted'] as bool?) ?? false,
+          ),
+      ];
+    } catch (e, st) {
+      AppLogger.w(
+        'SupabaseProductSyncClient: pull failed (returning empty)',
+        error: e,
+        stackTrace: st,
+      );
+      return const <Product>[];
+    }
+  }
 
   /// 商品リスト全体を upsert する。is_deleted 含めて送る。
   Future<void> push(

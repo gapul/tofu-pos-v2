@@ -22,6 +22,41 @@ class SupabaseCashDrawerSyncClient {
 
   static const String _table = 'cash_drawer_snapshots';
 
+  /// Supabase から該当店舗の釣銭スナップショットを取得して CashDrawer を組む。
+  /// クラウド未投入で 0 件のときは null を返す (呼び出し側がローカル温存判断)。
+  Future<CashDrawer?> pull({required String shopId}) async {
+    try {
+      final List<Map<String, dynamic>> rows = await _retry.run<List<Map<String, dynamic>>>(() async {
+        final result = await _client
+            .from(_table)
+            .select('denomination_yen, count')
+            .eq('shop_id', shopId);
+        return List<Map<String, dynamic>>.from(result as List);
+      });
+      if (rows.isEmpty) return null;
+      final Map<Denomination, int> counts = <Denomination, int>{
+        for (final Denomination d in Denomination.all) d: 0,
+      };
+      for (final Map<String, dynamic> r in rows) {
+        final int yen = (r['denomination_yen'] as num).toInt();
+        final int count = (r['count'] as num).toInt();
+        try {
+          counts[Denomination(yen)] = count;
+        } catch (_) {
+          // 未知金種は無視
+        }
+      }
+      return CashDrawer(counts);
+    } catch (e, st) {
+      AppLogger.w(
+        'SupabaseCashDrawerSyncClient: pull failed (returning null)',
+        error: e,
+        stackTrace: st,
+      );
+      return null;
+    }
+  }
+
   Future<void> push(
     CashDrawer drawer, {
     required String shopId,
