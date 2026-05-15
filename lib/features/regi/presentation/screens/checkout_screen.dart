@@ -654,6 +654,29 @@ class _CashManagementSection extends StatelessWidget {
   final CheckoutSession session;
   final CheckoutSessionNotifier notifier;
 
+  Widget _denominationRow(Denomination d) {
+    return Row(
+      children: <Widget>[
+        SizedBox(
+          width: 80,
+          child: Text('${d.yen}円', style: TofuTextStyles.bodyLgBold),
+        ),
+        Expanded(
+          child: TofuNumStepper(
+            value: session.cashDelta[d.yen] ?? 0,
+            onChanged: (v) {
+              final int diff = v - (session.cashDelta[d.yen] ?? 0);
+              _bumpDenomination(d, diff);
+            },
+            min: -999,
+            max: 999,
+            suffix: '枚',
+          ),
+        ),
+      ],
+    );
+  }
+
   void _bumpDenomination(Denomination d, int delta) {
     final Map<int, int> next = Map<int, int>.from(session.cashDelta);
     next[d.yen] = (next[d.yen] ?? 0) + delta;
@@ -688,28 +711,22 @@ class _CashManagementSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: TofuTokens.space5),
-          for (final Denomination d in denoms) ...<Widget>[
+          // 金種を 2 列グリッドで配置（1 列だと縦長になり過ぎるため）。
+          for (int i = 0; i < denoms.length; i += 2) ...<Widget>[
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                SizedBox(
-                  width: 90,
-                  child: Text('${d.yen}円', style: TofuTextStyles.bodyLgBold),
-                ),
+                Expanded(child: _denominationRow(denoms[i])),
+                const SizedBox(width: TofuTokens.space4),
                 Expanded(
-                  child: TofuNumStepper(
-                    value: session.cashDelta[d.yen] ?? 0,
-                    onChanged: (v) {
-                      final int diff = v - (session.cashDelta[d.yen] ?? 0);
-                      _bumpDenomination(d, diff);
-                    },
-                    min: -999,
-                    max: 999,
-                    suffix: '枚',
-                  ),
+                  child: i + 1 < denoms.length
+                      ? _denominationRow(denoms[i + 1])
+                      : const SizedBox.shrink(),
                 ),
               ],
             ),
-            const SizedBox(height: TofuTokens.space3),
+            if (i + 2 < denoms.length)
+              const SizedBox(height: TofuTokens.space3),
           ],
         ],
       ),
