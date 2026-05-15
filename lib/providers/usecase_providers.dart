@@ -87,7 +87,7 @@ final Provider<DailyResetUseCase> dailyResetUseCaseProvider =
 ///  - 通常時: Supabase へ送信、BLE には流さない。
 ///  - Supabase 送信失敗時: BLE に fallback（ProductMasterUpdate は除外）。
 ///  - 受信: 両 transport の events を merge、eventId で dedup。
-final Provider<bool> bleFallbackEnabledProvider = Provider<bool>((_) => false);
+final Provider<bool> bleFallbackEnabledProvider = Provider<bool>((_) => true);
 
 /// 端末間連携の Transport を、現在の TransportMode と DeviceRole から自動選択する。
 ///
