@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/format.dart';
@@ -83,7 +84,10 @@ class CartPanel extends StatelessWidget {
                     ),
                     itemBuilder: (c, i) {
                       final OrderItem it = session.items[i];
+                      // ValueKey でアイテム単位の identity を固定し、
+                      // 追加された行のみ fadeIn + slideX が走るようにする。
                       return _CartRow(
+                        key: ValueKey<String>('cart-row-${it.productId}'),
                         item: it,
                         product: _findProduct(it.productId),
                         stockEnabled: stockEnabled,
@@ -96,6 +100,13 @@ class CartPanel extends StatelessWidget {
                               : null,
                         ),
                         onRemove: () => notifier.removeProduct(it.productId),
+                      ).animate().fadeIn(
+                        duration: TofuTokens.motionShort,
+                      ).slideX(
+                        begin: 0.08,
+                        end: 0,
+                        duration: TofuTokens.motionMedium,
+                        curve: Curves.easeOutCubic,
                       );
                     },
                   ),
@@ -179,6 +190,7 @@ class _CartRow extends StatelessWidget {
     required this.highlighted,
     required this.onChanged,
     required this.onRemove,
+    super.key,
   });
 
   final OrderItem item;

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/app_exceptions.dart';
@@ -313,8 +314,18 @@ class _PendingPane extends StatelessWidget {
                           childAspectRatio: 280 / 220,
                         ),
                         itemBuilder: (c, i) => _PendingCard(
+                          key: ValueKey<String>(
+                            'pending-card-${orders[i].orderId}',
+                          ),
                           order: orders[i],
                           onAction: () => onAction(orders[i].orderId),
+                        ).animate().fadeIn(
+                          duration: TofuTokens.motionShort,
+                        ).slideY(
+                          begin: 0.08,
+                          end: 0,
+                          duration: TofuTokens.motionMedium,
+                          curve: Curves.easeOutCubic,
                         ),
                       );
                     },
@@ -364,7 +375,19 @@ class _ServedPane extends StatelessWidget {
                     itemCount: orders.length,
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: TofuTokens.space3),
-                    itemBuilder: (c, i) => _ServedCard(order: orders[i]),
+                    itemBuilder: (c, i) => _ServedCard(
+                      key: ValueKey<String>(
+                        'served-card-${orders[i].orderId}',
+                      ),
+                      order: orders[i],
+                    ).animate().fadeIn(
+                      duration: TofuTokens.motionShort,
+                    ).slideX(
+                      begin: 0.06,
+                      end: 0,
+                      duration: TofuTokens.motionMedium,
+                      curve: Curves.easeOutCubic,
+                    ),
                   ),
           ),
         ],
@@ -452,7 +475,11 @@ class _EmptyState extends StatelessWidget {
 //   - 「提供完了」ボタン
 // ---------------------------------------------------------------------------
 class _PendingCard extends StatelessWidget {
-  const _PendingCard({required this.order, required this.onAction});
+  const _PendingCard({
+    required this.order,
+    required this.onAction,
+    super.key,
+  });
   final KitchenOrder order;
   final VoidCallback onAction;
 
@@ -599,7 +626,7 @@ class _PendingCard extends StatelessWidget {
 // Served card (Figma 73:160, 356×96): 縦リストのコンパクト表示
 // ---------------------------------------------------------------------------
 class _ServedCard extends StatelessWidget {
-  const _ServedCard({required this.order});
+  const _ServedCard({required this.order, super.key});
   final KitchenOrder order;
 
   @override

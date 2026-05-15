@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/tokens.dart';
@@ -200,8 +201,18 @@ class _PendingPane extends StatelessWidget {
                       crossAxisSpacing: TofuTokens.space5,
                     ),
                     itemBuilder: (c, i) => _LargeTicketCard(
+                      key: ValueKey<String>(
+                        'large-ticket-${orders[i].orderId}',
+                      ),
                       order: orders[i],
                       onTap: () => onTap(orders[i]),
+                    ).animate().fadeIn(
+                      duration: TofuTokens.motionShort,
+                    ).slideY(
+                      begin: 0.08,
+                      end: 0,
+                      duration: TofuTokens.motionMedium,
+                      curve: Curves.easeOutCubic,
                     ),
                   ),
           ),
@@ -247,7 +258,19 @@ class _CalledPane extends StatelessWidget {
                       mainAxisSpacing: TofuTokens.space4,
                       crossAxisSpacing: TofuTokens.space4,
                     ),
-                    itemBuilder: (c, i) => _SmallTicketCard(order: orders[i]),
+                    itemBuilder: (c, i) => _SmallTicketCard(
+                      key: ValueKey<String>(
+                        'small-ticket-${orders[i].orderId}',
+                      ),
+                      order: orders[i],
+                    ).animate().fadeIn(
+                      duration: TofuTokens.motionShort,
+                    ).slideX(
+                      begin: 0.06,
+                      end: 0,
+                      duration: TofuTokens.motionMedium,
+                      curve: Curves.easeOutCubic,
+                    ),
                   ),
           ),
         ],
@@ -311,7 +334,11 @@ class _EmptyState extends StatelessWidget {
 // 大型整理券カード (Figma 76:91, 160×160): 呼び出し前。タップで全画面表示。
 // ---------------------------------------------------------------------------
 class _LargeTicketCard extends StatelessWidget {
-  const _LargeTicketCard({required this.order, required this.onTap});
+  const _LargeTicketCard({
+    required this.order,
+    required this.onTap,
+    super.key,
+  });
   final CallingOrder order;
   final VoidCallback onTap;
 
@@ -390,7 +417,7 @@ class _LargeTicketCard extends StatelessWidget {
 // 小型整理券カード (Figma 76:105, 110×110): 呼び出し済。
 // ---------------------------------------------------------------------------
 class _SmallTicketCard extends StatelessWidget {
-  const _SmallTicketCard({required this.order});
+  const _SmallTicketCard({required this.order, super.key});
   final CallingOrder order;
 
   @override

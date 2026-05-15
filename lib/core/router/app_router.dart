@@ -21,6 +21,7 @@ import '../../features/startup/presentation/screens/role_select_screen.dart';
 import '../../features/startup/presentation/screens/shop_id_screen.dart';
 import '../theme/tokens.dart';
 import '../ui/error_boundary.dart';
+import 'transitions.dart';
 
 /// セットアップ状態と現在地から、リダイレクト先パス（不要なら null）を返す。
 ///
@@ -69,88 +70,124 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((
     routes: <RouteBase>[
       GoRoute(
         path: '/',
-        builder: (c, s) => const ErrorBoundary(
-          label: 'route:/',
-          child: _HomeRouter(),
+        pageBuilder: (c, s) => TofuTransitions.fadeThroughPage(
+          key: s.pageKey,
+          child: const ErrorBoundary(
+            label: 'route:/',
+            child: _HomeRouter(),
+          ),
         ),
       ),
       // /setup/* は意図的に ErrorBoundary を被せない。
       // 失敗したら原因が見えるよう loud に落ちて欲しい初期化フロー。
       GoRoute(
         path: '/setup/shop',
-        builder: (c, s) => const ShopIdScreen(),
+        pageBuilder: (c, s) => TofuTransitions.sharedAxisPage(
+          key: s.pageKey,
+          child: const ShopIdScreen(),
+        ),
       ),
       GoRoute(
         path: '/setup/role',
-        builder: (c, s) => const RoleSelectScreen(),
+        pageBuilder: (c, s) => TofuTransitions.sharedAxisPage(
+          key: s.pageKey,
+          child: const RoleSelectScreen(),
+        ),
       ),
       GoRoute(
         path: '/regi/customer',
-        builder: (c, s) => const ErrorBoundary(
-          label: 'route:/regi/customer',
-          child: CustomerAttributesScreen(),
+        pageBuilder: (c, s) => TofuTransitions.sharedAxisPage(
+          key: s.pageKey,
+          child: const ErrorBoundary(
+            label: 'route:/regi/customer',
+            child: CustomerAttributesScreen(),
+          ),
         ),
       ),
       GoRoute(
         path: '/regi/products',
-        builder: (c, s) => const ErrorBoundary(
-          label: 'route:/regi/products',
-          child: ProductSelectScreen(),
+        pageBuilder: (c, s) => TofuTransitions.sharedAxisPage(
+          key: s.pageKey,
+          child: const ErrorBoundary(
+            label: 'route:/regi/products',
+            child: ProductSelectScreen(),
+          ),
         ),
       ),
       GoRoute(
         path: '/regi/products/master',
-        builder: (c, s) => const ErrorBoundary(
-          label: 'route:/regi/products/master',
-          child: ProductMasterScreen(),
+        pageBuilder: (c, s) => TofuTransitions.fadeThroughPage(
+          key: s.pageKey,
+          child: const ErrorBoundary(
+            label: 'route:/regi/products/master',
+            child: ProductMasterScreen(),
+          ),
         ),
       ),
       GoRoute(
         path: '/regi/checkout',
-        builder: (c, s) => const ErrorBoundary(
-          label: 'route:/regi/checkout',
-          child: CheckoutScreen(),
+        pageBuilder: (c, s) => TofuTransitions.sharedAxisPage(
+          key: s.pageKey,
+          child: const ErrorBoundary(
+            label: 'route:/regi/checkout',
+            child: CheckoutScreen(),
+          ),
         ),
       ),
       GoRoute(
         path: '/regi/done',
-        builder: (c, s) {
+        pageBuilder: (c, s) {
           final Object? extra = s.extra;
-          if (extra is Order) {
-            return ErrorBoundary(
-              label: 'route:/regi/done',
-              child: CheckoutDoneScreen(order: extra),
-            );
-          }
-          return const _MissingOrderRedirect();
+          final Widget child = extra is Order
+              ? ErrorBoundary(
+                  label: 'route:/regi/done',
+                  child: CheckoutDoneScreen(order: extra),
+                )
+              : const _MissingOrderRedirect();
+          return TofuTransitions.sharedAxisPage(
+            key: s.pageKey,
+            child: child,
+          );
         },
       ),
       GoRoute(
         path: '/regi/history',
-        builder: (c, s) => const ErrorBoundary(
-          label: 'route:/regi/history',
-          child: OrderHistoryScreen(),
+        pageBuilder: (c, s) => TofuTransitions.fadeThroughPage(
+          key: s.pageKey,
+          child: const ErrorBoundary(
+            label: 'route:/regi/history',
+            child: OrderHistoryScreen(),
+          ),
         ),
       ),
       GoRoute(
         path: '/regi/cash-close',
-        builder: (c, s) => const ErrorBoundary(
-          label: 'route:/regi/cash-close',
-          child: CashCloseScreen(),
+        pageBuilder: (c, s) => TofuTransitions.fadeThroughPage(
+          key: s.pageKey,
+          child: const ErrorBoundary(
+            label: 'route:/regi/cash-close',
+            child: CashCloseScreen(),
+          ),
         ),
       ),
       GoRoute(
         path: '/settings',
-        builder: (c, s) => const ErrorBoundary(
-          label: 'route:/settings',
-          child: SettingsScreen(),
+        pageBuilder: (c, s) => TofuTransitions.fadeThroughPage(
+          key: s.pageKey,
+          child: const ErrorBoundary(
+            label: 'route:/settings',
+            child: SettingsScreen(),
+          ),
         ),
       ),
       GoRoute(
         path: '/dev',
-        builder: (c, s) => const ErrorBoundary(
-          label: 'route:/dev',
-          child: DevConsoleScreen(),
+        pageBuilder: (c, s) => TofuTransitions.fadeThroughPage(
+          key: s.pageKey,
+          child: const ErrorBoundary(
+            label: 'route:/dev',
+            child: DevConsoleScreen(),
+          ),
         ),
       ),
     ],

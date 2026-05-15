@@ -36,6 +36,8 @@ void main() {
       ),
     );
     await tester.pump();
+    // PR-3: TofuButton 等のマイクロインタラクション余韻を消化。
+    await tester.pumpAndSettle();
     while (tester.takeException() != null) {}
 
     await expectLater(

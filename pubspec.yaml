@@ -56,6 +56,8 @@ dependencies:
   lottie: ^3.1.2
   # widget 単位の declarative なマイクロインタラクション (tap scale 等)。
   flutter_animate: ^4.5.0
+  # Material motion (SharedAxis / FadeThrough) を画面遷移に適用するため (PR-3)。
+  animations: ^2.0.11
 
 dev_dependencies:
   flutter_test:

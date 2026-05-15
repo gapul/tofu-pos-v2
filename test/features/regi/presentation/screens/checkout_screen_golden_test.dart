@@ -55,6 +55,8 @@ void main() {
       ),
     );
     await tester.pump();
+    // PR-3: cart_panel の追加トランジションを完全消化。
+    await tester.pumpAndSettle();
     while (tester.takeException() != null) {}
 
     await expectLater(

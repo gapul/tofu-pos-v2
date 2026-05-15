@@ -49,6 +49,8 @@ void main() {
       ),
     );
     await tester.pump();
+    // flutter_animate のリスト追加トランジション (PR-3) を完全消化する。
+    await tester.pumpAndSettle();
     while (tester.takeException() != null) {}
 
     // AppHeader (brand) と body の PageTitle で 2 箇所に出る。
@@ -90,6 +92,7 @@ void main() {
       ),
     );
     await tester.pump();
+    await tester.pumpAndSettle();
     while (tester.takeException() != null) {}
 
     // 「呼び出し前」ペインの大型カードをタップ。

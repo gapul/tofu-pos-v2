@@ -40,6 +40,8 @@ void main() {
       ),
     );
     await tester.pump();
+    // PR-3: カード追加トランジションを完全消化してからピクセル比較。
+    await tester.pumpAndSettle();
     while (tester.takeException() != null) {}
 
     await expectLater(

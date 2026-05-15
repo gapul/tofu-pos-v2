@@ -79,6 +79,8 @@ void main() {
       ),
     );
     await tester.pump();
+    // flutter_animate のカード追加トランジション (PR-3) を完全消化する。
+    await tester.pumpAndSettle();
     while (tester.takeException() != null) {}
 
     // 整理券番号が表示される。
