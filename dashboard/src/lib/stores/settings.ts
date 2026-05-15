@@ -1,6 +1,7 @@
 // 接続情報・店舗 ID を localStorage に永続化する store。
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
+import { env } from '$env/dynamic/public';
 
 const STORAGE_KEY = 'tofu-pos-dashboard.settings.v1';
 
@@ -10,8 +11,10 @@ export interface Settings {
   shop: string;
 }
 
-const ENV_URL = (import.meta.env.PUBLIC_SUPABASE_URL ?? '') as string;
-const ENV_KEY = (import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '') as string;
+// SvelteKit では Vite 直接の import.meta.env からは PUBLIC_* を取れないため
+// 必ず $env/static/public 経由で読む (ビルド時に静的置換)。
+const ENV_URL = env.PUBLIC_SUPABASE_URL ?? '';
+const ENV_KEY = env.PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 const defaults: Settings = { url: ENV_URL, key: ENV_KEY, shop: '' };
 
@@ -52,7 +55,7 @@ if (browser) {
 
 export function clearSettings() {
   if (browser) localStorage.removeItem(STORAGE_KEY);
-  settings.set({ ...empty });
+  settings.set({ ...defaults });
 }
 
 export function hasConnection(s: Settings = get(settings)): boolean {
