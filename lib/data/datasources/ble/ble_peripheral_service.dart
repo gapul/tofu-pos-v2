@@ -128,7 +128,9 @@ class BlePeripheralService {
     _notifySub = null;
     _subscribers.clear();
     _started = false;
-    await _events.close();
+    if (!_events.isClosed) {
+      await _events.close();
+    }
   }
 
   /// 購読中の全 central に notify を送る。

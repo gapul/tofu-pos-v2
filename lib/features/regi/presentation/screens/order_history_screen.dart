@@ -79,7 +79,11 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       if (!mounted) {
         return;
       }
-      TopSnack.show(context, '整理券 ${order.ticketNumber} を取消しました');
+      TopSnack.show(
+        context,
+        '整理券 ${order.ticketNumber} を取消しました',
+        duration: const Duration(milliseconds: 1200),
+      );
     } on AppException catch (e) {
       if (!mounted) {
         return;

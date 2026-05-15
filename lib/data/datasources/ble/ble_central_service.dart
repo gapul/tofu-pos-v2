@@ -36,11 +36,24 @@ class BleCentralService {
   int get peerCount => _peers.length;
 
   /// スキャン開始。発見した peripheral へ自動接続。
+  ///
+  /// 直前まで他 transport で稼働中だった場合に備え、既存スキャンを停止してから開始する。
+  /// この transport を生成し直すたびに新しいインスタンスとなるが、
+  /// `FlutterBluePlus` 側は singleton なので前回スキャンが残っているケースがある。
   Future<void> start() async {
     final List<Guid> services = <Guid>[
       Guid(BleUuids.kitchenService),
       Guid(BleUuids.callingService),
     ];
+
+    // 前回のスキャンが走っていれば停止（online → bluetooth 切替時の二重起動防止）。
+    if (FlutterBluePlus.isScanningNow) {
+      try {
+        await FlutterBluePlus.stopScan();
+      } catch (e) {
+        AppLogger.d('BleCentral: pre-stopScan ignored: $e');
+      }
+    }
 
     _scanSub = FlutterBluePlus.scanResults.listen(_onScanResults);
     await FlutterBluePlus.startScan(
@@ -56,14 +69,21 @@ class BleCentralService {
   }
 
   Future<void> stop() async {
-    await FlutterBluePlus.stopScan();
+    try {
+      // timeout 経過後は既に停止しており例外を投げるケースがあるため握りつぶす。
+      await FlutterBluePlus.stopScan();
+    } catch (e) {
+      AppLogger.d('BleCentral: stopScan ignored during teardown: $e');
+    }
     await _scanSub?.cancel();
     _scanSub = null;
     for (final _ConnectedPeer p in _peers.values) {
       await p.disconnect();
     }
     _peers.clear();
-    await _events.close();
+    if (!_events.isClosed) {
+      await _events.close();
+    }
   }
 
   /// 全接続中 peripheral へブロードキャスト送信。

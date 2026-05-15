@@ -85,6 +85,7 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
     TopSnack.show(
       context,
       '整理券 ${order.ticketNumber} を受取完了にしました',
+      duration: const Duration(milliseconds: 1200),
     );
   }
 
@@ -118,6 +119,7 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
       TopSnack.show(
         context,
         '整理券 ${order.ticketNumber} を呼び出しました',
+        duration: const Duration(milliseconds: 1200),
       );
     }
   }

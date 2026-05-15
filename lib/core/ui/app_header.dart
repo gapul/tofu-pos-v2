@@ -530,7 +530,13 @@ class _BrandBlock extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Text(title, style: textStyle, overflow: TextOverflow.ellipsis),
+        Text(
+          title,
+          style: textStyle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          softWrap: false,
+        ),
         if (subtitle != null && subtitle!.isNotEmpty) ...<Widget>[
           const SizedBox(height: 2),
           Text(
@@ -538,7 +544,9 @@ class _BrandBlock extends StatelessWidget {
             style: TofuTextStyles.caption.copyWith(
               color: TofuTokens.textSecondary,
             ),
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            softWrap: false,
           ),
         ],
       ],

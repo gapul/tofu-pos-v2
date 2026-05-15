@@ -241,7 +241,227 @@ class _SummaryPane extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: TofuTokens.space4),
+          const _CashFloatRegisterButton(),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 現金準備金 (釣銭準備金) 登録ボタン。
+// 学園祭開始時など「既に入っているお金」を金種ごとに入力 → CashDrawer を上書き。
+// ---------------------------------------------------------------------------
+class _CashFloatRegisterButton extends ConsumerWidget {
+  const _CashFloatRegisterButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return TofuButton(
+      label: '釣銭準備金を登録',
+      icon: Icons.savings,
+      variant: TofuButtonVariant.secondary,
+      onPressed: () => _openSheet(context, ref),
+    );
+  }
+
+  Future<void> _openSheet(BuildContext context, WidgetRef ref) async {
+    final CashDrawer current = await ref
+        .read(cashDrawerRepositoryProvider)
+        .get();
+    if (!context.mounted) {
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (c) => _CashFloatSheet(initial: current),
+    );
+  }
+}
+
+class _CashFloatSheet extends ConsumerStatefulWidget {
+  const _CashFloatSheet({required this.initial});
+  final CashDrawer initial;
+
+  @override
+  ConsumerState<_CashFloatSheet> createState() => _CashFloatSheetState();
+}
+
+class _CashFloatSheetState extends ConsumerState<_CashFloatSheet> {
+  late Map<int, int> _counts;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _counts = <int, int>{
+      for (final Denomination d in Denomination.all)
+        d.yen: widget.initial.countOf(d),
+    };
+  }
+
+  int get _totalYen => _counts.entries.fold<int>(
+    0,
+    (acc, e) => acc + e.key * e.value,
+  );
+
+  Future<void> _save() async {
+    final bool ok = await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: const Text('現金準備金を上書き登録'),
+            content: Text(
+              '現在のドロワー残高を以下で上書きします。\n合計 ${TofuFormat.yenInt(_totalYen)}\n\n'
+              'この操作は精算前の準備金登録用です。既存の理論値は上書きされます。',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(c).pop(false),
+                child: const Text('キャンセル'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(c).pop(true),
+                child: const Text('登録する'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!ok) return;
+    setState(() => _saving = true);
+    try {
+      final CashDrawer drawer = CashDrawer(<Denomination, int>{
+        for (final Denomination d in Denomination.all)
+          d: _counts[d.yen] ?? 0,
+      });
+      await ref.read(cashDrawerRepositoryProvider).replace(drawer);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      TopSnack.show(
+        context,
+        '釣銭準備金を登録しました',
+        duration: const Duration(milliseconds: 1200),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      TopSnack.show(context, '登録に失敗: $e', color: TofuTokens.dangerBgStrong);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Denomination> denoms = Denomination.all.reversed.toList();
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: TofuTokens.space6,
+          right: TofuTokens.space6,
+          top: TofuTokens.space5,
+          bottom: MediaQuery.of(context).viewInsets.bottom + TofuTokens.space5,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const PaneTitle(
+              title: '釣銭準備金を登録',
+              subtitle: '開始時にドロワーに入っているお金を金種別に入力します',
+            ),
+            const SizedBox(height: TofuTokens.space4),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: <Widget>[
+                    for (final Denomination d in denoms)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: TofuTokens.space2,
+                        ),
+                        child: Row(
+                          children: <Widget>[
+                            SizedBox(
+                              width: 96,
+                              child: Text(
+                                '${d.yen}円',
+                                style: TofuTextStyles.bodyMdBold,
+                              ),
+                            ),
+                            Expanded(
+                              child: TofuNumStepper(
+                                value: _counts[d.yen] ?? 0,
+                                onChanged: (v) => setState(
+                                  () => _counts[d.yen] = v,
+                                ),
+                                suffix: '枚',
+                                size: TofuNumStepperSize.sm,
+                              ),
+                            ),
+                            SizedBox(
+                              width: 96,
+                              child: Text(
+                                TofuFormat.yenInt(d.yen * (_counts[d.yen] ?? 0)),
+                                style: TofuTextStyles.bodyMd.copyWith(
+                                  color: TofuTokens.textTertiary,
+                                ),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: TofuTokens.space4),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: TofuTokens.space4,
+                vertical: TofuTokens.space3,
+              ),
+              decoration: BoxDecoration(
+                color: TofuTokens.bgSurface,
+                borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
+                border: Border.all(color: TofuTokens.borderSubtle),
+              ),
+              child: Row(
+                children: <Widget>[
+                  const Text('合計', style: TofuTextStyles.bodyMdBold),
+                  const Spacer(),
+                  Text(
+                    TofuFormat.yenInt(_totalYen),
+                    style: TofuTextStyles.h3,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: TofuTokens.space5),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: TofuButton(
+                    label: 'キャンセル',
+                    variant: TofuButtonVariant.secondary,
+                    onPressed: _saving
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                  ),
+                ),
+                const SizedBox(width: TofuTokens.space3),
+                Expanded(
+                  child: TofuButton(
+                    label: '登録',
+                    loading: _saving,
+                    onPressed: _saving ? null : _save,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

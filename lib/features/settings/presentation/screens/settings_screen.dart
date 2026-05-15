@@ -121,11 +121,17 @@ class _DeviceHeaderSection extends ConsumerWidget {
           textBaseline: TextBaseline.alphabetic,
           children: <Widget>[
             const Text('設定', style: TofuTextStyles.h2),
-            const Spacer(),
-            Text(
-              '店舗ID: ${data.shopId ?? '未設定'} / バージョン v1.0.0',
-              style: TofuTextStyles.caption.copyWith(
-                color: TofuTokens.textTertiary,
+            const SizedBox(width: TofuTokens.space4),
+            Expanded(
+              child: Text(
+                '店舗ID: ${data.shopId ?? '未設定'} / バージョン v1.0.0',
+                style: TofuTextStyles.caption.copyWith(
+                  color: TofuTokens.textTertiary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                textAlign: TextAlign.end,
               ),
             ),
           ],
@@ -176,7 +182,11 @@ class _UserNameSectionState extends ConsumerState<_UserNameSection> {
     // 反映のため presence を再接続。
     ref.invalidate(peerPresenceServiceProvider);
     if (!mounted) return;
-    TopSnack.show(context, 'ユーザー名を保存しました');
+    TopSnack.show(
+      context,
+      'ユーザー名を保存しました',
+      duration: const Duration(milliseconds: 1200),
+    );
   }
 
   @override
@@ -316,7 +326,11 @@ class _TransportSection extends ConsumerWidget {
                 ref.invalidate(supabaseRealtimeListenerProvider);
                 await ref.read(roleStarterProvider).start();
                 if (!context.mounted) return;
-                TopSnack.show(context, 'サーバーに再接続しました');
+                TopSnack.show(
+                  context,
+                  'サーバーに再接続しました',
+                  duration: const Duration(milliseconds: 1200),
+                );
               },
             ),
           ),
@@ -691,7 +705,11 @@ class _DangerSectionState extends ConsumerState<_DangerSection> {
     if (!mounted) {
       return;
     }
-    TopSnack.show(context, '整理券プールを初期化しました');
+    TopSnack.show(
+      context,
+      '整理券プールを初期化しました',
+      duration: const Duration(milliseconds: 1200),
+    );
   }
 
   @override

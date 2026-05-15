@@ -59,7 +59,9 @@ class PageTitle extends StatelessWidget {
                 Text(
                   title,
                   style: TofuTextStyles.h2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  softWrap: false,
                 ),
                 if (subtitle != null) ...<Widget>[
                   const SizedBox(height: TofuTokens.space1),
@@ -68,6 +70,8 @@ class PageTitle extends StatelessWidget {
                     style: TofuTextStyles.bodySm.copyWith(
                       color: TofuTokens.textTertiary,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ],
