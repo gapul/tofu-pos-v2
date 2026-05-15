@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/tokens.dart';
+import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/format.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
@@ -13,11 +14,17 @@ import '../../../../domain/enums/calling_status.dart';
 import '../../../../providers/repository_providers.dart';
 import '../notifiers/calling_providers.dart';
 
-/// 呼び出し画面（仕様書 §6.3 / §9.5）。
+/// 呼び出し画面（仕様書 §6.3 / §9.5 / Figma `08-Caller-Home`）。
 ///
-/// - 「呼び出し前」「呼び出し済み」を 2 ペインで同時表示
-/// - 呼び出し前カードをタップ → 整理券番号を大画面表示 → 閉じると済みへ
-/// - 直前1件の Undo を SnackBar で提供
+/// Figma レイアウト:
+///   - landscape (id 436:506, 1024×768): 左ペイン「呼び出し前」(604w) +
+///     右ペイン「呼び出し済」(420w, bgSurface tinted)。
+///   - portrait  (id 436:507, 375×812):  Header + 縦リスト (呼び出し前 → 呼び出し済)。
+///
+/// 業務要件:
+///   - `callingOrdersProvider` を購読し pending / called / cancelled を分離
+///   - 呼び出し前カードをタップ → 整理券大画面表示 → 閉じると called へ遷移
+///   - `callingOrderRepository.updateStatus` で状態更新（Undo SnackBar）
 class CallingScreen extends ConsumerStatefulWidget {
   const CallingScreen({super.key});
 
@@ -70,7 +77,9 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
 
     return Scaffold(
       backgroundColor: TofuTokens.bgCanvas,
+      appBar: const AppHeader(title: '呼び出し'),
       body: SafeArea(
+        top: false,
         child: orders.when(
           data: (all) {
             final List<CallingOrder> pending = all
@@ -85,72 +94,48 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
                 .toList();
             return LayoutBuilder(
               builder: (c, constraints) {
-                final bool wide = constraints.maxWidth >= 768;
+                final bool wide = constraints.maxWidth >= 720;
+                if (wide) {
+                  // Figma landscape (436:506): 横 2 ペイン構成。
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Expanded(
+                        flex: 604,
+                        child: _PendingPane(
+                          orders: pending,
+                          onTap: _showFullScreen,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 420,
+                        child: _CalledPane(orders: called),
+                      ),
+                    ],
+                  );
+                }
+                // Figma portrait (436:507): 縦 2 セクション。
                 return Column(
                   children: <Widget>[
-                    const _Header(),
                     Expanded(
-                      child: wide
-                          ? Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: _ColumnPane(
-                                    title: '呼び出し前',
-                                    accent: TofuTokens.brandPrimary,
-                                    orders: pending,
-                                    onTap: _showFullScreen,
-                                    showCallButton: true,
-                                  ),
-                                ),
-                                Container(
-                                  width: 1,
-                                  color: TofuTokens.borderSubtle,
-                                ),
-                                Expanded(
-                                  child: _ColumnPane(
-                                    title: '呼び出し済み',
-                                    accent: TofuTokens.textTertiary,
-                                    orders: called,
-                                    onTap: null,
-                                    showCallButton: false,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : Column(
-                              children: <Widget>[
-                                Expanded(
-                                  child: _ColumnPane(
-                                    title: '呼び出し前',
-                                    accent: TofuTokens.brandPrimary,
-                                    orders: pending,
-                                    onTap: _showFullScreen,
-                                    showCallButton: true,
-                                  ),
-                                ),
-                                const Divider(height: 1),
-                                Expanded(
-                                  child: _ColumnPane(
-                                    title: '呼び出し済み',
-                                    accent: TofuTokens.textTertiary,
-                                    orders: called,
-                                    onTap: null,
-                                    showCallButton: false,
-                                  ),
-                                ),
-                              ],
-                            ),
+                      child: _PendingPane(
+                        orders: pending,
+                        onTap: _showFullScreen,
+                      ),
                     ),
+                    Expanded(child: _CalledPane(orders: called)),
                   ],
                 );
               },
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => StatusIndicator.custom(
-            label: '注文の取得に失敗: $e',
-            icon: Icons.error_outline,
-            tone: StatusIndicatorTone.danger,
+          error: (e, _) => Center(
+            child: StatusIndicator.custom(
+              label: '注文の取得に失敗: $e',
+              icon: Icons.error_outline,
+              tone: StatusIndicatorTone.danger,
+            ),
           ),
         ),
       ),
@@ -158,103 +143,132 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header();
+// ---------------------------------------------------------------------------
+// 呼び出し前ペイン (Figma 76:86): bgCanvas + 大型 160×160 カード横並び
+// ---------------------------------------------------------------------------
+class _PendingPane extends StatelessWidget {
+  const _PendingPane({required this.orders, required this.onTap});
+
+  final List<CallingOrder> orders;
+  final Future<void> Function(CallingOrder) onTap;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: TofuTokens.bgCanvas,
-        border: Border(bottom: BorderSide(color: TofuTokens.borderSubtle)),
-      ),
+      color: TofuTokens.bgCanvas,
       padding: const EdgeInsets.symmetric(
-        horizontal: TofuTokens.space5,
-        vertical: TofuTokens.space5,
+        horizontal: TofuTokens.space7,
+        vertical: TofuTokens.space7,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: TofuTokens.brandPrimary,
-              borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
-            ),
-            child: const Icon(Icons.campaign, color: TofuTokens.brandOnPrimary),
+          _PaneTitle(
+            title: '呼び出し前',
+            count: orders.length,
+            accent: TofuTokens.brandPrimary,
           ),
-          const SizedBox(width: TofuTokens.space4),
-          const Text('呼び出し', style: TofuTextStyles.h3),
+          const SizedBox(height: TofuTokens.space5),
+          Expanded(
+            child: orders.isEmpty
+                ? const _EmptyState(label: '呼び出し前の注文はありません')
+                : GridView.builder(
+                    // Figma: 160×160 が 3 つ横並び。
+                    padding: EdgeInsets.zero,
+                    itemCount: orders.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 200,
+                      mainAxisSpacing: TofuTokens.space5,
+                      crossAxisSpacing: TofuTokens.space5,
+                    ),
+                    itemBuilder: (c, i) => _LargeTicketCard(
+                      order: orders[i],
+                      onTap: () => onTap(orders[i]),
+                    ),
+                  ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _ColumnPane extends StatelessWidget {
-  const _ColumnPane({
-    required this.title,
-    required this.accent,
-    required this.orders,
-    required this.onTap,
-    required this.showCallButton,
-  });
-
-  final String title;
-  final Color accent;
+// ---------------------------------------------------------------------------
+// 呼び出し済ペイン (Figma 76:100): bgSurface + コンパクト 110×110 カード
+// ---------------------------------------------------------------------------
+class _CalledPane extends StatelessWidget {
+  const _CalledPane({required this.orders});
   final List<CallingOrder> orders;
-  final Future<void> Function(CallingOrder)? onTap;
-  final bool showCallButton;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Container(
+      color: TofuTokens.bgSurface,
+      padding: const EdgeInsets.symmetric(
+        horizontal: TofuTokens.space7,
+        vertical: TofuTokens.space7,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _PaneTitle(
+            title: '呼び出し済',
+            count: orders.length,
+            accent: TofuTokens.textTertiary,
+          ),
+          const SizedBox(height: TofuTokens.space5),
+          Expanded(
+            child: orders.isEmpty
+                ? const _EmptyState(label: '呼び出し済はありません')
+                : GridView.builder(
+                    padding: EdgeInsets.zero,
+                    itemCount: orders.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 140,
+                      mainAxisSpacing: TofuTokens.space4,
+                      crossAxisSpacing: TofuTokens.space4,
+                    ),
+                    itemBuilder: (c, i) => _SmallTicketCard(order: orders[i]),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaneTitle extends StatelessWidget {
+  const _PaneTitle({
+    required this.title,
+    required this.accent,
+    required this.count,
+  });
+  final String title;
+  final Color accent;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
       children: <Widget>[
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: TofuTokens.space5,
-            vertical: TofuTokens.space4,
-          ),
-          color: TofuTokens.bgSurface,
-          child: Row(
-            children: <Widget>[
-              Container(width: 4, height: 24, color: accent),
-              const SizedBox(width: TofuTokens.space3),
-              Text(title, style: TofuTextStyles.h4),
-              const SizedBox(width: TofuTokens.space3),
-              StatusIndicator.custom(
-                label: '${orders.length}件',
-                tone: StatusIndicatorTone.neutral,
-                dense: true,
-              ),
-            ],
+          width: 4,
+          height: 24,
+          decoration: BoxDecoration(
+            color: accent,
+            borderRadius: BorderRadius.circular(2),
           ),
         ),
-        Expanded(
-          child: orders.isEmpty
-              ? _EmptyState(label: '$title はありません')
-              : LayoutBuilder(
-                  builder: (c, constraints) {
-                    final int cols = constraints.maxWidth >= 600 ? 2 : 1;
-                    return GridView.builder(
-                      padding: const EdgeInsets.all(TofuTokens.space5),
-                      itemCount: orders.length,
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: cols,
-                        mainAxisSpacing: TofuTokens.space4,
-                        crossAxisSpacing: TofuTokens.space4,
-                        childAspectRatio: 1.6,
-                      ),
-                      itemBuilder: (c, i) => _CallingCard(
-                        order: orders[i],
-                        accent: accent,
-                        onTap: onTap == null ? null : () => onTap!(orders[i]),
-                        showCallButton: showCallButton,
-                      ),
-                    );
-                  },
-                ),
+        const SizedBox(width: TofuTokens.space3),
+        Text(title, style: TofuTextStyles.h4),
+        const SizedBox(width: TofuTokens.space3),
+        Text(
+          '$count件',
+          style: TofuTextStyles.bodySmBold.copyWith(
+            color: TofuTokens.textTertiary,
+          ),
         ),
       ],
     );
@@ -276,18 +290,13 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _CallingCard extends StatelessWidget {
-  const _CallingCard({
-    required this.order,
-    required this.accent,
-    required this.onTap,
-    required this.showCallButton,
-  });
-
+// ---------------------------------------------------------------------------
+// 大型整理券カード (Figma 76:91, 160×160): 呼び出し前。タップで全画面表示。
+// ---------------------------------------------------------------------------
+class _LargeTicketCard extends StatelessWidget {
+  const _LargeTicketCard({required this.order, required this.onTap});
   final CallingOrder order;
-  final Color accent;
-  final VoidCallback? onTap;
-  final bool showCallButton;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -299,46 +308,61 @@ class _CallingCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
         onTap: isCancelled ? null : onTap,
         child: Container(
-          padding: const EdgeInsets.all(TofuTokens.space5),
+          padding: const EdgeInsets.all(TofuTokens.space4),
           decoration: BoxDecoration(
             border: Border.all(
-              color: isCancelled ? TofuTokens.dangerBorder : accent,
-              width: 2,
+              color: isCancelled
+                  ? TofuTokens.dangerBorder
+                  : TofuTokens.brandPrimary,
+              width: TofuTokens.strokeThick,
             ),
             borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+            boxShadow: isCancelled ? null : TofuTokens.elevationSm,
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
+              if (isCancelled)
+                const StatusIndicator.custom(
+                  label: '取消',
+                  icon: Icons.block,
+                  tone: StatusIndicatorTone.danger,
+                  dense: true,
+                ),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    if (isCancelled)
-                      const StatusIndicator.custom(
-                        label: '取消',
-                        icon: Icons.block,
-                        tone: StatusIndicatorTone.danger,
-                        dense: true,
-                      ),
-                    Text(
+                child: Center(
+                  child: FittedBox(
+                    child: Text(
                       order.ticketNumber.toString(),
                       style: TofuTextStyles.numberLg.copyWith(
-                        color: isCancelled ? TofuTokens.dangerText : accent,
-                        fontSize: 56,
+                        color: isCancelled
+                            ? TofuTokens.dangerText
+                            : TofuTokens.brandPrimary,
+                        fontSize: 72,
+                        height: 1,
                       ),
                     ),
-                    Text(
-                      TofuFormat.relativeFromNow(order.receivedAt),
-                      style: TofuTextStyles.captionBold.copyWith(
-                        color: TofuTokens.textTertiary,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              if (showCallButton)
-                Icon(Icons.touch_app, size: 32, color: accent),
+              Row(
+                children: <Widget>[
+                  Text(
+                    TofuFormat.relativeFromNow(order.receivedAt),
+                    style: TofuTextStyles.bodySm.copyWith(
+                      color: TofuTokens.textTertiary,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (!isCancelled)
+                    const Icon(
+                      Icons.touch_app,
+                      size: 20,
+                      color: TofuTokens.brandPrimary,
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -347,6 +371,63 @@ class _CallingCard extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 小型整理券カード (Figma 76:105, 110×110): 呼び出し済。
+// ---------------------------------------------------------------------------
+class _SmallTicketCard extends StatelessWidget {
+  const _SmallTicketCard({required this.order});
+  final CallingOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isCancelled = order.status == CallingStatus.cancelled;
+    return Container(
+      padding: const EdgeInsets.all(TofuTokens.space3),
+      decoration: BoxDecoration(
+        color: isCancelled ? TofuTokens.dangerBg : TofuTokens.bgCanvas,
+        borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+        border: Border.all(
+          color: isCancelled
+              ? TofuTokens.dangerBorder
+              : TofuTokens.borderSubtle,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Expanded(
+            child: Center(
+              child: FittedBox(
+                child: Text(
+                  order.ticketNumber.toString(),
+                  style: TofuTextStyles.numberMd.copyWith(
+                    color: isCancelled
+                        ? TofuTokens.dangerText
+                        : TofuTokens.textPrimary,
+                    fontSize: 40,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Text(
+            isCancelled ? '取消' : '呼出済',
+            style: TofuTextStyles.captionBold.copyWith(
+              color: isCancelled
+                  ? TofuTokens.dangerText
+                  : TofuTokens.textTertiary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 全画面呼び出しダイアログ: 整理券番号を顧客向けに巨大表示。
+// ---------------------------------------------------------------------------
 class _FullScreenCallDialog extends StatelessWidget {
   const _FullScreenCallDialog({required this.order});
   final CallingOrder order;

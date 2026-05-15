@@ -380,7 +380,6 @@ class _PaneTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
         Container(
           width: 4,
@@ -613,6 +612,7 @@ class _ServedCard extends StatelessWidget {
               label: '提供済',
               icon: Icons.check_circle,
               tone: StatusIndicatorTone.success,
+              dense: true,
             ),
           const Spacer(),
           Text(
