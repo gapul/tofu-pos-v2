@@ -285,7 +285,7 @@ class _HistoryRow extends StatelessWidget {
                 TofuButton(
                   label: '取消',
                   icon: Icons.delete_outline,
-                  variant: TofuButtonVariant.outlined,
+                  variant: TofuButtonVariant.secondary,
                   onPressed: () => onCancel(order),
                 ),
             ],

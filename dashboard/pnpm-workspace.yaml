@@ -1,0 +1,7 @@
+# pnpm 11+ ではプロジェクト単位の設定をここに書く。
+# esbuild は postinstall を実行しないとプラットフォーム別バイナリが取れない
+# ので明示的に許可する。
+onlyBuiltDependencies:
+  - esbuild
+verifyDepsBeforeRun: false
+strictDepBuilds: false

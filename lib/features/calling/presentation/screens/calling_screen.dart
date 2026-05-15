@@ -400,7 +400,7 @@ class _FullScreenCallDialog extends StatelessWidget {
               child: TofuButton(
                 label: '閉じる（呼び出し済みへ）',
                 icon: Icons.close,
-                size: TofuButtonSize.primary,
+                size: TofuButtonSize.lg,
                 onPressed: () => Navigator.of(context).pop(true),
               ),
             ),

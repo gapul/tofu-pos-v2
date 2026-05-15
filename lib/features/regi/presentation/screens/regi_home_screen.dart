@@ -134,7 +134,7 @@ class _StartButton extends StatelessWidget {
     return TofuButton(
       label: '次のお客様',
       icon: Icons.arrow_forward,
-      size: TofuButtonSize.primary,
+      size: TofuButtonSize.lg,
       fullWidth: true,
       onPressed: () {
         ref.read(checkoutSessionProvider.notifier).reset();

@@ -121,7 +121,7 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
                   TofuButton(
                     label: 'はじめる',
                     icon: Icons.check_circle,
-                    size: TofuButtonSize.primary,
+                    size: TofuButtonSize.lg,
                     fullWidth: true,
                     loading: _saving,
                     onPressed: (_selected == null || _saving) ? null : _submit,

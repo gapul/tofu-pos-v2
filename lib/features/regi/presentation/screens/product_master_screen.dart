@@ -344,7 +344,7 @@ class _ProductEditorState extends State<_ProductEditor> {
                 children: <Widget>[
                   TofuButton(
                     label: 'キャンセル',
-                    variant: TofuButtonVariant.outlined,
+                    variant: TofuButtonVariant.secondary,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   const SizedBox(width: TofuTokens.adjacentSpacing),

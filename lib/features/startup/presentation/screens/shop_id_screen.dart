@@ -108,7 +108,7 @@ class _ShopIdScreenState extends ConsumerState<ShopIdScreen> {
                   TofuButton(
                     label: '次へ',
                     icon: Icons.arrow_forward,
-                    size: TofuButtonSize.primary,
+                    size: TofuButtonSize.lg,
                     fullWidth: true,
                     loading: _saving,
                     onPressed: _saving ? null : _submit,

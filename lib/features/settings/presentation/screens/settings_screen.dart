@@ -118,7 +118,7 @@ class _DeviceSection extends ConsumerWidget {
                 TofuButton(
                   label: '初期設定をやり直す',
                   icon: Icons.refresh,
-                  variant: TofuButtonVariant.outlined,
+                  variant: TofuButtonVariant.secondary,
                   onPressed: () => context.push('/setup/shop'),
                 ),
               ],
@@ -367,7 +367,7 @@ class _ExportSectionState extends ConsumerState<_ExportSection> {
         TofuButton(
           label: 'CSVを書き出す',
           icon: Icons.file_download,
-          variant: TofuButtonVariant.outlined,
+          variant: TofuButtonVariant.secondary,
           loading: _busy,
           onPressed: _busy ? null : _export,
         ),
@@ -451,7 +451,7 @@ class _DevToolsSection extends StatelessWidget {
         TofuButton(
           label: 'DevConsole を開く',
           icon: Icons.code,
-          variant: TofuButtonVariant.outlined,
+          variant: TofuButtonVariant.secondary,
           onPressed: () => context.push('/dev'),
         ),
       ],

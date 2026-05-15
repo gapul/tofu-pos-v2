@@ -99,7 +99,7 @@ class TofuConfirmDialog extends StatelessWidget {
                     autofocus: true,
                     child: TofuButton(
                       label: cancelLabel,
-                      variant: TofuButtonVariant.outlined,
+                      variant: TofuButtonVariant.secondary,
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
                   ),

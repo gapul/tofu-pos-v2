@@ -618,7 +618,7 @@ class _RightActions extends StatelessWidget {
           TofuButton(
             label: '会計確定',
             icon: Icons.check_circle,
-            size: TofuButtonSize.primary,
+            size: TofuButtonSize.lg,
             fullWidth: true,
             loading: confirming,
             onPressed: (insufficient || session.items.isEmpty || confirming)

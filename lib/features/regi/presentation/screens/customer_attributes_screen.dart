@@ -96,7 +96,7 @@ class CustomerAttributesScreen extends ConsumerWidget {
                       child: TofuButton(
                         label: '次へ',
                         icon: Icons.arrow_forward,
-                        size: TofuButtonSize.primary,
+                        size: TofuButtonSize.lg,
                         onPressed: () => context.go('/regi/products'),
                       ),
                     ),

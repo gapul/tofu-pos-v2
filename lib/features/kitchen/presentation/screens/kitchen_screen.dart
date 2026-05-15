@@ -468,7 +468,7 @@ class _OrderCard extends StatelessWidget {
               child: TofuButton(
                 label: '提供完了',
                 icon: Icons.done_all,
-                size: TofuButtonSize.primary,
+                size: TofuButtonSize.lg,
                 fullWidth: true,
                 onPressed: () => onAction!(order.orderId),
               ),

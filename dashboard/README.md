@@ -1,92 +1,110 @@
-# Tofu POS Dashboard（暫定 UI）
+# Tofu POS Dashboard (SvelteKit)
 
-仕様書 §8.5 で定義する「Web 管理ページ」。読み取り専用で売上を集計表示する。
+仕様書 §8.5 で定義する「Web 管理ページ」。読み取り専用で売上を集計表示し、
+Tester タブでテレメトリイベントをリアルタイム表示する。
 
-> **位置づけ**: 現状の `index.html` は **動作確認用の暫定 UI** です（POS 本体の DevConsole 相当）。
-> 本番 UI は Figma でデザイン確定後に差し替えます。仕様（指標・期間フィルタ・接続情報の扱い）はそのまま継続します。
+- フレームワーク: **SvelteKit (Svelte 5 / Runes API)**
+- ビルド: `@sveltejs/adapter-static` → 静的 SPA（CF Pages 互換）
+- スタイル: Tailwind CSS + PostCSS
+- データ: `@supabase/supabase-js` v2（Realtime 含む）
+- グラフ: Chart.js
+- パッケージマネージャ: **pnpm**
 
-## 構成
+> **位置づけ**: 動作確認用の暫定 UI（POS 本体の DevConsole 相当）。
+> 本番 UI は Figma でデザイン確定後に差し替え予定。仕様（指標・期間フィルタ・接続情報の扱い）はそのまま継続。
 
-| ファイル | 内容 |
+## ローカル開発
+
+```sh
+cd dashboard
+pnpm install
+pnpm dev        # http://localhost:5173
+```
+
+主要スクリプト:
+
+| コマンド | 内容 |
 |---|---|
-| `index.html` | エントリ。Tailwind / Supabase JS / Chart.js を CDN から読む |
-| `app.js` | データ取得・集計・描画（ESM モジュール） |
-| `styles.css` | 補助スタイル |
+| `pnpm dev` | Vite dev サーバ（HMR） |
+| `pnpm build` | `build/` に静的サイトを生成 |
+| `pnpm preview` | `build/` をローカル配信して動作確認 |
+| `pnpm check` | `svelte-check` で型チェック |
 
-ビルドステップなし。Supabase JS と Chart.js は `index.html` の importmap で `esm.sh` から取得します。
+ブラウザで開いたら **⚙ 設定** から Supabase の URL と anon キーを保存
+（localStorage に保存される）。店舗 ID は設定モーダル、または URL クエリ
+`?shop=yakisoba_A` で指定できる。
 
-## 使い方
+## ディレクトリ構成
 
-1. 任意の静的サーバーで `dashboard/` を配信:
-   ```bash
-   cd dashboard
-   python3 -m http.server 8787
-   # → http://localhost:8787
-   ```
-2. ブラウザで開いたら **⚙ 設定** から Supabase の URL と anon キーを保存（localStorage に保存される）。
-3. 店舗ID を入力して **適用**。
-
-クエリで店舗を上書き:
 ```
-http://localhost:8787/?shop=yakisoba_A
+dashboard/
+├── src/
+│   ├── app.html / app.css / app.d.ts
+│   ├── lib/
+│   │   ├── supabase.ts          # Supabase クライアント (derived store)
+│   │   ├── time.ts              # JST 時刻ヘルパ
+│   │   ├── sales.ts             # order_lines 取得 + 集計
+│   │   ├── stores/
+│   │   │   ├── settings.ts      # localStorage 永続化
+│   │   │   └── realtime.ts      # telemetry_events 購読
+│   │   └── components/
+│   │       ├── ConnSettings.svelte
+│   │       ├── KpiCard.svelte
+│   │       ├── HourlyChart.svelte
+│   │       ├── CategoryChart.svelte
+│   │       ├── ProductRanking.svelte
+│   │       ├── AttrBreakdown.svelte
+│   │       └── EventStream.svelte
+│   └── routes/
+│       ├── +layout.{ts,svelte}
+│       ├── +page.svelte         # 売上タブ
+│       └── tester/+page.svelte  # Tester タブ
+├── static/
+│   └── _headers                 # CF Pages 向けヘッダ
+├── svelte.config.js
+├── vite.config.ts
+├── tailwind.config.js / postcss.config.js
+└── tsconfig.json
 ```
 
-## デプロイ
+## 機能
 
-`dashboard/` をそのまま静的ホスティング（GitHub Pages / Cloudflare Pages / Supabase Static Hosting 等）にアップロードすれば動きます。secret はリポジトリに含めず、ブラウザの localStorage に閲覧者が入力します。
+### 📈 売上タブ (`/`)
 
-### Cloudflare Pages
-
-2 通りどちらでも動きます。
-
-**A. CF Dashboard 経由でリポジトリ連携（推奨・GUI のみ）**
-
-1. <https://dash.cloudflare.com/> → Workers & Pages → Create → Pages → Connect to Git
-2. このリポジトリを選択。Production branch = `main`
-3. Build settings:
-   - Framework preset: **None**
-   - Build command: 空欄
-   - Build output directory: **`dashboard`**
-4. Save and Deploy。`https://tofu-pos-dashboard.pages.dev`（プロジェクト名により変動）で公開される。
-5. カスタムドメインが必要なら **Custom domains** から DNS CNAME を設定。
-
-**B. GitHub Actions 経由（CI で自動デプロイ）**
-
-`.github/workflows/cf-pages-dashboard.yml` が `main` ブランチへの `dashboard/**` 変更で発火する。事前に GitHub Secrets を 2 つ設定:
-
-- `CLOUDFLARE_API_TOKEN` — CF Dashboard → My Profile → API Tokens → Create で「Account / Cloudflare Pages / Edit」権限を付与
-- `CLOUDFLARE_ACCOUNT_ID` — CF Dashboard 右サイドバー or Workers のアカウント概要から確認
-
-プロジェクト名は `tofu-pos-dashboard`。別名にする場合はワークフローの `--project-name` を書き換える。
-
-### セキュリティヘッダ
-
-`dashboard/_headers` で Cloudflare Pages のレスポンスヘッダを設定している（XFO/Referrer-Policy 等）。CSP は CDN（tailwind / esm.sh）と Supabase の wss 接続があるため緩めにも書きづらく、現時点では未設定。将来の改修課題。
-
-## タブ構成
-
-### 📈 売上タブ
-
-仕様書 §8.5 参照。
+仕様書 §8.5。データソース: `public.order_lines`
 
 - 売上合計（取消除く・按分割引差し引き後）
 - 注文件数 / 取消件数 / 平均客単価 / 取消率
 - 時間帯別売上（棒グラフ）
 - 商品別ランキング（数量 + 売上、上位10）
 - 顧客属性内訳（年代 / 性別 / 客層）
+- 期間フィルタ: 本日 / 前日 / 直近7日 / 任意
 
-期間フィルタ: 本日 / 前日 / 直近7日 / 任意。
+### 🧪 Tester タブ (`/tester/`)
 
-### 🧪 Tester タブ（リアルタイム）
+実機テスト中の telemetry をライブ表示。データソース: `public.telemetry_events`
++ Supabase Realtime (`postgres_changes`)。
 
-実機テスト中、各端末から流れてくるテレメトリイベントをライブ表示します。仕様書 §11 / [`docs/MANUAL_TEST_RUNBOOK.md`](../docs/MANUAL_TEST_RUNBOOK.md) と対になる機能。
+- ライブステータス（直近1分 / 直近1時間エラー / アクティブ端末 / 最終受信）
+- エラー専用ストリーム
+- 全イベントストリーム（kind / device で検索、レベル絞り込み）
+- イベント種別 × 端末の集計表
 
-- **ライブステータス**: 直近1分のイベント数 / 直近1時間のエラー / アクティブ端末数 / 最終受信時刻
-- **エラーストリーム**: `level=error` のイベントだけを赤背景で抜粋表示
-- **イベントストリーム**: 全イベントの時系列ログ（kind / 端末 / 検索 / レベル絞り込み付き）
-- **イベント種別 × 端末**: kind ごとの発生数を端末別に集計（多端末で何がどこから来ているかが一目でわかる）
+## Cloudflare Pages デプロイ
 
-データソースは Supabase の `public.telemetry_events` テーブル（`supabase/migrations/0002_telemetry.sql`）。Supabase Realtime の `postgres_changes` でこの shop_id の INSERT を購読します。
+`.github/workflows/cf-pages-dashboard.yml` が `dashboard/**` の変更を検知し、
+`pnpm install && pnpm build` を実行してから `dashboard/build/` を
+`wrangler pages deploy` で公開する。
+
+必要な GitHub Secrets:
+
+- `CLOUDFLARE_API_TOKEN` — Account / Cloudflare Pages / Edit 権限
+- `CLOUDFLARE_ACCOUNT_ID`
+
+CF Pages プロジェクト名: `tofu-pos-dashboard`
+
+`static/_headers` は adapter-static が `build/` 直下にコピーするので、
+そのまま Cloudflare Pages のレスポンスヘッダとして効く。
 
 ## データソース
 
@@ -95,4 +113,10 @@ http://localhost:8787/?shop=yakisoba_A
 | 📈 売上 | `public.order_lines` | `supabase/migrations/0001_initial.sql` |
 | 🧪 Tester | `public.telemetry_events` | `supabase/migrations/0002_telemetry.sql` |
 
-RLS の `anon read` ポリシーに乗ります。**現状は anon キー＋公開 RLS のため、URL とキーを知る人が閲覧できる前提**です。
+RLS の `anon read` ポリシーに乗る。**現状は anon キー＋公開 RLS のため、
+URL とキーを知る人が閲覧できる前提**。
+
+## 不可侵範囲
+
+このプロジェクトは Flutter 側 (`lib/`, `ios/`, `android/`, `pubspec.yaml` 等) や
+`supabase/migrations/` に依存せず、これらのファイルを変更しない。

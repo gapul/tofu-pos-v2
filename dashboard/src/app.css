@@ -1,25 +1,13 @@
-/* Tailwind の補助。最小限。 */
-canvas {
-  max-height: 100%;
-}
-
-/* タブの選択状態 */
-.tab-btn.active {
-  background-color: white;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-.tab-btn:not(.active):not(:first-child),
-.tab-btn:not(.active):not(:last-child) {
-  background-color: transparent;
-  box-shadow: none;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ライブインジケータの呼吸 */
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
-#live-dot.live {
+.live-dot.live {
   background-color: #10b981;
   animation: pulse-soft 1.6s ease-in-out infinite;
 }
@@ -32,10 +20,10 @@ canvas {
   padding: 0.25rem 0;
   border-top: 1px solid #f1f5f9;
 }
-.ev-row:first-child {
-  border-top: none;
-}
+.ev-row:first-child { border-top: none; }
 .ev-level-info { color: #475569; }
 .ev-level-warn { color: #b45309; }
 .ev-level-error { color: #be123c; font-weight: 600; }
 .ev-level-debug { color: #94a3b8; }
+
+canvas { max-height: 100%; }

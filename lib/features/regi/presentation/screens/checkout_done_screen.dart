@@ -116,7 +116,7 @@ class _CheckoutDoneScreenState extends ConsumerState<CheckoutDoneScreen> {
                   TofuButton(
                     label: '次のお客様へ',
                     icon: Icons.arrow_forward,
-                    size: TofuButtonSize.primary,
+                    size: TofuButtonSize.lg,
                     fullWidth: true,
                     onPressed: () => context.go('/'),
                   ),
