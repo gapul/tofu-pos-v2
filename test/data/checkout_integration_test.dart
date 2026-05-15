@@ -107,9 +107,7 @@ void main() {
       CashDrawer(<Denomination, int>{const Denomination(100): 5}),
     );
 
-    const FeatureFlags flags = FeatureFlags(
-      
-    );
+    const FeatureFlags flags = FeatureFlags();
     const Map<int, int> cashDelta = <int, int>{1000: 1, 100: -2};
 
     final Order placed = await checkout.execute(

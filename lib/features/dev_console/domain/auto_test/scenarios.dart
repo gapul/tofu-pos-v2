@@ -161,9 +161,7 @@ Future<ScenarioResult> _runCancelRollback(ScenarioContext ctx) async {
   await ctx.cashRepo.replace(
     CashDrawer(<Denomination, int>{const Denomination(100): 5}),
   );
-  const FeatureFlags flags = FeatureFlags(
-    
-  );
+  const FeatureFlags flags = FeatureFlags();
   const Map<int, int> delta = <int, int>{1000: 1, 100: -2};
   final Order saved = await ctx.checkout.execute(
     draft: _draft(p, qty: 2, cashDelta: delta, receivedCash: const Money(1000)),

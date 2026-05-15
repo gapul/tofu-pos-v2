@@ -308,7 +308,8 @@ class _CashFloatSheetState extends ConsumerState<_CashFloatSheet> {
   );
 
   Future<void> _save() async {
-    final bool ok = await showDialog<bool>(
+    final bool ok =
+        await showDialog<bool>(
           context: context,
           builder: (c) => AlertDialog(
             title: const Text('現金準備金を上書き登録'),
@@ -333,8 +334,7 @@ class _CashFloatSheetState extends ConsumerState<_CashFloatSheet> {
     setState(() => _saving = true);
     try {
       final CashDrawer drawer = CashDrawer(<Denomination, int>{
-        for (final Denomination d in Denomination.all)
-          d: _counts[d.yen] ?? 0,
+        for (final Denomination d in Denomination.all) d: _counts[d.yen] ?? 0,
       });
       await ref.read(cashDrawerRepositoryProvider).replace(drawer);
       if (!mounted) return;
@@ -402,7 +402,9 @@ class _CashFloatSheetState extends ConsumerState<_CashFloatSheet> {
                             SizedBox(
                               width: 96,
                               child: Text(
-                                TofuFormat.yenInt(d.yen * (_counts[d.yen] ?? 0)),
+                                TofuFormat.yenInt(
+                                  d.yen * (_counts[d.yen] ?? 0),
+                                ),
                                 style: TofuTextStyles.bodyMd.copyWith(
                                   color: TofuTokens.textTertiary,
                                 ),
