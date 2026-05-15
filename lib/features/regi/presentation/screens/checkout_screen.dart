@@ -779,7 +779,7 @@ class _RightPane extends StatelessWidget {
           ] else ...<Widget>[
             const SizedBox(height: TofuTokens.space5),
           ],
-          const Spacer(),
+          const SizedBox(height: TofuTokens.space7),
           TofuButton(
             label: confirmLabel,
             icon: Icons.check_circle,
