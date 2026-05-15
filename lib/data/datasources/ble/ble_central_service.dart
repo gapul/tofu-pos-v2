@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../../../core/logging/app_logger.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../../../core/transport/transport_event.dart';
 import 'ble_protocol.dart';
 import 'ble_uuids.dart';
@@ -56,11 +57,28 @@ class BleCentralService {
     }
 
     _scanSub = FlutterBluePlus.scanResults.listen(_onScanResults);
-    await FlutterBluePlus.startScan(
-      withServices: services,
-      timeout: _scanTimeout,
-      continuousUpdates: true,
-    );
+    try {
+      await FlutterBluePlus.startScan(
+        withServices: services,
+        timeout: _scanTimeout,
+        continuousUpdates: true,
+      );
+      Telemetry.instance.event(
+        'ble.central.scan_started',
+        attrs: <String, Object?>{
+          'shop': shopId,
+          'services': services.map((g) => g.str).toList(),
+        },
+      );
+    } catch (e, st) {
+      Telemetry.instance.error(
+        'ble.central.scan_failed',
+        error: e,
+        stackTrace: st,
+        attrs: <String, Object?>{'shop': shopId},
+      );
+      rethrow;
+    }
     AppLogger.event(
       'ble',
       'scan_started',
@@ -118,10 +136,28 @@ class BleCentralService {
       // peripheral 側が Service Data で shopId を載せる前提。
       // 実装簡略化のため、advName に shopId が含まれているかチェックする実装に。
       final String advName = r.advertisementData.advName;
+      // 観測のため未マッチも 1 度だけ telemetry に出す。
+      Telemetry.instance.event(
+        'ble.central.scan_result',
+        attrs: <String, Object?>{
+          'shop': shopId,
+          'remote_id': id,
+          'adv_name': advName,
+          'matches': advName.contains(shopId),
+        },
+      );
       if (!advName.contains(shopId)) {
         continue;
       }
       _peers[id] = _ConnectedPeer(this, r.device);
+      Telemetry.instance.event(
+        'ble.central.peer_found',
+        attrs: <String, Object?>{
+          'shop': shopId,
+          'remote_id': id,
+          'adv_name': advName,
+        },
+      );
       unawaited(_peers[id]!.connect());
     }
   }

@@ -8,6 +8,7 @@ import 'package:bluetooth_low_energy/bluetooth_low_energy.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/logging/app_logger.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../../../core/transport/transport_event.dart';
 import 'ble_protocol.dart';
 import 'ble_uuids.dart';
@@ -61,6 +62,8 @@ class BlePeripheralService {
     }
     if (kIsWeb) {
       AppLogger.w('BlePeripheral: not supported on web');
+      Telemetry.instance.warn('ble.peripheral.skip',
+          attrs: <String, Object?>{'reason': 'web'});
       return;
     }
 
@@ -71,32 +74,61 @@ class BlePeripheralService {
       // iOS/macOS は UnsupportedError を投げるが致命ではない
     }
 
+    Telemetry.instance.event(
+      'ble.peripheral.power_state',
+      attrs: <String, Object?>{'state': _manager.state.toString()},
+    );
+
     if (_manager.state != BluetoothLowEnergyState.poweredOn) {
       AppLogger.w(
         'BlePeripheral: BLE not powered on (state=${_manager.state})',
       );
+      Telemetry.instance.warn(
+        'ble.peripheral.not_powered',
+        attrs: <String, Object?>{'state': _manager.state.toString()},
+      );
       return;
     }
 
-    _buildService();
-    await _manager.addService(_service!);
+    try {
+      _buildService();
+      await _manager.addService(_service!);
 
-    _writeSub = _manager.characteristicWriteRequested.listen(_onWriteRequest);
-    _notifySub = _manager.characteristicNotifyStateChanged.listen(
-      _onNotifyStateChanged,
-    );
+      _writeSub =
+          _manager.characteristicWriteRequested.listen(_onWriteRequest);
+      _notifySub = _manager.characteristicNotifyStateChanged.listen(
+        _onNotifyStateChanged,
+      );
 
-    final UUID serviceUuid = _service!.uuid;
-    await _manager.startAdvertising(
-      Advertisement(
-        name: 'tofu-pos:$role:$shopId',
-        serviceUUIDs: <UUID>[serviceUuid],
-      ),
-    );
+      final UUID serviceUuid = _service!.uuid;
+      await _manager.startAdvertising(
+        Advertisement(
+          name: 'tofu-pos:$role:$shopId',
+          serviceUUIDs: <UUID>[serviceUuid],
+        ),
+      );
 
-    _started = true;
+      _started = true;
+      Telemetry.instance.event(
+        'ble.peripheral.started',
+        attrs: <String, Object?>{
+          'role': role,
+          'shop': shopId,
+          'service_uuid': serviceUuid.toString(),
+          'adv_name': 'tofu-pos:$role:$shopId',
+        },
+      );
+    } catch (e, st) {
+      Telemetry.instance.error(
+        'ble.peripheral.start_failed',
+        error: e,
+        stackTrace: st,
+        attrs: <String, Object?>{'role': role, 'shop': shopId},
+      );
+      rethrow;
+    }
     AppLogger.i(
-      'BlePeripheral started: role=$role shopId=$shopId service=$serviceUuid',
+      'BlePeripheral started: role=$role shopId=$shopId service=${_service!.uuid}',
     );
   }
 
