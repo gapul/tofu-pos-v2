@@ -83,6 +83,15 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
       backgroundColor: TofuTokens.bgCanvas,
       appBar: AppHeader(
         title: '呼び出し',
+        // /regi/calling から push されたときだけ戻るボタンを出す。
+        // 呼び出し役の役割ホームとして開いているときは戻り先がないので非表示。
+        leading: context.canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: context.pop,
+                tooltip: '戻る',
+              )
+            : null,
         actions: <Widget>[
           IconButton(
             tooltip: '設定',
