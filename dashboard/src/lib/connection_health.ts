@@ -31,19 +31,26 @@ export function validateFormat(s: Settings): HealthStatus {
       detail: `URL の形式が不正です: "${url}" (期待: https://xxxx.supabase.co)`,
     };
   }
+  // secret key は絶対にフロントに置かない
   if (SB_SECRET_RE.test(key)) {
     return {
       kind: 'invalid_key',
       detail:
-        'secret key (sb_secret_*) が登録されています。フロントエンドには絶対に置かないでください。Project Settings → API → "Publishable" 側のキーを使ってください。',
+        'secret key (sb_secret_*) が登録されています。フロントエンドには絶対に置かないでください。Project Settings → API → Publishable 側のキーを使ってください。',
     };
   }
-  if (!JWT_RE.test(key) && !SB_PUBLISHABLE_RE.test(key)) {
+  // 明らかにおかしい長さ (< 20 字) のみ拒否。形式判定の本質は API 側の認証に任せる。
+  if (key.length < 20) {
     return {
       kind: 'invalid_key',
-      detail:
-        'anon key の形式が不正です (期待: 旧 JWT "eyJ...xxx.yyy.zzz" または新 "sb_publishable_xxxxx")',
+      detail: `anon key が短すぎます (${key.length} 字)。Supabase ダッシュボードからコピーしなおしてください。`,
     };
+  }
+  // 既知形式以外でも通すが、見慣れない形式の場合は console に注意を残す
+  if (!JWT_RE.test(key) && !SB_PUBLISHABLE_RE.test(key)) {
+    console.warn(
+      `[connection_health] 既知形式 (eyJ.../sb_publishable_*) に合致しない anon key です。長さ=${key.length}、先頭=${key.slice(0, 8)}... API 側で認証検証されます。`,
+    );
   }
   return { kind: 'ok' };
 }
