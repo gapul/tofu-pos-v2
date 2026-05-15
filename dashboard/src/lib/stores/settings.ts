@@ -11,40 +11,59 @@ export interface Settings {
   shop: string;
 }
 
-// SvelteKit では Vite 直接の import.meta.env からは PUBLIC_* を取れないため
-// 必ず $env/static/public 経由で読む (ビルド時に静的置換)。
-const ENV_URL = env.PUBLIC_SUPABASE_URL ?? '';
-const ENV_KEY = env.PUBLIC_SUPABASE_ANON_KEY ?? '';
+// env は SvelteKit が _app/env.js を非同期ロードして globalThis に流し込む。
+// モジュール初期化時には未注入の可能性があるため、必ず関数内で都度読む。
+// 関数経由ならバンドラが値を固定化せず、アクセス毎に最新を取れる。
+function readEnv(): { url: string; key: string } {
+  return {
+    url: (env.PUBLIC_SUPABASE_URL ?? '') as string,
+    key: (env.PUBLIC_SUPABASE_ANON_KEY ?? '') as string,
+  };
+}
 
-const defaults: Settings = { url: ENV_URL, key: ENV_KEY, shop: '' };
+export function hasEnvConnection(): boolean {
+  const { url, key } = readEnv();
+  return Boolean(url && key);
+}
 
 function load(): Settings {
-  if (!browser) return { ...defaults };
+  const e = readEnv();
+  if (!browser) return { url: e.url, key: e.key, shop: '' };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const stored = raw ? JSON.parse(raw) : {};
-    // env で URL/key が指定されていれば常にそれを優先 (デプロイ環境の安定化)
     const base: Settings = {
-      url: ENV_URL || stored.url || '',
-      key: ENV_KEY || stored.key || '',
+      url: e.url || stored.url || '',
+      key: e.key || stored.key || '',
       shop: stored.shop ?? '',
     };
-    // ?shop=xxx で上書き可能
-    const params = new URLSearchParams(location.search);
-    const qShop = params.get('shop');
+    const qShop = new URLSearchParams(location.search).get('shop');
     if (qShop) base.shop = qShop;
     return base;
   } catch {
-    return { ...defaults };
+    return { url: e.url, key: e.key, shop: '' };
   }
 }
 
-export const hasEnvConnection = Boolean(ENV_URL && ENV_KEY);
-
 export const settings = writable<Settings>(load());
+
+// env のロードがモジュール初期化より遅いケースに備えて、env を再読し
+// 値が手に入ったら store を上書きする。
+export function refreshFromEnv(): void {
+  if (!browser) return;
+  const e = readEnv();
+  if (!e.url || !e.key) return;
+  settings.update((s) => ({
+    ...s,
+    url: e.url,
+    key: e.key,
+  }));
+}
 
 if (browser) {
   settings.subscribe((s) => {
+    // url/key/shop のいずれも空なら書き込まない (初期化レースで空書きするのを防ぐ)
+    if (!s.url && !s.key && !s.shop) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
     } catch {
@@ -55,7 +74,8 @@ if (browser) {
 
 export function clearSettings() {
   if (browser) localStorage.removeItem(STORAGE_KEY);
-  settings.set({ ...defaults });
+  const e = readEnv();
+  settings.set({ url: e.url, key: e.key, shop: '' });
 }
 
 export function hasConnection(s: Settings = get(settings)): boolean {
