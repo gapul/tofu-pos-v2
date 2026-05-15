@@ -3,16 +3,21 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/format.dart';
-import '../../../../core/ui/num_stepper.dart';
-import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/order_item.dart';
 import '../../../../domain/entities/product.dart';
 import '../notifiers/checkout_session.dart';
 
-/// カートパネル（仕様書 §9.2）。
+/// カートパネル（仕様書 §9.2 / Figma `03-Register-Products` → `Cart`）。
 ///
-/// - カート行の数量はフォントを大きく取り、誤入力に気付ける大きさで表示。
-/// - 数量変更時は対象行をハイライト（recentlyChangedId と一致する行）。
+/// Figma 構造 (`46:23`, 384x687):
+/// - ヘッダ (`47:62`, 88h): 「カート」H4 + 右側に「直前取消」テキストリンク
+///   と「クリア」ボタン。
+/// - リスト (`47:66`): `CartRow` (`商品名 / × N / 価格`) を縦に並べる。
+/// - フッタ (`47:79`, 188h): 「合計」caption + 大きな数字 + 「会計へ進む →」
+///   プライマリ大ボタン。
+///
+/// `notifier.undoLast()` は末尾エントリを 1 件分ロールバックする純粋な
+/// state 操作（[CheckoutSessionNotifier.undoLast] を参照）。
 class CartPanel extends StatelessWidget {
   const CartPanel({
     required this.session,
@@ -31,17 +36,9 @@ class CartPanel extends StatelessWidget {
   final String? recentlyChangedId;
   final VoidCallback onCheckout;
 
-  Product? _findProduct(String id) {
-    for (final Product p in products) {
-      if (p.id == id) {
-        return p;
-      }
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
+    final bool hasItems = session.items.isNotEmpty;
     return Container(
       decoration: const BoxDecoration(
         color: TofuTokens.bgCanvas,
@@ -49,57 +46,29 @@ class CartPanel extends StatelessWidget {
       ),
       child: Column(
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: TofuTokens.space5,
-              vertical: TofuTokens.space5,
-            ),
-            child: Row(
-              children: <Widget>[
-                const Text('カート', style: TofuTextStyles.h4),
-                const Spacer(),
-                if (session.items.isNotEmpty)
-                  TofuButton(
-                    label: '全削除',
-                    icon: Icons.delete_sweep,
-                    lordicon: 'trash',
-                    variant: TofuButtonVariant.ghost,
-                    onPressed: notifier.clearItems,
-                  ),
-              ],
-            ),
+          _CartHeader(
+            hasItems: hasItems,
+            onUndo: notifier.undoLast,
+            onClear: notifier.clearItems,
           ),
-          const Divider(height: 1),
+          const Divider(height: 1, color: TofuTokens.borderSubtle),
           Expanded(
-            child: session.items.isEmpty
-                ? const _EmptyCart()
-                : ListView.separated(
+            child: hasItems
+                ? ListView.separated(
                     padding: const EdgeInsets.symmetric(
-                      vertical: TofuTokens.space3,
+                      vertical: TofuTokens.space2,
                     ),
                     itemCount: session.items.length,
                     separatorBuilder: (_, _) => const Divider(
-                      height: TofuTokens.space2,
+                      height: 1,
                       color: TofuTokens.borderSubtle,
                     ),
                     itemBuilder: (c, i) {
                       final OrderItem it = session.items[i];
-                      // ValueKey でアイテム単位の identity を固定し、
-                      // 追加された行のみ fadeIn + slideX が走るようにする。
                       return _CartRow(
                         key: ValueKey<String>('cart-row-${it.productId}'),
                         item: it,
-                        product: _findProduct(it.productId),
-                        stockEnabled: stockEnabled,
                         highlighted: recentlyChangedId == it.productId,
-                        onChanged: (q) => notifier.setQuantity(
-                          it.productId,
-                          q,
-                          maxStock: stockEnabled
-                              ? _findProduct(it.productId)?.stock
-                              : null,
-                        ),
-                        onRemove: () => notifier.removeProduct(it.productId),
                       ).animate().fadeIn(
                         duration: TofuTokens.motionShort,
                       ).slideX(
@@ -109,47 +78,83 @@ class CartPanel extends StatelessWidget {
                         curve: Curves.easeOutCubic,
                       );
                     },
-                  ),
+                  )
+                : const _EmptyCart(),
           ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(TofuTokens.space5),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                _Summary(
-                  label: '点数',
-                  value:
-                      '${session.items.fold<int>(0, (s, it) => s + it.quantity)} 点',
-                ),
-                const SizedBox(height: TofuTokens.space3),
-                _Summary(
-                  label: '小計',
-                  value: TofuFormat.yen(session.totalPrice),
-                  large: true,
-                ),
-                const SizedBox(height: TofuTokens.space5),
-                FilledButton.icon(
-                  onPressed: session.items.isEmpty ? null : onCheckout,
-                  icon: const Icon(Icons.point_of_sale),
-                  label: const Text('会計へ進む'),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(
-                      double.infinity,
-                      TofuTokens.touchPrimary,
-                    ),
-                    backgroundColor: TofuTokens.brandPrimary,
-                    foregroundColor: TofuTokens.brandOnPrimary,
-                    textStyle: TofuTextStyles.bodyLgBold,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          const Divider(height: 1, color: TofuTokens.borderSubtle),
+          _CartFooter(
+            total: TofuFormat.yen(session.totalPrice),
+            enabled: hasItems,
+            onCheckout: onCheckout,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// カートヘッダ。Figma `47:62` を踏襲（カート + 直前取消 link + クリア link）。
+class _CartHeader extends StatelessWidget {
+  const _CartHeader({
+    required this.hasItems,
+    required this.onUndo,
+    required this.onClear,
+  });
+
+  final bool hasItems;
+  final VoidCallback onUndo;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: TofuTokens.space5,
+        vertical: TofuTokens.space5,
+      ),
+      child: Row(
+        children: <Widget>[
+          const Text('カート', style: TofuTextStyles.h4),
+          const Spacer(),
+          _TextLink(
+            label: '直前取消',
+            onPressed: hasItems ? onUndo : null,
+          ),
+          const SizedBox(width: TofuTokens.space5),
+          _TextLink(
+            label: 'クリア',
+            onPressed: hasItems ? onClear : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Figma の「直前取消 / クリア」（テキストリンク見た目）。
+class _TextLink extends StatelessWidget {
+  const _TextLink({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = onPressed == null
+        ? TofuTokens.textDisabled
+        : TofuTokens.textLink;
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(TofuTokens.radiusSm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: TofuTokens.space2,
+          vertical: TofuTokens.space2,
+        ),
+        child: Text(
+          label,
+          style: TofuTextStyles.bodyMdBold.copyWith(color: color),
+        ),
       ),
     );
   }
@@ -182,23 +187,17 @@ class _EmptyCart extends StatelessWidget {
   }
 }
 
+/// Figma `CartRow` (`426:481` 等) を踏襲。
+/// 3 列: `商品名` / `× N` / `金額(小計)`。
 class _CartRow extends StatelessWidget {
   const _CartRow({
     required this.item,
-    required this.product,
-    required this.stockEnabled,
     required this.highlighted,
-    required this.onChanged,
-    required this.onRemove,
     super.key,
   });
 
   final OrderItem item;
-  final Product? product;
-  final bool stockEnabled;
   final bool highlighted;
-  final ValueChanged<int> onChanged;
-  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -212,44 +211,27 @@ class _CartRow extends StatelessWidget {
       child: Row(
         children: <Widget>[
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  item.productName,
-                  style: TofuTextStyles.bodyLgBold,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${TofuFormat.yen(item.priceAtTime)} × ${item.quantity}',
-                  style: TofuTextStyles.bodySm.copyWith(
-                    color: TofuTokens.textTertiary,
-                  ),
-                ),
-                const SizedBox(height: TofuTokens.space2),
-                Text(
-                  TofuFormat.yen(item.subtotal),
-                  style: TofuTextStyles.numberMd,
-                ),
-              ],
+            child: Text(
+              item.productName,
+              style: TofuTextStyles.bodyLgBold,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          TofuNumStepper(
-            value: item.quantity,
-            onChanged: onChanged,
-            min: 1,
-            max: stockEnabled
-                ? (product?.stock ?? item.quantity).clamp(1, 9999)
-                : 99,
-            size: TofuNumStepperSize.sm,
+          const SizedBox(width: TofuTokens.space3),
+          SizedBox(
+            width: 48,
+            child: Text(
+              '× ${item.quantity}',
+              style: TofuTextStyles.numberMd.copyWith(
+                color: TofuTokens.textTertiary,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
           const SizedBox(width: TofuTokens.space3),
-          IconButton(
-            tooltip: '削除',
-            icon: const Icon(Icons.close, size: 20),
-            color: TofuTokens.textTertiary,
-            onPressed: onRemove,
+          Text(
+            TofuFormat.yen(item.subtotal),
+            style: TofuTextStyles.numberMd,
           ),
         ],
       ),
@@ -257,30 +239,71 @@ class _CartRow extends StatelessWidget {
   }
 }
 
-class _Summary extends StatelessWidget {
-  const _Summary({
-    required this.label,
-    required this.value,
-    this.large = false,
+/// Figma `47:79` (合計 + 会計へ進む)。
+class _CartFooter extends StatelessWidget {
+  const _CartFooter({
+    required this.total,
+    required this.enabled,
+    required this.onCheckout,
   });
-  final String label;
-  final String value;
-  final bool large;
+
+  final String total;
+  final bool enabled;
+  final VoidCallback onCheckout;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Text(
-          label,
-          style: TofuTextStyles.bodyMd.copyWith(color: TofuTokens.textTertiary),
-        ),
-        const Spacer(),
-        Text(
-          value,
-          style: large ? TofuTextStyles.h2 : TofuTextStyles.bodyLgBold,
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        TofuTokens.space5,
+        TofuTokens.space5,
+        TofuTokens.space5,
+        TofuTokens.space5,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  '合計',
+                  style: TofuTextStyles.caption.copyWith(
+                    color: TofuTokens.textTertiary,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                total,
+                style: TofuTextStyles.h1,
+              ),
+            ],
+          ),
+          const SizedBox(height: TofuTokens.space5),
+          FilledButton.icon(
+            onPressed: enabled ? onCheckout : null,
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('会計へ進む'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(
+                double.infinity,
+                TofuTokens.touchPrimary,
+              ),
+              backgroundColor: TofuTokens.brandPrimary,
+              foregroundColor: TofuTokens.brandOnPrimary,
+              disabledBackgroundColor: TofuTokens.gray200,
+              disabledForegroundColor: TofuTokens.textDisabled,
+              textStyle: TofuTextStyles.bodyLgBold,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

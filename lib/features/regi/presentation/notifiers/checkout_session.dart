@@ -131,6 +131,32 @@ class CheckoutSessionNotifier extends Notifier<CheckoutSession> {
     state = state.copyWith(items: next);
   }
 
+  /// 直前の追加操作を 1 件分だけ巻き戻す（Figma `03-Register-Products` の
+   /// カートヘッダ「直前取消」リンクから呼ぶ）。
+   ///
+   /// 仕様（純粋な state 操作のみ。`addProduct` の逆向きでロールバック）:
+   /// - カートが空なら no-op。
+   /// - 末尾エントリの `quantity > 1` のときは `quantity -= 1`。
+   /// - 末尾エントリの `quantity == 1` のときは行ごと削除。
+   ///
+   /// 「直前に追加された行」を末尾エントリと同一視するのは、`addProduct`
+   /// が新規行を末尾 push、既存行を in-place 更新する仕様によるもの。
+   /// 厳密な操作履歴は持たないため、`setQuantity` 等を挟んだ場合は
+   /// 末尾行への 1 件分ロールバックとして振る舞う。
+  void undoLast() {
+    if (state.items.isEmpty) {
+      return;
+    }
+    final List<OrderItem> next = List<OrderItem>.from(state.items);
+    final OrderItem last = next.last;
+    if (last.quantity > 1) {
+      next[next.length - 1] = last.copyWith(quantity: last.quantity - 1);
+    } else {
+      next.removeLast();
+    }
+    state = state.copyWith(items: next);
+  }
+
   void removeProduct(String productId) {
     state = state.copyWith(
       items: state.items

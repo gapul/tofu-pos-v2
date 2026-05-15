@@ -120,6 +120,44 @@ void main() {
     });
   });
 
+  group('undoLast', () {
+    test('空カートでは no-op', () {
+      notifier.undoLast();
+      expect(notifier.state.items, isEmpty);
+    });
+
+    test('quantity > 1 の末尾行は quantity が 1 減る', () {
+      notifier
+        ..addProduct(yakisoba)
+        ..addProduct(juice, delta: 3)
+        ..undoLast();
+
+      expect(notifier.state.items.length, 2);
+      expect(notifier.state.items.last.productId, 'p2');
+      expect(notifier.state.items.last.quantity, 2);
+    });
+
+    test('quantity == 1 の末尾行は行ごと削除', () {
+      notifier
+        ..addProduct(yakisoba)
+        ..addProduct(juice)
+        ..undoLast();
+
+      expect(notifier.state.items.length, 1);
+      expect(notifier.state.items.first.productId, 'p1');
+    });
+
+    test('連続呼び出しで全行を巻き戻して空に戻る', () {
+      notifier
+        ..addProduct(yakisoba)
+        ..addProduct(juice)
+        ..undoLast()
+        ..undoLast();
+
+      expect(notifier.state.items, isEmpty);
+    });
+  });
+
   group('removeProduct', () {
     test('指定商品だけ取り除く', () {
       notifier

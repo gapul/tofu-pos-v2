@@ -228,7 +228,12 @@ class _PortraitLayout extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.zero,
       children: <Widget>[
-        _LeftPane(session: session, notifier: notifier, flags: flags),
+        _LeftPane(
+          session: session,
+          notifier: notifier,
+          flags: flags,
+          scrollable: false,
+        ),
         Container(
           decoration: const BoxDecoration(
             color: TofuTokens.bgSurface,
@@ -256,33 +261,43 @@ class _LeftPane extends StatelessWidget {
     required this.session,
     required this.notifier,
     required this.flags,
+    this.scrollable = true,
   });
 
   final CheckoutSession session;
   final CheckoutSessionNotifier notifier;
   final FeatureFlags flags;
+  final bool scrollable;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        TofuTokens.space8,
-        TofuTokens.space7,
-        TofuTokens.space7,
-        TofuTokens.space7,
-      ),
-      children: <Widget>[
-        const PageTitle(title: 'お会計', padding: EdgeInsets.zero),
+    const EdgeInsets pad = EdgeInsets.fromLTRB(
+      TofuTokens.space8,
+      TofuTokens.space7,
+      TofuTokens.space7,
+      TofuTokens.space7,
+    );
+    final List<Widget> children = <Widget>[
+      const PageTitle(title: 'お会計', padding: EdgeInsets.zero),
+      const SizedBox(height: TofuTokens.space5),
+      _SummaryCard(session: session),
+      const SizedBox(height: TofuTokens.space5),
+      _DiscountSection(session: session, notifier: notifier),
+      if (flags.cashManagement) ...<Widget>[
         const SizedBox(height: TofuTokens.space5),
-        _SummaryCard(session: session),
-        const SizedBox(height: TofuTokens.space5),
-        _DiscountSection(session: session, notifier: notifier),
-        if (flags.cashManagement) ...<Widget>[
-          const SizedBox(height: TofuTokens.space5),
-          _CashManagementSection(session: session, notifier: notifier),
-        ],
-        const SizedBox(height: TofuTokens.space11),
+        _CashManagementSection(session: session, notifier: notifier),
       ],
+      const SizedBox(height: TofuTokens.space11),
+    ];
+    if (scrollable) {
+      return ListView(padding: pad, children: children);
+    }
+    return Padding(
+      padding: pad,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
     );
   }
 }

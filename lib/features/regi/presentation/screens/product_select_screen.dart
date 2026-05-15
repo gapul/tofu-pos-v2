@@ -105,6 +105,12 @@ class _ProductSelectScreenState extends ConsumerState<ProductSelectScreen> {
                   _flashHighlight(p.id);
                 }
 
+                void handleDecrement(Product p) {
+                  unawaited(HapticFeedback.selectionClick());
+                  notifier.addProduct(p, delta: -1);
+                  _flashHighlight(p.id);
+                }
+
                 return isWide
                     ? _LandscapeBody(
                         products: data,
@@ -114,6 +120,7 @@ class _ProductSelectScreenState extends ConsumerState<ProductSelectScreen> {
                         recentlyChangedId: _recentlyChangedId,
                         syncLevel: syncLevel,
                         onAdd: handleAdd,
+                        onDecrement: handleDecrement,
                       )
                     : _PortraitBody(
                         products: data,
@@ -123,6 +130,7 @@ class _ProductSelectScreenState extends ConsumerState<ProductSelectScreen> {
                         recentlyChangedId: _recentlyChangedId,
                         syncLevel: syncLevel,
                         onAdd: handleAdd,
+                        onDecrement: handleDecrement,
                       );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -151,6 +159,7 @@ class _LandscapeBody extends StatelessWidget {
     required this.recentlyChangedId,
     required this.syncLevel,
     required this.onAdd,
+    required this.onDecrement,
   });
 
   final List<Product> products;
@@ -160,6 +169,7 @@ class _LandscapeBody extends StatelessWidget {
   final String? recentlyChangedId;
   final SyncWarningLevel syncLevel;
   final ValueChanged<Product> onAdd;
+  final ValueChanged<Product> onDecrement;
 
   @override
   Widget build(BuildContext context) {
@@ -173,6 +183,7 @@ class _LandscapeBody extends StatelessWidget {
             stockEnabled: stockEnabled,
             syncLevel: syncLevel,
             onAdd: onAdd,
+            onDecrement: onDecrement,
             compact: false,
           ),
         ),
@@ -202,6 +213,7 @@ class _PortraitBody extends StatelessWidget {
     required this.recentlyChangedId,
     required this.syncLevel,
     required this.onAdd,
+    required this.onDecrement,
   });
 
   final List<Product> products;
@@ -211,6 +223,7 @@ class _PortraitBody extends StatelessWidget {
   final String? recentlyChangedId;
   final SyncWarningLevel syncLevel;
   final ValueChanged<Product> onAdd;
+  final ValueChanged<Product> onDecrement;
 
   void _showCartSheet(BuildContext context) {
     unawaited(showModalBottomSheet<void>(
@@ -259,6 +272,7 @@ class _PortraitBody extends StatelessWidget {
             stockEnabled: stockEnabled,
             syncLevel: syncLevel,
             onAdd: onAdd,
+            onDecrement: onDecrement,
             compact: true,
           ),
         ),
@@ -319,6 +333,7 @@ class _ProductArea extends StatefulWidget {
     required this.stockEnabled,
     required this.syncLevel,
     required this.onAdd,
+    required this.onDecrement,
     required this.compact,
   });
 
@@ -327,6 +342,7 @@ class _ProductArea extends StatefulWidget {
   final bool stockEnabled;
   final SyncWarningLevel syncLevel;
   final ValueChanged<Product> onAdd;
+  final ValueChanged<Product> onDecrement;
   final bool compact;
 
   @override
@@ -334,11 +350,19 @@ class _ProductArea extends StatefulWidget {
 }
 
 class _ProductAreaState extends State<_ProductArea> {
-  /// 現状 Product にカテゴリ情報がないため、`すべて` のみを選択肢として
-  /// 提示する (Figma の `すべて / 主食 / 飲み物 / デザート` を踏襲しつつ、
-  /// ダミーデータを増やさない構成)。Phase 6 以降でカテゴリ実装時に拡張。
+  /// Figma `03-Register-Products` のカテゴリ chip 行
+  /// (`47:7` → `すべて / 主食 / 飲み物 / デザート`) を視覚的に再現する。
+  ///
+  /// 注意: `Product` 実体には現状 `category` フィールドが存在しないため、
+  /// chip タップによる絞り込みは実装していない（`すべて` 相当の挙動に固定）。
+  /// Phase 6 以降で `Product.category` を導入する際にここで分岐させる予定。
   int _selectedIndex = 0;
-  static const List<String> _categoryLabels = <String>['すべて'];
+  static const List<String> _categoryLabels = <String>[
+    'すべて',
+    '主食',
+    '飲み物',
+    'デザート',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -405,6 +429,7 @@ class _ProductAreaState extends State<_ProductArea> {
             session: widget.session,
             stockEnabled: widget.stockEnabled,
             onAdd: widget.onAdd,
+            onDecrement: widget.onDecrement,
             padding: EdgeInsets.fromLTRB(
               pad.left,
               0,
@@ -424,6 +449,7 @@ class _ProductGrid extends StatelessWidget {
     required this.session,
     required this.stockEnabled,
     required this.onAdd,
+    required this.onDecrement,
     required this.padding,
   });
 
@@ -431,6 +457,7 @@ class _ProductGrid extends StatelessWidget {
   final CheckoutSession session;
   final bool stockEnabled;
   final ValueChanged<Product> onAdd;
+  final ValueChanged<Product> onDecrement;
   final EdgeInsets padding;
 
   @override
@@ -458,12 +485,15 @@ class _ProductGrid extends StatelessWidget {
           ),
           itemBuilder: (c, i) {
             final Product p = products[i];
+            final int qty = session.countOf(p.id);
             return ProductButton(
               product: p,
-              cartCount: session.countOf(p.id),
+              cartCount: qty,
               stockEnabled: stockEnabled,
               onTap: () => onAdd(p),
               onLongPress: () => onAdd(p),
+              onIncrement: qty > 0 ? () => onAdd(p) : null,
+              onDecrement: qty > 0 ? () => onDecrement(p) : null,
             );
           },
         );

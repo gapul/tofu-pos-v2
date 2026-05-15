@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/format.dart';
 import '../../../../core/ui/ticket_number.dart';
-import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/enums/order_status.dart';
 
@@ -34,7 +33,7 @@ class CheckoutDoneScreen extends ConsumerStatefulWidget {
 }
 
 class _CheckoutDoneScreenState extends ConsumerState<CheckoutDoneScreen> {
-  static const Duration _autoAdvance = Duration(seconds: 3);
+  static const Duration _autoAdvance = Duration(milliseconds: 2500);
   Timer? _autoTimer;
 
   @override
@@ -42,7 +41,7 @@ class _CheckoutDoneScreenState extends ConsumerState<CheckoutDoneScreen> {
     super.initState();
     _autoTimer = Timer(_autoAdvance, () {
       if (!mounted) return;
-      context.go('/');
+      context.go('/regi/products');
     });
   }
 
@@ -175,14 +174,27 @@ class _CheckoutDoneScreenState extends ConsumerState<CheckoutDoneScreen> {
                     ),
                   ],
                   const SizedBox(height: TofuTokens.space8), // 32
-                  // 5. 主要ボタン
-                  TofuButton(
-                    label: '次のお客様',
-                    icon: Icons.arrow_forward,
-                    lordicon: 'arrow-right',
-                    size: TofuButtonSize.lg,
-                    fullWidth: true,
-                    onPressed: () => context.go('/'),
+                  // 自動遷移インジケーター（操作不要）
+                  Center(
+                    child: Text(
+                      '間もなく次のお客様の画面に切り替わります…',
+                      style: TofuTextStyles.bodySm.copyWith(
+                        color: TofuTokens.textTertiary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: TofuTokens.space3),
+                  TweenAnimationBuilder<double>(
+                    duration: _autoAdvance,
+                    tween: Tween<double>(begin: 0, end: 1),
+                    builder: (c, v, _) => LinearProgressIndicator(
+                      value: v,
+                      minHeight: 3,
+                      backgroundColor: TofuTokens.borderSubtle,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        TofuTokens.brandPrimary,
+                      ),
+                    ),
                   ),
                 ],
               ),

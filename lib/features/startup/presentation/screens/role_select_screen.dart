@@ -126,9 +126,10 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
                     const SizedBox(height: TofuTokens.space8), // 32
                     // 役割カード群: landscape は横並び、portrait は縦並び
                     if (isWide)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
                           for (int i = 0; i < _options.length; i++) ...<Widget>[
                             if (i > 0)
                               const SizedBox(width: TofuTokens.space7), // 24
@@ -146,7 +147,8 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
                               ),
                             ),
                           ],
-                        ],
+                          ],
+                        ),
                       )
                     else
                       Column(
