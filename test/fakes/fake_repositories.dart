@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:tofu_pos/core/error/app_exceptions.dart';
 import 'package:tofu_pos/domain/entities/calling_order.dart';
 import 'package:tofu_pos/domain/entities/cash_drawer.dart';
+import 'package:tofu_pos/domain/entities/customer_attributes.dart';
 import 'package:tofu_pos/domain/entities/kitchen_order.dart';
 import 'package:tofu_pos/domain/entities/operation_log.dart';
 import 'package:tofu_pos/domain/entities/order.dart';
@@ -171,6 +172,21 @@ class InMemoryOrderRepository implements OrderRepository {
     final Order? o = _orders[id];
     if (o != null) {
       _orders[id] = o.copyWith(syncStatus: status);
+      _controller.add(_orders.values.toList());
+    }
+  }
+
+  @override
+  Future<void> updateCustomerAttributes(
+    int id,
+    CustomerAttributes attributes,
+  ) async {
+    final Order? o = _orders[id];
+    if (o != null) {
+      _orders[id] = o.copyWith(
+        customerAttributes: attributes,
+        syncStatus: SyncStatus.notSynced,
+      );
       _controller.add(_orders.values.toList());
     }
   }

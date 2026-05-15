@@ -1,3 +1,4 @@
+import '../entities/customer_attributes.dart';
 import '../entities/order.dart';
 import '../enums/order_status.dart';
 import '../enums/sync_status.dart';
@@ -40,4 +41,7 @@ abstract interface class OrderRepository {
   });
 
   Future<void> updateSyncStatus(int id, SyncStatus status);
+
+  /// 顧客属性を後付けで更新する（会計後ヒアリング用）。
+  Future<void> updateCustomerAttributes(int id, CustomerAttributes attributes);
 }

@@ -46,6 +46,7 @@ class CheckoutScreen extends ConsumerWidget {
 
   void _handleConfirmResult(
     BuildContext context,
+    WidgetRef ref,
     AsyncValue<Order?>? previous,
     AsyncValue<Order?> next,
   ) {
@@ -53,7 +54,15 @@ class CheckoutScreen extends ConsumerWidget {
       data: (order) {
         if (order != null && previous?.value != order) {
           unawaited(HapticFeedback.heavyImpact());
-          context.go('/regi/done', extra: order);
+          // 顧客属性入力フラグ ON のときは、お釣り受け取り後に顧客属性を
+          // 入力させてから完了画面へ。OFF のときは直接完了画面へ。
+          final FeatureFlags flags = ref.read(featureFlagsProvider).value ??
+              FeatureFlags.allOff;
+          if (flags.customerAttributes) {
+            context.go('/regi/customer', extra: order);
+          } else {
+            context.go('/regi/done', extra: order);
+          }
         }
       },
       error: (error, _) {
@@ -100,7 +109,7 @@ class CheckoutScreen extends ConsumerWidget {
 
     ref.listen<AsyncValue<Order?>>(
       checkoutConfirmControllerProvider,
-      (prev, next) => _handleConfirmResult(context, prev, next),
+      (prev, next) => _handleConfirmResult(context, ref, prev, next),
     );
 
     Future<void> onConfirm() async {

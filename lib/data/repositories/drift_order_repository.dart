@@ -231,4 +231,20 @@ class DriftOrderRepository implements OrderRepository {
     await (_db.update(_db.orders)..where((t) => t.id.equals(id)))
         .write(OrdersCompanion(syncStatus: Value<String>(status.name)));
   }
+
+  @override
+  Future<void> updateCustomerAttributes(
+    int id,
+    CustomerAttributes attributes,
+  ) async {
+    await (_db.update(_db.orders)..where((t) => t.id.equals(id))).write(
+      OrdersCompanion(
+        customerAge: Value<String?>(attributes.age?.name),
+        customerGender: Value<String?>(attributes.gender?.name),
+        customerGroup: Value<String?>(attributes.group?.name),
+        // 顧客属性追記後は再同期が必要なので notSynced に戻す。
+        syncStatus: const Value<String>('notSynced'),
+      ),
+    );
+  }
 }

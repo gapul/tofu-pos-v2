@@ -96,13 +96,19 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((
       ),
       GoRoute(
         path: '/regi/customer',
-        pageBuilder: (c, s) => TofuTransitions.sharedAxisPage(
-          key: s.pageKey,
-          child: const ErrorBoundary(
-            label: 'route:/regi/customer',
-            child: CustomerAttributesScreen(),
-          ),
-        ),
+        pageBuilder: (c, s) {
+          final Object? extra = s.extra;
+          final Widget child = extra is Order
+              ? ErrorBoundary(
+                  label: 'route:/regi/customer',
+                  child: CustomerAttributesScreen(order: extra),
+                )
+              : const _MissingOrderRedirect();
+          return TofuTransitions.sharedAxisPage(
+            key: s.pageKey,
+            child: child,
+          );
+        },
       ),
       GoRoute(
         path: '/regi/products',

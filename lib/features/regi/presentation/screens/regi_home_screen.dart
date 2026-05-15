@@ -9,9 +9,7 @@ import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/lordicon.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
-import '../../../../domain/value_objects/feature_flags.dart';
 import '../../../../domain/value_objects/ticket_number.dart';
-import '../../../../providers/settings_providers.dart';
 import '../notifiers/checkout_session.dart';
 import '../notifiers/regi_providers.dart';
 
@@ -23,7 +21,6 @@ class RegiHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<FeatureFlags> flagsAsync = ref.watch(featureFlagsProvider);
     final AsyncValue<TicketNumber?> upcoming = ref.watch(
       upcomingTicketProvider,
     );
@@ -72,12 +69,7 @@ class RegiHomeScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: TofuTokens.space8),
-                  flagsAsync.when(
-                    data: (flags) =>
-                        _StartButton(flags: flags, ref: ref),
-                    loading: () => const CircularProgressIndicator(),
-                    error: (e, _) => Text('$e'),
-                  ),
+                  _StartButton(ref: ref),
                   const SizedBox(height: TofuTokens.space7),
                   const _SecondaryGrid(),
                 ],
@@ -130,8 +122,7 @@ class _NextTicketHero extends StatelessWidget {
 }
 
 class _StartButton extends StatelessWidget {
-  const _StartButton({required this.flags, required this.ref});
-  final FeatureFlags flags;
+  const _StartButton({required this.ref});
   final WidgetRef ref;
 
   @override
@@ -142,12 +133,10 @@ class _StartButton extends StatelessWidget {
       size: TofuButtonSize.lg,
       fullWidth: true,
       onPressed: () {
+        // 顧客属性入力は会計後（お釣り受け取り後）に遷移する設計に変更
+        // したため、ホームからは直接商品選択に進む。
         ref.read(checkoutSessionProvider.notifier).reset();
-        if (flags.customerAttributes) {
-          unawaited(context.push('/regi/customer'));
-        } else {
-          unawaited(context.push('/regi/products'));
-        }
+        unawaited(context.push('/regi/products'));
       },
     );
   }

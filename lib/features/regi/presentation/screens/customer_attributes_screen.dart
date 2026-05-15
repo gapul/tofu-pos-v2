@@ -8,7 +8,9 @@ import '../../../../core/ui/attribute_chip.dart';
 import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/customer_attributes.dart';
+import '../../../../domain/entities/order.dart';
 import '../../../../domain/enums/customer_attributes_enums.dart';
+import '../../../../providers/repository_providers.dart';
 import '../notifiers/checkout_session.dart';
 import '../notifiers/regi_providers.dart';
 
@@ -24,7 +26,10 @@ import '../notifiers/regi_providers.dart';
 ///
 /// 既存業務ロジック (`setCustomerAttributes` / `context.go`) はそのまま使用。
 class CustomerAttributesScreen extends ConsumerWidget {
-  const CustomerAttributesScreen({super.key});
+  const CustomerAttributesScreen({required this.order, super.key});
+
+  /// 会計確定済みの Order。「次へ」で属性をこの Order に紐づけて保存。
+  final Order order;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -55,8 +60,16 @@ class CustomerAttributesScreen extends ConsumerWidget {
                 const PageTitle(title: '顧客属性'),
                 Expanded(
                   child: isWide
-                      ? _LandscapeBody(attrs: attrs, notifier: notifier)
-                      : _PortraitBody(attrs: attrs, notifier: notifier),
+                      ? _LandscapeBody(
+                          attrs: attrs,
+                          notifier: notifier,
+                          order: order,
+                        )
+                      : _PortraitBody(
+                          attrs: attrs,
+                          notifier: notifier,
+                          order: order,
+                        ),
                 ),
               ],
             ),
@@ -69,10 +82,15 @@ class CustomerAttributesScreen extends ConsumerWidget {
 
 /// landscape (>= 720dp) ボディ。Figma `64:84` を踏襲。
 class _LandscapeBody extends StatelessWidget {
-  const _LandscapeBody({required this.attrs, required this.notifier});
+  const _LandscapeBody({
+    required this.attrs,
+    required this.notifier,
+    required this.order,
+  });
 
   final CustomerAttributes attrs;
   final CheckoutSessionNotifier notifier;
+  final Order order;
 
   @override
   Widget build(BuildContext context) {
@@ -100,8 +118,10 @@ class _LandscapeBody extends StatelessWidget {
                 ],
               ),
             ),
-            const _FooterBar(
-              padding: EdgeInsets.fromLTRB(
+            _FooterBar(
+              order: order,
+              attrs: attrs,
+              padding: const EdgeInsets.fromLTRB(
                 TofuTokens.space11,
                 TofuTokens.space4,
                 TofuTokens.space11,
@@ -117,10 +137,15 @@ class _LandscapeBody extends StatelessWidget {
 
 /// portrait (< 720dp) ボディ。Figma `237:50` を踏襲。
 class _PortraitBody extends StatelessWidget {
-  const _PortraitBody({required this.attrs, required this.notifier});
+  const _PortraitBody({
+    required this.attrs,
+    required this.notifier,
+    required this.order,
+  });
 
   final CustomerAttributes attrs;
   final CheckoutSessionNotifier notifier;
+  final Order order;
 
   @override
   Widget build(BuildContext context) {
@@ -145,8 +170,10 @@ class _PortraitBody extends StatelessWidget {
             ],
           ),
         ),
-        const _FooterBar(
-          padding: EdgeInsets.fromLTRB(
+        _FooterBar(
+          order: order,
+          attrs: attrs,
+          padding: const EdgeInsets.fromLTRB(
             TofuTokens.space5,
             TofuTokens.space3,
             TofuTokens.space5,
@@ -279,13 +306,25 @@ class _Section extends StatelessWidget {
 /// フッタの操作バー。Figma `64:123` / `237:89`。
 ///
 /// 並び (右寄せ): スキップ (ghost) / 戻る (secondary) / 次へ (primary lg)。
-class _FooterBar extends StatelessWidget {
-  const _FooterBar({required this.padding});
+class _FooterBar extends ConsumerWidget {
+  const _FooterBar({
+    required this.order,
+    required this.attrs,
+    required this.padding,
+  });
 
+  final Order order;
+  final CustomerAttributes attrs;
   final EdgeInsets padding;
 
+  Future<void> _save(WidgetRef ref) async {
+    await ref
+        .read(orderRepositoryProvider)
+        .updateCustomerAttributes(order.id, attrs);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: padding,
       decoration: const BoxDecoration(
@@ -297,21 +336,21 @@ class _FooterBar extends StatelessWidget {
           TofuButton(
             label: 'スキップ',
             variant: TofuButtonVariant.ghost,
-            onPressed: () => context.go('/regi/products'),
+            onPressed: () => context.go('/regi/done', extra: order),
           ),
           const Spacer(),
           TofuButton(
-            label: '戻る',
-            icon: Icons.arrow_back,
-            variant: TofuButtonVariant.secondary,
-            onPressed: () => context.canPop() ? context.pop() : context.go('/'),
-          ),
-          const SizedBox(width: TofuTokens.space3),
-          TofuButton(
-            label: '次へ',
-            icon: Icons.arrow_forward,
+            label: '確定',
+            icon: Icons.check,
             size: TofuButtonSize.lg,
-            onPressed: () => context.go('/regi/products'),
+            onPressed: () async {
+              await _save(ref);
+              if (!context.mounted) return;
+              context.go(
+                '/regi/done',
+                extra: order.copyWith(customerAttributes: attrs),
+              );
+            },
           ),
         ],
       ),
