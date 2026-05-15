@@ -3,30 +3,57 @@
   import { page } from '$app/state';
   import { onMount } from 'svelte';
   import ConnSettings from '$lib/components/ConnSettings.svelte';
-  import { settings, hasConnection, hasEnvConnection, refreshFromEnv } from '$lib/stores/settings';
+  import { settings, hasEnvConnection, refreshFromEnv } from '$lib/stores/settings';
   import { startRealtime } from '$lib/stores/realtime';
   import { invalidateAll } from '$app/navigation';
+  import {
+    probeConnection,
+    validateFormat,
+    describe,
+    severity,
+    type HealthStatus,
+  } from '$lib/connection_health';
 
   let { children } = $props();
   let settingsOpen = $state(false);
+  let health = $state<HealthStatus>({ kind: 'idle' });
 
-  // 接続情報が揃ったらリアルタイム購読を起動。env はモジュール初期化より
-  // 後に注入されることがあるため、mount のタイミングで再読する。
+  async function checkHealth() {
+    const s = $settings;
+    const fmt = validateFormat(s);
+    if (fmt.kind !== 'ok') {
+      health = fmt;
+      return;
+    }
+    // 形式 OK なら起動時に 1 度だけ疎通確認
+    health = { kind: 'idle' };
+    health = await probeConnection(s);
+  }
+
   onMount(() => {
     refreshFromEnv();
     startRealtime();
+    checkHealth();
   });
 
-  let showBanner = $derived(!hasConnection($settings));
+  // settings が変わったら (設定モーダル保存など) 再チェック
+  $effect(() => {
+    // 依存させたい値を読む
+    void $settings.url;
+    void $settings.key;
+    checkHealth();
+  });
 
   function reload() {
-    // 各ページで data-reload="..." のような連携を入れず、単純にナビゲーション無効化で再評価
     invalidateAll();
-    // 売上タブでは window のイベントで再取得を起こす（簡易）
     window.dispatchEvent(new CustomEvent('tofu:reload'));
+    checkHealth();
   }
 
   let activeTab = $derived(page.url.pathname.startsWith('/tester') ? 'tester' : 'sales');
+  let bannerText = $derived(describe(health));
+  let bannerSeverity = $derived(severity(health));
+  let showBanner = $derived(health.kind !== 'ok' && health.kind !== 'idle');
 </script>
 
 <header class="border-b border-slate-200 bg-white">
@@ -67,9 +94,23 @@
 {#if showBanner}
   <div class="mx-auto max-w-6xl px-4 pt-4">
     <div
-      class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+      class="rounded-md border px-4 py-3 text-sm"
+      class:border-amber-300={bannerSeverity === 'warn'}
+      class:bg-amber-50={bannerSeverity === 'warn'}
+      class:text-amber-900={bannerSeverity === 'warn'}
+      class:border-rose-300={bannerSeverity === 'error'}
+      class:bg-rose-50={bannerSeverity === 'error'}
+      class:text-rose-900={bannerSeverity === 'error'}
     >
-      Supabase の接続情報が未設定です。{hasEnvConnection() ? 'デプロイ環境変数を確認してください。' : '右上の「⚙ 設定」を開いてください。'}
+      <div class="font-semibold">
+        {bannerSeverity === 'error' ? '⚠ 接続エラー' : 'ℹ 未設定'}
+      </div>
+      <div class="mt-1 whitespace-pre-wrap break-words">{bannerText}</div>
+      {#if health.kind === 'missing'}
+        <div class="mt-1 text-xs opacity-80">
+          {hasEnvConnection() ? 'デプロイ環境変数を確認してください。' : '右上の「⚙ 設定」を開いて入力してください。'}
+        </div>
+      {/if}
     </div>
   </div>
 {/if}
