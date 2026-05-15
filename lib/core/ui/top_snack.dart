@@ -12,33 +12,15 @@ import '../theme/tokens.dart';
 ///   - 上部の AppHeader 直下に表示することで、視線移動も最小で済む。
 ///
 /// 実装メモ:
-///   - `OverlayEntry` を直近の `Overlay` (= MaterialApp の root)
-///     に挿入する。Scaffold に依存しないので、appBar や bottomNavBar の
-///     有無に関係なく同じ位置に出る。
-///   - 同時表示は 1 件まで。新しい show は古いものを置き換える。
+///   - 各 `show` は専用の OverlayEntry + State を持ち、Timer もそのインスタンス
+///     内に閉じている（旧実装の static Timer race を回避）。
+///   - 同時表示は 1 件まで。新しい show は古いものに dismiss 要求を出して
+///     即座に置き換える。
 class TopSnack {
   TopSnack._();
 
-  static OverlayEntry? _current;
-  static Timer? _timer;
-
-  /// 現在ライブな (entry, timer) を一意に識別する世代番号。
-  ///
-  /// 旧仕様では `_TopSnackContent.dispose()` がグローバル `_timer` を無条件に
-  /// cancel していたため、以下の順序で「新しい SnackBar が永遠に消えない」
-  /// バグが起きていた:
-  ///
-  ///   1. show() #1 が entry1 + timer1 を立てる
-  ///   2. show() #2 が timer1 を cancel → entry1.remove() を呼ぶ
-  ///   3. show() #2 が entry2 を insert → timer2 を立てる
-  ///   4. 次フレームで entry1 の Widget が dispose → グローバル _timer
-  ///      (= 既に timer2) を cancel してしまい、entry2 が自動消去されない
-  ///
-  /// `_generation` を per-show でインクリメントし、dispose 側は自分の世代と
-  /// 現行世代が一致するときだけ cancel するようにして race を断つ。
-  static int _generation = 0;
-  static int get _currentGeneration => _generation;
-  static const Duration _enterAnim = Duration(milliseconds: 220);
+  /// 現在ライブな entry の dismissal トリガ。show のたびに更新される。
+  static _DismissHandle? _current;
 
   /// 上部にトーストを表示する。`context` から Overlay を解決する。
   ///
@@ -64,59 +46,78 @@ class TopSnack {
     const Duration cap = Duration(seconds: 2);
     final Duration effective = duration > cap ? cap : duration;
 
-    _scheduleDismiss(immediate: true);
-    _generation++;
+    // 前回表示中があれば即時 dismiss 要求を出す。
+    _current?.dismiss();
+    _current = null;
 
-    final Color bg = color ?? TofuTokens.bgInverse;
-    final Color fg = foreground ?? TofuTokens.brandOnPrimary;
-    final OverlayEntry entry = OverlayEntry(
+    final _DismissHandle handle = _DismissHandle();
+    late OverlayEntry entry;
+    entry = OverlayEntry(
       builder: (ctx) => _TopSnackContent(
+        handle: handle,
         message: message,
-        background: bg,
-        foreground: fg,
+        background: color ?? TofuTokens.bgInverse,
+        foreground: foreground ?? TofuTokens.brandOnPrimary,
         icon: icon,
         actionLabel: actionLabel,
-        onAction: onAction == null
-            ? null
-            : () {
-                _scheduleDismiss(immediate: true);
-                onAction();
-              },
+        onAction: onAction,
+        duration: effective,
+        onRemoved: () {
+          if (entry.mounted) {
+            entry.remove();
+          }
+          if (identical(_current, handle)) {
+            _current = null;
+          }
+        },
       ),
     );
     overlay.insert(entry);
-    _current = entry;
-    _timer = Timer(effective + _enterAnim, _scheduleDismiss);
+    _current = handle;
   }
 
   /// 表示中があれば消す。テストや画面遷移直前のクリーンアップに使う。
   static void dismiss() {
-    _scheduleDismiss(immediate: true);
+    _current?.dismiss();
+    _current = null;
+  }
+}
+
+/// State 側で受け取って dispose を待つトリガ。外から `dismiss()` 即時消去要求。
+class _DismissHandle {
+  void Function()? _onDismiss;
+  void attach(void Function() onDismiss) {
+    _onDismiss = onDismiss;
   }
 
-  static void _scheduleDismiss({bool immediate = false}) {
-    _timer?.cancel();
-    _timer = null;
-    final OverlayEntry? entry = _current;
-    if (entry == null) return;
-    _current = null;
-    entry.remove();
+  void detach() {
+    _onDismiss = null;
+  }
+
+  void dismiss() {
+    _onDismiss?.call();
   }
 }
 
 class _TopSnackContent extends StatefulWidget {
   const _TopSnackContent({
+    required this.handle,
     required this.message,
     required this.background,
     required this.foreground,
+    required this.duration,
+    required this.onRemoved,
     this.icon,
     this.actionLabel,
     this.onAction,
   });
 
+  final _DismissHandle handle;
   final String message;
   final Color background;
   final Color foreground;
+  final Duration duration;
+  final VoidCallback onRemoved;
   final IconData? icon;
   final String? actionLabel;
   final VoidCallback? onAction;
@@ -127,26 +128,40 @@ class _TopSnackContent extends StatefulWidget {
 
 class _TopSnackContentState extends State<_TopSnackContent>
     with SingleTickerProviderStateMixin {
+  static const Duration _enter = Duration(milliseconds: 220);
+  static const Duration _exit = Duration(milliseconds: 180);
+
   late final AnimationController _ac = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 220),
-  )..forward();
+    duration: _enter,
+    reverseDuration: _exit,
+  );
+  Timer? _autoDismiss;
+  bool _exiting = false;
 
-  /// 自分が属する show() 呼び出しの世代。dispose 時に「現行世代が
-  /// 自分と同じ」場合だけ Timer を片付ける（後発の show が立てた新しい
-  /// Timer を巻き込んで cancel しないため）。
-  late final int _generation = TopSnack._currentGeneration;
+  @override
+  void initState() {
+    super.initState();
+    widget.handle.attach(_beginExit);
+    _ac.forward();
+    _autoDismiss = Timer(widget.duration + _enter, _beginExit);
+  }
+
+  void _beginExit() {
+    if (_exiting || !mounted) return;
+    _exiting = true;
+    _autoDismiss?.cancel();
+    _autoDismiss = null;
+    _ac.reverse().whenComplete(() {
+      widget.handle.detach();
+      widget.onRemoved();
+    });
+  }
 
   @override
   void dispose() {
-    // 自分の世代がまだ現行ならグローバル timer を解放。後発 show により
-    // 既に世代が進んでいる場合は何もしない（新しい SnackBar の自動消去
-    // タイマーを潰してしまわないため）。test の `timersPending` 対策は
-    // 「現行世代を消す」「自分が現行のときだけ消す」のどちらでも満たせる。
-    if (TopSnack._currentGeneration == _generation) {
-      TopSnack._timer?.cancel();
-      TopSnack._timer = null;
-    }
+    _autoDismiss?.cancel();
+    widget.handle.detach();
     _ac.dispose();
     super.dispose();
   }
@@ -158,8 +173,14 @@ class _TopSnackContentState extends State<_TopSnackContent>
       top: 0,
       left: 0,
       right: 0,
-      child: IgnorePointer(
-        ignoring: false,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragEnd: (d) {
+          if ((d.primaryVelocity ?? 0) < -200) {
+            _beginExit();
+          }
+        },
+        onTap: _beginExit,
         child: SlideTransition(
           position: Tween<Offset>(
             begin: const Offset(0, -1),
@@ -212,7 +233,10 @@ class _TopSnackContentState extends State<_TopSnackContent>
                             widget.onAction != null) ...<Widget>[
                           const SizedBox(width: TofuTokens.space4),
                           TextButton(
-                            onPressed: widget.onAction,
+                            onPressed: () {
+                              widget.onAction?.call();
+                              _beginExit();
+                            },
                             style: TextButton.styleFrom(
                               foregroundColor: widget.foreground,
                               padding: const EdgeInsets.symmetric(
