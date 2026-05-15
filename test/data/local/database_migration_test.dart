@@ -13,9 +13,9 @@ import 'package:tofu_pos/data/datasources/local/database.dart';
 /// 現状は schema_versions tooling を有効化していないため、
 /// onUpgrade の単体テストはこのファイルでは行わない（future work）。
 void main() {
-  test('schemaVersion は 2（更新時はテストも更新する）', () async {
+  test('schemaVersion は 3（更新時はテストも更新する）', () async {
     final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
-    expect(db.schemaVersion, 2);
+    expect(db.schemaVersion, 3);
     await db.close();
   });
 
@@ -45,45 +45,41 @@ void main() {
     await db.close();
   });
 
-  group('v2: kitchen/calling.orderId に orders(id) FK が効く (#3)', () {
-    test('存在しない orderId で kitchen_orders に insert すると FK 違反', () async {
+  group('v3: kitchen/calling.orderId の FK は撤回されている', () {
+    // v2 で FK を入れたが、端末間でテーブル所有が異なるイベントソース構成
+    // のため (キッチン端末に親 orders 行が無い) 必ず FK 違反となり、
+    // 取り込みが失敗していた。v3 で撤回。
+    test('親 orders 無しで kitchen_orders に insert できる', () async {
       final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
       addTearDown(db.close);
-
-      // FK enforce が ON であることを保証。
       await db.customStatement('PRAGMA foreign_keys = ON');
 
-      // 親 orders が空の状態で kitchen_orders に直挿入 → FK 違反
-      await expectLater(
-        db.into(db.kitchenOrders).insert(
-              KitchenOrdersCompanion.insert(
-                orderId: const Value(999),
-                ticketNumber: 1,
-                itemsJson: '[]',
-                status: 'waiting',
-                receivedAt: DateTime(2026, 5, 8),
-              ),
+      await db.into(db.kitchenOrders).insert(
+            KitchenOrdersCompanion.insert(
+              orderId: const Value(999),
+              ticketNumber: 1,
+              itemsJson: '[]',
+              status: 'waiting',
+              receivedAt: DateTime(2026, 5, 8),
             ),
-        throwsA(anything),
-      );
+          );
+      expect((await db.select(db.kitchenOrders).get()).length, 1);
     });
 
-    test('存在しない orderId で calling_orders に insert すると FK 違反', () async {
+    test('親 orders 無しで calling_orders に insert できる', () async {
       final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
       addTearDown(db.close);
       await db.customStatement('PRAGMA foreign_keys = ON');
 
-      await expectLater(
-        db.into(db.callingOrders).insert(
-              CallingOrdersCompanion.insert(
-                orderId: const Value(999),
-                ticketNumber: 1,
-                status: 'waiting',
-                receivedAt: DateTime(2026, 5, 8),
-              ),
+      await db.into(db.callingOrders).insert(
+            CallingOrdersCompanion.insert(
+              orderId: const Value(999),
+              ticketNumber: 1,
+              status: 'waiting',
+              receivedAt: DateTime(2026, 5, 8),
             ),
-        throwsA(anything),
-      );
+          );
+      expect((await db.select(db.callingOrders).get()).length, 1);
     });
   });
 }

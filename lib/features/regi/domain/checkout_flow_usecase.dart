@@ -58,11 +58,17 @@ class CheckoutFlowUseCase {
         'ticket': saved.ticketNumber.value,
         'total_yen': saved.finalPrice.yen,
         'item_count': saved.items.length,
+        'kitchen_link': flags.kitchenLink,
       },
     );
 
     // 2. キッチン連携オフ時は送信せず終了
     if (!flags.kitchenLink) {
+      Telemetry.instance.warn(
+        'transport.send.order_submitted.skipped',
+        message: 'kitchenLink=false のため送信スキップ',
+        attrs: <String, Object?>{'order_id': saved.id},
+      );
       return saved;
     }
 

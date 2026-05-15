@@ -67,10 +67,10 @@ class CashDrawerCounts extends Table {
 
 @DataClassName('KitchenOrderRow')
 class KitchenOrders extends Table {
-  /// orders(id) を参照する。Orders は物理削除しない運用なので RESTRICT で
-  /// 「親が消えるはずがない」ことをスキーマレベルで担保する（孤児防止）。
-  IntColumn get orderId =>
-      integer().references(Orders, #id, onDelete: KeyAction.restrict)();
+  /// orderId はレジ端末で発番された注文IDだが、キッチン端末側では Orders
+  /// テーブルに親行が存在しないため、FK 制約は付けない（端末間で table
+  /// 所有が異なるイベントソース構成）。
+  IntColumn get orderId => integer()();
   IntColumn get ticketNumber => integer()();
 
   /// JSONエンコード済の明細配列
@@ -87,9 +87,8 @@ class KitchenOrders extends Table {
 
 @DataClassName('CallingOrderRow')
 class CallingOrders extends Table {
-  /// orders(id) を参照する。理由は KitchenOrders と同じ。
-  IntColumn get orderId =>
-      integer().references(Orders, #id, onDelete: KeyAction.restrict)();
+  /// 理由は KitchenOrders と同じ（呼び出し端末側で Orders 親行は持たない）。
+  IntColumn get orderId => integer()();
   IntColumn get ticketNumber => integer()();
 
   /// CallingStatus.name
@@ -153,7 +152,7 @@ class AppDatabase extends _$AppDatabase {
   ///  - 既存ユーザーが居る本番では、決して `m.createAll()` を再実行しない
   ///    （現在の onCreate は新規端末専用）
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -162,11 +161,14 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (m, from, to) async {
-      // v2: KitchenOrders / CallingOrders.orderId に orders(id) への FK を追加。
-      //     SQLite は ALTER で FK 追加できないので、テーブル再作成パターンで
-      //     旧テーブルからコピーする。
+      // v2: KitchenOrders / CallingOrders.orderId に orders(id) FK を追加（後で撤回）。
       if (from < 2) {
         await _migrateAddOrderFk(m);
+      }
+      // v3: v2 の FK 制約を撤回。キッチン / 呼び出し端末側では Orders 親行が
+      //     存在しないイベントソース構成のため FK 違反で取り込みが失敗していた。
+      if (from < 3) {
+        await _migrateDropOrderFk(m);
       }
     },
     beforeOpen: (details) async {
@@ -235,6 +237,59 @@ class AppDatabase extends _$AppDatabase {
         SELECT order_id, ticket_number, status, received_at
         FROM calling_orders
         WHERE EXISTS (SELECT 1 FROM orders WHERE orders.id = calling_orders.order_id)
+      ''',
+    );
+  }
+
+  /// v2 → v3: v2 で追加した FK 制約を撤回する。
+  ///
+  /// 端末間でテーブル所有が異なるイベントソース構成（Order はレジ端末側で
+  /// 永続化、KitchenOrder/CallingOrder は別端末側）のため、子テーブルから
+  /// 親テーブルへの FK は物理的に成立しない。FK 違反で OrderSubmittedEvent
+  /// の取り込みが失敗していたため、テーブル再作成で FK を外す。
+  Future<void> _migrateDropOrderFk(Migrator m) async {
+    Future<void> rebuildWithoutFk({
+      required String oldTable,
+      required String createNew,
+      required String copyFromOld,
+    }) async {
+      await customStatement('DROP TABLE IF EXISTS ${oldTable}_v3');
+      await customStatement(createNew);
+      await customStatement(copyFromOld);
+      await customStatement('DROP TABLE $oldTable');
+      await customStatement('ALTER TABLE ${oldTable}_v3 RENAME TO $oldTable');
+    }
+
+    await rebuildWithoutFk(
+      oldTable: 'kitchen_orders',
+      createNew: '''
+        CREATE TABLE kitchen_orders_v3 (
+          order_id INTEGER NOT NULL PRIMARY KEY,
+          ticket_number INTEGER NOT NULL,
+          items_json TEXT NOT NULL,
+          status TEXT NOT NULL,
+          received_at INTEGER NOT NULL
+        )
+      ''',
+      copyFromOld: '''
+        INSERT INTO kitchen_orders_v3 (order_id, ticket_number, items_json, status, received_at)
+        SELECT order_id, ticket_number, items_json, status, received_at FROM kitchen_orders
+      ''',
+    );
+
+    await rebuildWithoutFk(
+      oldTable: 'calling_orders',
+      createNew: '''
+        CREATE TABLE calling_orders_v3 (
+          order_id INTEGER NOT NULL PRIMARY KEY,
+          ticket_number INTEGER NOT NULL,
+          status TEXT NOT NULL,
+          received_at INTEGER NOT NULL
+        )
+      ''',
+      copyFromOld: '''
+        INSERT INTO calling_orders_v3 (order_id, ticket_number, status, received_at)
+        SELECT order_id, ticket_number, status, received_at FROM calling_orders
       ''',
     );
   }
