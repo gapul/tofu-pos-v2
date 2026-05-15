@@ -69,11 +69,10 @@ void main() {
     // AppHeader はブランド固定「レジ」、画面固有タイトルは PageTitle で「お会計」。
     expect(find.text('レジ'), findsOneWidget);
     expect(find.text('お会計'), findsOneWidget);
-    // 注文内容の見出しと商品名。
-    expect(find.text('注文内容'), findsAtLeastNWidgets(1));
+    // Figma 70:88 サマリーカード: 商品行 + 小計 / 請求金額。
     expect(find.text('湯豆腐'), findsOneWidget);
     expect(find.text('×2'), findsOneWidget);
-    // 合計セクション。
-    expect(find.text('合計'), findsAtLeastNWidgets(1));
+    expect(find.text('小計'), findsAtLeastNWidgets(1));
+    expect(find.text('請求金額'), findsAtLeastNWidgets(1));
   });
 }

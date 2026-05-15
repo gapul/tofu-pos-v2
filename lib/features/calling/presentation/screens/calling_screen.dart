@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
-import '../../../../core/ui/format.dart';
 import '../../../../core/ui/lordicon.dart';
 import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/status_indicator.dart';
@@ -319,14 +318,24 @@ class _LargeTicketCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isCancelled = order.status == CallingStatus.cancelled;
+    // Figma 76:91 — 角丸は tl/tr=xl(16), bl/br=2xl(24) の非対称
+    const BorderRadius cardRadius = BorderRadius.only(
+      topLeft: Radius.circular(TofuTokens.radiusXl),
+      topRight: Radius.circular(TofuTokens.radiusXl),
+      bottomLeft: Radius.circular(TofuTokens.radius2xl),
+      bottomRight: Radius.circular(TofuTokens.radius2xl),
+    );
     return Material(
-      color: isCancelled ? TofuTokens.dangerBg : TofuTokens.bgCanvas,
-      borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+      color: isCancelled ? TofuTokens.dangerBg : TofuTokens.brandPrimarySubtle,
+      borderRadius: cardRadius,
       child: InkWell(
-        borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+        borderRadius: cardRadius,
         onTap: isCancelled ? null : onTap,
         child: Container(
-          padding: const EdgeInsets.all(TofuTokens.space4),
+          padding: const EdgeInsets.symmetric(
+            horizontal: TofuTokens.space8,
+            vertical: TofuTokens.space7,
+          ),
           decoration: BoxDecoration(
             border: Border.all(
               color: isCancelled
@@ -334,52 +343,40 @@ class _LargeTicketCard extends StatelessWidget {
                   : TofuTokens.brandPrimary,
               width: TofuTokens.strokeThick,
             ),
-            borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
-            boxShadow: isCancelled ? null : TofuTokens.elevationSm,
+            borderRadius: cardRadius,
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               if (isCancelled)
-                const StatusIndicator.custom(
-                  label: '取消',
-                  icon: Icons.block,
-                  tone: StatusIndicatorTone.danger,
-                  dense: true,
+                const Padding(
+                  padding: EdgeInsets.only(bottom: TofuTokens.space2),
+                  child: StatusIndicator.custom(
+                    label: '取消',
+                    icon: Icons.block,
+                    tone: StatusIndicatorTone.danger,
+                    dense: true,
+                  ),
                 ),
               Expanded(
                 child: Center(
                   child: FittedBox(
                     child: Text(
                       order.ticketNumber.toString(),
-                      style: TofuTextStyles.numberLg.copyWith(
+                      style: const TextStyle(
+                        fontFamily: TofuTokens.fontFamily,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 72,
+                        height: 80 / 72,
+                        letterSpacing: -1.44,
+                      ).copyWith(
                         color: isCancelled
                             ? TofuTokens.dangerText
                             : TofuTokens.brandPrimary,
-                        fontSize: 72,
-                        height: 1,
                       ),
                     ),
                   ),
                 ),
-              ),
-              Row(
-                children: <Widget>[
-                  Text(
-                    TofuFormat.relativeFromNow(order.receivedAt),
-                    style: TofuTextStyles.bodySm.copyWith(
-                      color: TofuTokens.textTertiary,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (!isCancelled)
-                    const Icon(
-                      Icons.touch_app,
-                      size: 20,
-                      color: TofuTokens.brandPrimary,
-                    ),
-                ],
               ),
             ],
           ),
@@ -399,10 +396,14 @@ class _SmallTicketCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isCancelled = order.status == CallingStatus.cancelled;
+    // Figma 76:105 — bgMuted / radiusLg / 48px textTertiary
     return Container(
-      padding: const EdgeInsets.all(TofuTokens.space3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: TofuTokens.space7,
+        vertical: TofuTokens.space6,
+      ),
       decoration: BoxDecoration(
-        color: isCancelled ? TofuTokens.dangerBg : TofuTokens.bgCanvas,
+        color: isCancelled ? TofuTokens.dangerBg : TofuTokens.bgMuted,
         borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
         border: Border.all(
           color: isCancelled
@@ -418,25 +419,23 @@ class _SmallTicketCard extends StatelessWidget {
               child: FittedBox(
                 child: Text(
                   order.ticketNumber.toString(),
-                  style: TofuTextStyles.numberMd.copyWith(
+                  style: TofuTextStyles.displayS.copyWith(
                     color: isCancelled
                         ? TofuTokens.dangerText
-                        : TofuTokens.textPrimary,
-                    fontSize: 40,
-                    height: 1,
+                        : TofuTokens.textTertiary,
+                    height: 56 / 48,
                   ),
                 ),
               ),
             ),
           ),
-          Text(
-            isCancelled ? '取消' : '呼出済',
-            style: TofuTextStyles.captionBold.copyWith(
-              color: isCancelled
-                  ? TofuTokens.dangerText
-                  : TofuTokens.textTertiary,
+          if (isCancelled)
+            Text(
+              '取消',
+              style: TofuTextStyles.captionBold.copyWith(
+                color: TofuTokens.dangerText,
+              ),
             ),
-          ),
         ],
       ),
     );

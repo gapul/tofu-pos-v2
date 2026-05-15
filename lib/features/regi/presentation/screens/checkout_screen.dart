@@ -11,7 +11,7 @@ import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/format.dart';
 import '../../../../core/ui/num_stepper.dart';
 import '../../../../core/ui/page_title.dart';
-import '../../../../core/ui/status_indicator.dart';
+import '../../../../core/ui/quick_amount_btn.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/entities/order_item.dart';
@@ -23,11 +23,17 @@ import '../../../../providers/settings_providers.dart';
 import '../notifiers/checkout_session.dart';
 import '../notifiers/regi_providers.dart';
 
-/// 会計画面（仕様書 §6.1.3 / §9.3）。
+/// 会計画面（仕様書 §6.1.3 / §9.3 / Figma `04-Register-Payment` landscape 436:494）。
 ///
-/// M3 リファクタ: 会計確定の業務ロジックは
-/// `CheckoutConfirmController` (AsyncNotifier) に抽出済み。
-/// 本画面は `listen` で AsyncValue を購読し、SnackBar/遷移のみ扱う。
+/// レイアウト（landscape, Figma 完全準拠）:
+///   - 左ペイン (560w, bgCanvas): タイトル「お会計」+ サマリーカード
+///     （注文行 / 小計 / 割引 / 請求金額 ハイライト）+ 割引・割増セクション
+///     （ステッパー -/+ + 円/% トグル）
+///   - 右ペイン (flex, bgSurface): 預り金 + お釣り 合体カード (Display/S 48)
+///     + 「クイック金額」+ 2 列 +100/+500/+1000/+5000/+10000/ピッタリ
+///     + 「会計確定 → 整理券N」primary lg full-width
+///
+/// 業務ロジック (`CheckoutConfirmController`) はそのまま流用。
 class CheckoutScreen extends ConsumerWidget {
   const CheckoutScreen({super.key});
 
@@ -42,7 +48,6 @@ class CheckoutScreen extends ConsumerWidget {
     AsyncValue<Order?>? previous,
     AsyncValue<Order?> next,
   ) {
-    // data(non-null) は確定成功 → 完了画面へ。
     next.whenOrNull(
       data: (order) {
         if (order != null && previous?.value != order) {
@@ -66,7 +71,6 @@ class CheckoutScreen extends ConsumerWidget {
             e.message,
             bg: TofuTokens.dangerBgStrong,
           );
-          // ローカル保存は完了済 → ホームへ戻す（Controller 側で reset 済）。
           context.go('/');
           return;
         }
@@ -74,7 +78,6 @@ class CheckoutScreen extends ConsumerWidget {
           _showSnack(context, error.message);
           return;
         }
-        // InsufficientStockException その他
         _showSnack(context, '$error');
       },
     );
@@ -92,6 +95,7 @@ class CheckoutScreen extends ConsumerWidget {
       checkoutConfirmControllerProvider,
     );
     final bool confirming = confirmState.isLoading;
+    final int? upcomingTicket = ref.watch(upcomingTicketProvider).value?.value;
 
     ref.listen<AsyncValue<Order?>>(
       checkoutConfirmControllerProvider,
@@ -99,13 +103,12 @@ class CheckoutScreen extends ConsumerWidget {
     );
 
     Future<void> onConfirm() async {
-      // 軽量ガード: 業務例外は Controller 側で AsyncValue.error にする。
       try {
         await ref
             .read(checkoutConfirmControllerProvider.notifier)
             .confirm();
       } catch (_) {
-        // listen() 側で SnackBar 表示。ここでは握り潰し OK。
+        // listen 側で表示済。
       }
     }
 
@@ -124,29 +127,23 @@ class CheckoutScreen extends ConsumerWidget {
             ),
           ),
           body: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                const PageTitle(title: 'お会計'),
-                Expanded(
-                  child: wide
-                      ? _LandscapeLayout(
-                          session: session,
-                          notifier: notifier,
-                          flags: flags,
-                          confirming: confirming,
-                          onConfirm: onConfirm,
-                        )
-                      : _PortraitLayout(
-                          session: session,
-                          notifier: notifier,
-                          flags: flags,
-                          confirming: confirming,
-                          onConfirm: onConfirm,
-                        ),
-                ),
-              ],
-            ),
+            child: wide
+                ? _LandscapeLayout(
+                    session: session,
+                    notifier: notifier,
+                    flags: flags,
+                    confirming: confirming,
+                    upcomingTicket: upcomingTicket,
+                    onConfirm: onConfirm,
+                  )
+                : _PortraitLayout(
+                    session: session,
+                    notifier: notifier,
+                    flags: flags,
+                    confirming: confirming,
+                    upcomingTicket: upcomingTicket,
+                    onConfirm: onConfirm,
+                  ),
           ),
         );
       },
@@ -154,12 +151,16 @@ class CheckoutScreen extends ConsumerWidget {
   }
 }
 
+// ===========================================================================
+// Landscape (Figma 436:494): 左 560w / 右 flex の 2 ペイン
+// ===========================================================================
 class _LandscapeLayout extends StatelessWidget {
   const _LandscapeLayout({
     required this.session,
     required this.notifier,
     required this.flags,
     required this.confirming,
+    required this.upcomingTicket,
     required this.onConfirm,
   });
 
@@ -167,24 +168,34 @@ class _LandscapeLayout extends StatelessWidget {
   final CheckoutSessionNotifier notifier;
   final FeatureFlags flags;
   final bool confirming;
+  final int? upcomingTicket;
   final VoidCallback onConfirm;
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Expanded(
-          flex: 3,
-          child: _LeftSide(session: session, notifier: notifier, flags: flags),
-        ),
         SizedBox(
-          width: 380,
-          child: _RightActions(
-            session: session,
-            notifier: notifier,
-            flags: flags,
-            confirming: confirming,
-            onConfirm: onConfirm,
+          width: 560,
+          child: _LeftPane(session: session, notifier: notifier, flags: flags),
+        ),
+        Expanded(
+          child: Container(
+            decoration: const BoxDecoration(
+              color: TofuTokens.bgSurface,
+              border: Border(
+                left: BorderSide(color: TofuTokens.borderSubtle),
+              ),
+            ),
+            child: _RightPane(
+              session: session,
+              notifier: notifier,
+              flags: flags,
+              confirming: confirming,
+              upcomingTicket: upcomingTicket,
+              onConfirm: onConfirm,
+            ),
           ),
         ),
       ],
@@ -192,12 +203,16 @@ class _LandscapeLayout extends StatelessWidget {
   }
 }
 
+// ===========================================================================
+// Portrait: 縦に左 → 右の順
+// ===========================================================================
 class _PortraitLayout extends StatelessWidget {
   const _PortraitLayout({
     required this.session,
     required this.notifier,
     required this.flags,
     required this.confirming,
+    required this.upcomingTicket,
     required this.onConfirm,
   });
 
@@ -205,25 +220,26 @@ class _PortraitLayout extends StatelessWidget {
   final CheckoutSessionNotifier notifier;
   final FeatureFlags flags;
   final bool confirming;
+  final int? upcomingTicket;
   final VoidCallback onConfirm;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return ListView(
+      padding: EdgeInsets.zero,
       children: <Widget>[
-        Expanded(
-          child: _LeftSide(session: session, notifier: notifier, flags: flags),
-        ),
+        _LeftPane(session: session, notifier: notifier, flags: flags),
         Container(
           decoration: const BoxDecoration(
-            color: TofuTokens.bgCanvas,
+            color: TofuTokens.bgSurface,
             border: Border(top: BorderSide(color: TofuTokens.borderSubtle)),
           ),
-          child: _RightActions(
+          child: _RightPane(
             session: session,
             notifier: notifier,
             flags: flags,
             confirming: confirming,
+            upcomingTicket: upcomingTicket,
             onConfirm: onConfirm,
           ),
         ),
@@ -232,8 +248,11 @@ class _PortraitLayout extends StatelessWidget {
   }
 }
 
-class _LeftSide extends StatelessWidget {
-  const _LeftSide({
+// ===========================================================================
+// 左ペイン: PageTitle + Summary + Discount
+// ===========================================================================
+class _LeftPane extends StatelessWidget {
+  const _LeftPane({
     required this.session,
     required this.notifier,
     required this.flags,
@@ -246,39 +265,56 @@ class _LeftSide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(TofuTokens.space5),
+      padding: const EdgeInsets.fromLTRB(
+        TofuTokens.space8,
+        TofuTokens.space7,
+        TofuTokens.space7,
+        TofuTokens.space7,
+      ),
       children: <Widget>[
-        _ItemsSummary(session: session),
+        const PageTitle(title: 'お会計', padding: EdgeInsets.zero),
+        const SizedBox(height: TofuTokens.space5),
+        _SummaryCard(session: session),
         const SizedBox(height: TofuTokens.space5),
         _DiscountSection(session: session, notifier: notifier),
-        const SizedBox(height: TofuTokens.space5),
-        if (flags.cashManagement)
-          _CashManagementSection(session: session, notifier: notifier)
-        else
-          _SimpleCashInput(session: session, notifier: notifier),
+        if (flags.cashManagement) ...<Widget>[
+          const SizedBox(height: TofuTokens.space5),
+          _CashManagementSection(session: session, notifier: notifier),
+        ],
         const SizedBox(height: TofuTokens.space11),
       ],
     );
   }
 }
 
-class _ItemsSummary extends StatelessWidget {
-  const _ItemsSummary({required this.session});
+// ===========================================================================
+// サマリーカード (Figma 70:88): 注文行 / 小計 / 割引 / 請求金額(highlight)
+// ===========================================================================
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({required this.session});
   final CheckoutSession session;
 
   @override
   Widget build(BuildContext context) {
+    final Money subtotal = session.totalPrice;
+    final Money discount = subtotal - session.discount.applyTo(subtotal);
+    final Money finalPrice = session.finalPrice;
+    final bool hasDiscount = !discount.isZero;
+
     return Container(
-      padding: const EdgeInsets.all(TofuTokens.space5),
+      padding: const EdgeInsets.symmetric(
+        horizontal: TofuTokens.space7,
+        vertical: TofuTokens.space6,
+      ),
       decoration: BoxDecoration(
         color: TofuTokens.bgSurface,
         borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+        border: Border.all(color: TofuTokens.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Text('注文内容', style: TofuTextStyles.h4),
-          const SizedBox(height: TofuTokens.space3),
+          // 注文行（Figma にはないが既存テストとロジック的に表示）
           for (final OrderItem it in session.items)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: TofuTokens.space2),
@@ -290,7 +326,7 @@ class _ItemsSummary extends StatelessWidget {
                   Text('×${it.quantity}', style: TofuTextStyles.bodyMdBold),
                   const SizedBox(width: TofuTokens.space5),
                   SizedBox(
-                    width: 90,
+                    width: 96,
                     child: Text(
                       TofuFormat.yen(it.subtotal),
                       textAlign: TextAlign.right,
@@ -300,14 +336,42 @@ class _ItemsSummary extends StatelessWidget {
                 ],
               ),
             ),
-          const Divider(),
+          if (session.items.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: TofuTokens.space3),
+              child: Divider(height: 1, color: TofuTokens.borderSubtle),
+            ),
+          _SummaryRow(
+            label: '小計',
+            value: TofuFormat.yen(subtotal),
+          ),
+          if (hasDiscount) ...<Widget>[
+            const SizedBox(height: TofuTokens.space4),
+            _SummaryRow(
+              label: '割引',
+              value: '-${TofuFormat.yen(discount)}',
+              valueColor: TofuTokens.dangerText,
+            ),
+          ],
+          const SizedBox(height: TofuTokens.space4),
+          const Divider(height: 1, color: TofuTokens.borderSubtle),
+          const SizedBox(height: TofuTokens.space4),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: <Widget>[
-              const Text('合計', style: TofuTextStyles.bodyLgBold),
+              Text(
+                '請求金額',
+                style: TofuTextStyles.bodySm.copyWith(
+                  color: TofuTokens.textSecondary,
+                ),
+              ),
               const Spacer(),
               Text(
-                TofuFormat.yen(session.totalPrice),
-                style: TofuTextStyles.h3,
+                TofuFormat.yen(finalPrice),
+                style: TofuTextStyles.h1.copyWith(
+                  color: TofuTokens.brandPrimary,
+                ),
               ),
             ],
           ),
@@ -317,6 +381,43 @@ class _ItemsSummary extends StatelessWidget {
   }
 }
 
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: <Widget>[
+        Text(
+          label,
+          style: TofuTextStyles.bodySm.copyWith(
+            color: TofuTokens.textSecondary,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: TofuTextStyles.bodyLg.copyWith(
+            color: valueColor ?? TofuTokens.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ===========================================================================
+// 割引・割増セクション (Figma 70:99): -/+ ステッパー + 円/% トグル
+// ===========================================================================
 class _DiscountSection extends StatefulWidget {
   const _DiscountSection({required this.session, required this.notifier});
   final CheckoutSession session;
@@ -327,9 +428,8 @@ class _DiscountSection extends StatefulWidget {
 }
 
 class _DiscountSectionState extends State<_DiscountSection> {
-  late TextEditingController _controller;
-  bool _isPercent = false;
-  late int _signValue;
+  late bool _isPercent;
+  late int _signedValue; // negative = 割引, positive = 割増
 
   @override
   void initState() {
@@ -337,108 +437,127 @@ class _DiscountSectionState extends State<_DiscountSection> {
     final Discount d = widget.session.discount;
     if (d is AmountDiscount) {
       _isPercent = false;
-      _signValue = d.amount.yen;
+      _signedValue = d.amount.yen; // 負 = 割引, 正 = 割増
     } else if (d is PercentDiscount) {
       _isPercent = true;
-      _signValue = d.percent;
+      _signedValue = d.percent;
     } else {
-      _signValue = 0;
+      _isPercent = false;
+      _signedValue = 0;
     }
-    _controller = TextEditingController(
-      text: _signValue == 0 ? '' : _signValue.abs().toString(),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   void _emit() {
-    final int abs = int.tryParse(_controller.text) ?? 0;
-    final int signed = _signValue >= 0 ? abs : -abs;
     if (_isPercent) {
-      widget.notifier.setDiscount(PercentDiscount(signed));
+      widget.notifier.setDiscount(PercentDiscount(_signedValue));
     } else {
-      widget.notifier.setDiscount(AmountDiscount(Money(signed)));
+      widget.notifier.setDiscount(AmountDiscount(Money(_signedValue)));
     }
   }
 
-  void _toggleSign(bool isDiscount) {
-    final int abs = int.tryParse(_controller.text) ?? 0;
-    setState(() => _signValue = isDiscount ? -abs : abs);
+  void _bump(int delta) {
+    setState(() => _signedValue += delta);
     _emit();
   }
 
   @override
   Widget build(BuildContext context) {
-    final Money preview = widget.session.discount.applyTo(
-      widget.session.totalPrice,
-    );
+    final String displayValue = _signedValue == 0
+        ? '0'
+        : (_signedValue > 0 ? '+$_signedValue' : '$_signedValue');
+    final Color valueColor = _signedValue < 0
+        ? TofuTokens.dangerText
+        : (_signedValue > 0
+              ? TofuTokens.successText
+              : TofuTokens.textPrimary);
+    final int step = _isPercent ? 1 : 100;
+
     return Container(
-      padding: const EdgeInsets.all(TofuTokens.space5),
+      padding: const EdgeInsets.symmetric(
+        horizontal: TofuTokens.space6,
+        vertical: TofuTokens.space5,
+      ),
       decoration: BoxDecoration(
-        border: Border.all(color: TofuTokens.borderSubtle),
+        color: TofuTokens.bgSurface,
         borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+        border: Border.all(color: TofuTokens.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text('割引・割増（任意）', style: TofuTextStyles.h4),
-          const SizedBox(height: TofuTokens.space3),
-          Row(
-            children: <Widget>[
-              ChoiceChip(
-                label: const Text('割引'),
-                selected: _signValue <= 0,
-                onSelected: (_) => _toggleSign(true),
-              ),
-              const SizedBox(width: TofuTokens.space3),
-              ChoiceChip(
-                label: const Text('割増'),
-                selected: _signValue > 0,
-                onSelected: (_) => _toggleSign(false),
-              ),
-              const SizedBox(width: TofuTokens.space5),
-              SizedBox(
-                width: 140,
-                child: TextField(
-                  controller: _controller,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: <TextInputFormatter>[
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
-                  textAlign: TextAlign.right,
-                  style: TofuTextStyles.h3,
-                  onChanged: (_) => _emit(),
-                  decoration: const InputDecoration(hintText: '0'),
-                ),
-              ),
-              const SizedBox(width: TofuTokens.space3),
-              ToggleButtons(
-                isSelected: <bool>[!_isPercent, _isPercent],
-                onPressed: (i) {
-                  setState(() => _isPercent = i == 1);
-                  _emit();
-                },
-                borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
-                constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
-                children: const <Widget>[Text('円'), Text('％')],
-              ),
-            ],
+          Text(
+            '割引・割増',
+            style: TofuTextStyles.bodySm.copyWith(
+              color: TofuTokens.textSecondary,
+            ),
           ),
-          const SizedBox(height: TofuTokens.space3),
+          const SizedBox(height: TofuTokens.space4),
           Row(
             children: <Widget>[
-              Text(
-                '適用後',
-                style: TofuTextStyles.bodySm.copyWith(
-                  color: TofuTokens.textTertiary,
+              // -/+ ステッパー
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: TofuTokens.bgCanvas,
+                    borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+                    border: Border.all(color: TofuTokens.borderDefault),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      _StepperButton(
+                        icon: Icons.remove,
+                        onTap: () => _bump(-step),
+                      ),
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: Center(
+                            child: Text(
+                              displayValue,
+                              style: TofuTextStyles.h4.copyWith(
+                                color: valueColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      _StepperButton(
+                        icon: Icons.add,
+                        onTap: () => _bump(step),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const Spacer(),
-              Text(TofuFormat.yen(preview), style: TofuTextStyles.h3),
+              const SizedBox(width: TofuTokens.space3),
+              // 円/% トグル
+              Container(
+                padding: const EdgeInsets.all(TofuTokens.space2),
+                decoration: BoxDecoration(
+                  color: TofuTokens.bgMuted,
+                  borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    _ModeChip(
+                      label: '円',
+                      selected: !_isPercent,
+                      onTap: () {
+                        setState(() => _isPercent = false);
+                        _emit();
+                      },
+                    ),
+                    _ModeChip(
+                      label: '％',
+                      selected: _isPercent,
+                      onTap: () {
+                        setState(() => _isPercent = true);
+                        _emit();
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ],
@@ -447,38 +566,67 @@ class _DiscountSectionState extends State<_DiscountSection> {
   }
 }
 
-class _SimpleCashInput extends StatelessWidget {
-  const _SimpleCashInput({required this.session, required this.notifier});
-  final CheckoutSession session;
-  final CheckoutSessionNotifier notifier;
+class _StepperButton extends StatelessWidget {
+  const _StepperButton({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(TofuTokens.space5),
-      decoration: BoxDecoration(
-        border: Border.all(color: TofuTokens.borderSubtle),
-        borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text('預り金', style: TofuTextStyles.h4),
-          const SizedBox(height: TofuTokens.space4),
-          TofuNumStepper(
-            value: session.receivedCash.yen,
-            onChanged: (v) => notifier.setReceivedCash(Money(v)),
-            max: 1000000,
-            step: 100,
-            suffix: '円',
-            formatter: (v) => TofuFormat.yenInt(v).replaceAll('¥', ''),
-          ),
-        ],
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Icon(icon, size: 24, color: TofuTokens.textPrimary),
+        ),
       ),
     );
   }
 }
 
+class _ModeChip extends StatelessWidget {
+  const _ModeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? TofuTokens.brandPrimary : Colors.transparent,
+      borderRadius: BorderRadius.circular(TofuTokens.radiusSm),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(TofuTokens.radiusSm),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: TofuTokens.space5,
+            vertical: TofuTokens.space3,
+          ),
+          child: Text(
+            label,
+            style: TofuTextStyles.bodyMd.copyWith(
+              color: selected
+                  ? TofuTokens.brandOnPrimary
+                  : TofuTokens.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// 金種管理セクション（cashManagement フラグ ON 時のみ）
+// ===========================================================================
 class _CashManagementSection extends StatelessWidget {
   const _CashManagementSection({required this.session, required this.notifier});
   final CheckoutSession session;
@@ -502,6 +650,7 @@ class _CashManagementSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(TofuTokens.space5),
       decoration: BoxDecoration(
+        color: TofuTokens.bgSurface,
         border: Border.all(color: TofuTokens.borderSubtle),
         borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
       ),
@@ -546,12 +695,16 @@ class _CashManagementSection extends StatelessWidget {
   }
 }
 
-class _RightActions extends StatelessWidget {
-  const _RightActions({
+// ===========================================================================
+// 右ペイン (Figma 70:116): 預り金＋お釣り合体カード + クイック金額 + 会計確定
+// ===========================================================================
+class _RightPane extends StatelessWidget {
+  const _RightPane({
     required this.session,
     required this.notifier,
     required this.flags,
     required this.confirming,
+    required this.upcomingTicket,
     required this.onConfirm,
   });
 
@@ -559,6 +712,7 @@ class _RightActions extends StatelessWidget {
   final CheckoutSessionNotifier notifier;
   final FeatureFlags flags;
   final bool confirming;
+  final int? upcomingTicket;
   final VoidCallback onConfirm;
 
   @override
@@ -566,62 +720,47 @@ class _RightActions extends StatelessWidget {
     final Money finalPrice = session.finalPrice;
     final Money change = session.changeCash;
     final bool insufficient = change.isNegative;
+    final String confirmLabel = upcomingTicket != null
+        ? '会計確定 → 整理券$upcomingTicket'
+        : '会計確定';
 
     return Padding(
-      padding: const EdgeInsets.all(TofuTokens.space5),
+      padding: const EdgeInsets.fromLTRB(
+        TofuTokens.space7,
+        TofuTokens.space7,
+        TofuTokens.space8,
+        TofuTokens.space7,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _SummaryCard(
-            label: '請求金額',
-            value: TofuFormat.yen(finalPrice),
-            highlight: true,
-          ),
-          const SizedBox(height: TofuTokens.space4),
-          _SummaryCard(
-            label: '預り金',
-            value: TofuFormat.yen(session.receivedCash),
-          ),
-          const SizedBox(height: TofuTokens.space4),
-          _SummaryCard(
-            label: insufficient ? '不足' : 'お釣り',
-            value: TofuFormat.yen(change.abs()),
-            tone: insufficient
-                ? StatusIndicatorTone.danger
-                : (change.isZero
-                      ? StatusIndicatorTone.neutral
-                      : StatusIndicatorTone.success),
+          // 預り金 + お釣り 合体カード（Figma 70:117）
+          _CashAndChangeCard(
+            session: session,
+            insufficient: insufficient,
+            change: change,
           ),
           const SizedBox(height: TofuTokens.space5),
           if (!flags.cashManagement) ...<Widget>[
-            const Text('クイック金額', style: TofuTextStyles.bodySmBold),
-            const SizedBox(height: TofuTokens.space3),
-            Wrap(
-              spacing: TofuTokens.space3,
-              runSpacing: TofuTokens.space3,
-              children: <Widget>[
-                for (final int v in <int>[100, 500, 1000, 5000, 10000])
-                  _QuickButton(
-                    label: '+${TofuFormat.yenInt(v).replaceAll('¥', '')}円',
-                    onPressed: () => notifier.setReceivedCash(
-                      session.receivedCash + Money(v),
-                    ),
-                  ),
-                _QuickButton(
-                  label: 'ピッタリ',
-                  onPressed: () => notifier.setReceivedCash(finalPrice),
-                ),
-                _QuickButton(
-                  label: 'クリア',
-                  onPressed: () => notifier.setReceivedCash(Money.zero),
-                  destructive: true,
-                ),
-              ],
+            Text(
+              'クイック金額',
+              style: TofuTextStyles.bodySm.copyWith(
+                color: TofuTokens.textSecondary,
+              ),
+            ),
+            const SizedBox(height: TofuTokens.space4),
+            _QuickAmountGrid(
+              session: session,
+              notifier: notifier,
+              finalPrice: finalPrice,
             ),
             const SizedBox(height: TofuTokens.space5),
+          ] else ...<Widget>[
+            const SizedBox(height: TofuTokens.space5),
           ],
+          const Spacer(),
           TofuButton(
-            label: '会計確定',
+            label: confirmLabel,
             icon: Icons.check_circle,
             lordicon: 'check',
             size: TofuButtonSize.lg,
@@ -637,81 +776,156 @@ class _RightActions extends StatelessWidget {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.label,
-    required this.value,
-    this.highlight = false,
-    this.tone = StatusIndicatorTone.neutral,
+// ===========================================================================
+// 預り金 + お釣り 合体カード (Figma 70:117)
+//   - bgCanvas / radiusLg / px20 py16
+//   - 「預り金」caption + 48px display 値
+//   - 区切らず下に「お釣り」caption + Number/Md (24) 値
+// ===========================================================================
+class _CashAndChangeCard extends StatelessWidget {
+  const _CashAndChangeCard({
+    required this.session,
+    required this.insufficient,
+    required this.change,
   });
 
-  final String label;
-  final String value;
-  final bool highlight;
-  final StatusIndicatorTone tone;
+  final CheckoutSession session;
+  final bool insufficient;
+  final Money change;
 
   @override
   Widget build(BuildContext context) {
-    final Color bg = highlight ? TofuTokens.brandPrimary : TofuTokens.bgSurface;
-    final Color labelColor = highlight
-        ? TofuTokens.brandOnPrimary.withValues(alpha: 0.85)
-        : TofuTokens.textTertiary;
-    final Color valueColor = highlight
-        ? TofuTokens.brandOnPrimary
-        : (tone == StatusIndicatorTone.danger
-              ? TofuTokens.dangerText
-              : (tone == StatusIndicatorTone.success
-                    ? TofuTokens.successText
-                    : TofuTokens.textPrimary));
+    final Color changeColor = insufficient
+        ? TofuTokens.dangerText
+        : (change.isZero
+              ? TofuTokens.textTertiary
+              : TofuTokens.successText);
+
     return Container(
-      padding: const EdgeInsets.all(TofuTokens.space5),
+      padding: const EdgeInsets.symmetric(
+        horizontal: TofuTokens.space6,
+        vertical: TofuTokens.space5,
+      ),
       decoration: BoxDecoration(
-        color: bg,
+        color: TofuTokens.bgCanvas,
         borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            label,
-            style: TofuTextStyles.bodyMdBold.copyWith(color: labelColor),
+            '預り金',
+            style: TofuTextStyles.caption.copyWith(
+              color: TofuTokens.textSecondary,
+            ),
           ),
-          const Spacer(),
-          Text(value, style: TofuTextStyles.h2.copyWith(color: valueColor)),
+          const SizedBox(height: TofuTokens.space3),
+          Text(
+            TofuFormat.yen(session.receivedCash),
+            style: TofuTextStyles.displayS.copyWith(
+              color: TofuTokens.textPrimary,
+              height: 56 / 48,
+            ),
+          ),
+          const SizedBox(height: TofuTokens.space3),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: <Widget>[
+              Text(
+                insufficient ? '不足' : 'お釣り',
+                style: TofuTextStyles.caption.copyWith(
+                  color: TofuTokens.textSecondary,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                TofuFormat.yen(change.abs()),
+                style: TofuTextStyles.numberMd.copyWith(color: changeColor),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _QuickButton extends StatelessWidget {
-  const _QuickButton({
-    required this.label,
-    required this.onPressed,
-    this.destructive = false,
+// ===========================================================================
+// クイック金額 2 列グリッド (Figma 70:124):
+//   +100 / +500 / +1000 / +5000 / +10000 / ピッタリ
+// ===========================================================================
+class _QuickAmountGrid extends StatelessWidget {
+  const _QuickAmountGrid({
+    required this.session,
+    required this.notifier,
+    required this.finalPrice,
   });
 
-  final String label;
-  final VoidCallback onPressed;
-  final bool destructive;
+  final CheckoutSession session;
+  final CheckoutSessionNotifier notifier;
+  final Money finalPrice;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: TofuTokens.touchMin,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: destructive
-              ? TofuTokens.dangerText
-              : TofuTokens.textPrimary,
-          side: BorderSide(
-            color: destructive
-                ? TofuTokens.dangerBorder
-                : TofuTokens.borderDefault,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: TofuTokens.space5),
+    final List<Widget> tiles = <Widget>[
+      for (final int v in <int>[100, 500, 1000, 5000, 10000])
+        QuickAmountBtn(
+          amount: v,
+          label: '+${TofuFormat.yenInt(v).replaceAll('¥', '')}円',
+          onPressed: () =>
+              notifier.setReceivedCash(session.receivedCash + Money(v)),
         ),
-        child: Text(label, style: TofuTextStyles.bodyMdBold),
+      _PerfectButton(
+        onPressed: () => notifier.setReceivedCash(finalPrice),
+      ),
+    ];
+    return LayoutBuilder(
+      builder: (c, constraints) {
+        const double spacing = TofuTokens.space3;
+        final double itemW = (constraints.maxWidth - spacing) / 2;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: <Widget>[
+            for (final Widget t in tiles) SizedBox(width: itemW, child: t),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PerfectButton extends StatelessWidget {
+  const _PerfectButton({required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: TofuTokens.bgCanvas,
+      borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+        onTap: onPressed,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: TofuTokens.touchPrimary),
+          padding: const EdgeInsets.symmetric(
+            horizontal: TofuTokens.space5,
+            vertical: TofuTokens.space5,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+            border: Border.all(color: TofuTokens.borderDefault),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            'ピッタリ',
+            style: TofuTextStyles.bodyLgBold.copyWith(
+              color: TofuTokens.textPrimary,
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -104,14 +104,16 @@ class _DeviceHeaderSection extends ConsumerWidget {
       builder: (c, s) {
         final ({String? shopId, DeviceRole? role}) data =
             s.data ?? (shopId: null, role: null);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        // Figma 80:86 — 「設定」h2 と 店舗ID / version を baseline で左右配置。
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: <Widget>[
             const Text('設定', style: TofuTextStyles.h2),
-            const SizedBox(height: TofuTokens.space2),
+            const Spacer(),
             Text(
               '店舗ID: ${data.shopId ?? '未設定'} / バージョン v1.0.0',
-              style: TofuTextStyles.bodySm.copyWith(
+              style: TofuTextStyles.caption.copyWith(
                 color: TofuTokens.textTertiary,
               ),
             ),

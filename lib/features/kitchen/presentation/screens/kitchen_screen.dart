@@ -489,29 +489,47 @@ class _PendingCard extends StatelessWidget {
     final bool isCancelled = order.status == KitchenStatus.cancelled;
     final List<({String name, int qty})> items = _parseItems();
 
+    // Figma: 73:87 — 角丸は tl/br=xl(16), tr/bl=sm(4) の非対称
+    const BorderRadius cardRadius = BorderRadius.only(
+      topLeft: Radius.circular(TofuTokens.radiusXl),
+      topRight: Radius.circular(TofuTokens.radiusSm),
+      bottomLeft: Radius.circular(TofuTokens.radiusSm),
+      bottomRight: Radius.circular(TofuTokens.radiusXl),
+    );
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: TofuTokens.space5,
-        vertical: TofuTokens.space4,
+        horizontal: TofuTokens.space6,
+        vertical: TofuTokens.space5,
       ),
       decoration: BoxDecoration(
         color: isCancelled ? TofuTokens.dangerBg : TofuTokens.bgSurface,
-        borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+        borderRadius: cardRadius,
         border: Border.all(
           color: isCancelled
               ? TofuTokens.dangerBorder
-              : TofuTokens.brandPrimary,
-          width: TofuTokens.strokeThick,
+              : TofuTokens.borderDefault,
+          width: isCancelled
+              ? TofuTokens.strokeThick
+              : TofuTokens.strokeHairline,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: <Widget>[
               Text(
+                '[ 伝 票 ]',
+                style: TofuTextStyles.caption.copyWith(
+                  color: TofuTokens.textTertiary,
+                ),
+              ),
+              const SizedBox(width: TofuTokens.space3),
+              Text(
                 order.ticketNumber.toString(),
-                style: TofuTextStyles.numberLg.copyWith(
+                style: TofuTextStyles.h2.copyWith(
                   color: isCancelled
                       ? TofuTokens.dangerText
                       : TofuTokens.brandPrimary,
@@ -520,7 +538,7 @@ class _PendingCard extends StatelessWidget {
               const Spacer(),
               Text(
                 TofuFormat.relativeFromNow(order.receivedAt),
-                style: TofuTextStyles.bodySmBold.copyWith(
+                style: TofuTextStyles.caption.copyWith(
                   color: TofuTokens.textTertiary,
                 ),
               ),
