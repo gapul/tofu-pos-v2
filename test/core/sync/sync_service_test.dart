@@ -88,6 +88,10 @@ class _FakeSettings implements SettingsRepository {
   Future<void> setBleSendTimeout(Duration value) async {}
   @override
   Future<String> getOrCreateDeviceId() async => 'test-device';
+  @override
+  Future<String?> getUserName() async => null;
+  @override
+  Future<void> setUserName(String? value) async {}
 }
 
 class _RecordingClient implements CloudSyncClient {

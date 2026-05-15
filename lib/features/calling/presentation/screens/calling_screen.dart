@@ -52,6 +52,43 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
   /// 自動表示の待ち行列。ダイアログ閉じ後に先頭から順に開く。
   final List<CallingOrder> _autoQueue = <CallingOrder>[];
 
+  Future<void> _markPickedUp(CallingOrder order) async {
+    unawaited(HapticFeedback.lightImpact());
+    await ref
+        .read(callingOrderRepositoryProvider)
+        .updateStatus(order.orderId, CallingStatus.pickedUp);
+    // レジ端末で整理券プールを return できるよう OrderPickedUpEvent をブロードキャスト。
+    try {
+      final Transport transport =
+          await ref.read(transportProvider.future);
+      final ShopId? shopId =
+          await ref.read(settingsRepositoryProvider).getShopId();
+      if (shopId == null) return;
+      await transport.send(
+        OrderPickedUpEvent(
+          shopId: shopId.value,
+          eventId: const Uuid().v4(),
+          occurredAt: DateTime.now(),
+          orderId: order.orderId,
+          ticketNumber: order.ticketNumber,
+        ),
+      );
+    } catch (e, st) {
+      AppLogger.w(
+        'CallingScreen: broadcast order_picked_up failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('整理券 ${order.ticketNumber} を受取完了にしました'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   Future<void> _markCalled(CallingOrder order) async {
     unawaited(HapticFeedback.mediumImpact());
     await ref
@@ -261,7 +298,10 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
                       ),
                       Expanded(
                         flex: 420,
-                        child: _CalledPane(orders: called),
+                        child: _CalledPane(
+                          orders: called,
+                          onTap: _markPickedUp,
+                        ),
                       ),
                     ],
                   );
@@ -275,7 +315,12 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
                         onTap: _showFullScreen,
                       ),
                     ),
-                    Expanded(child: _CalledPane(orders: called)),
+                    Expanded(
+                      child: _CalledPane(
+                        orders: called,
+                        onTap: _markPickedUp,
+                      ),
+                    ),
                   ],
                 );
               },
@@ -364,8 +409,9 @@ class _PendingPane extends StatelessWidget {
 // 呼び出し済ペイン (Figma 76:100): bgSurface + コンパクト 110×110 カード
 // ---------------------------------------------------------------------------
 class _CalledPane extends StatelessWidget {
-  const _CalledPane({required this.orders});
+  const _CalledPane({required this.orders, required this.onTap});
   final List<CallingOrder> orders;
+  final Future<void> Function(CallingOrder) onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -401,6 +447,9 @@ class _CalledPane extends StatelessWidget {
                         'small-ticket-${orders[i].orderId}',
                       ),
                       order: orders[i],
+                      onTap: orders[i].status == CallingStatus.called
+                          ? () => onTap(orders[i])
+                          : null,
                     ).animate().fadeIn(
                       duration: TofuTokens.motionShort,
                     ).slideX(
@@ -555,21 +604,29 @@ class _LargeTicketCard extends StatelessWidget {
 // 小型整理券カード (Figma 76:105, 110×110): 呼び出し済。
 // ---------------------------------------------------------------------------
 class _SmallTicketCard extends StatelessWidget {
-  const _SmallTicketCard({required this.order, super.key});
+  const _SmallTicketCard({required this.order, this.onTap, super.key});
   final CallingOrder order;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final bool isCancelled = order.status == CallingStatus.cancelled;
     // Figma 76:105 — bgMuted / radiusLg / 48px textTertiary
-    return Container(
+    final BorderRadius radius =
+        BorderRadius.circular(TofuTokens.radiusLg);
+    return Material(
+      color: isCancelled ? TofuTokens.dangerBg : TofuTokens.bgMuted,
+      borderRadius: radius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: radius,
+        child: Container(
       padding: const EdgeInsets.symmetric(
         horizontal: TofuTokens.space7,
         vertical: TofuTokens.space6,
       ),
       decoration: BoxDecoration(
-        color: isCancelled ? TofuTokens.dangerBg : TofuTokens.bgMuted,
-        borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+        borderRadius: radius,
         border: Border.all(
           color: isCancelled
               ? TofuTokens.dangerBorder
@@ -602,6 +659,8 @@ class _SmallTicketCard extends StatelessWidget {
               ),
             ),
         ],
+      ),
+        ),
       ),
     );
   }

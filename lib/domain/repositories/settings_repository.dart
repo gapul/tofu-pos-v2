@@ -38,4 +38,9 @@ abstract interface class SettingsRepository {
   /// 端末の安定IDを返す。未設定なら新規生成して永続化する。
   /// テレメトリでの端末識別に用いる（個人情報ではなく不可視のランダム値）。
   Future<String> getOrCreateDeviceId();
+
+  /// 端末を操作中の担当者名（任意、空可）。
+  /// presence で他端末から「誰が動かしているか」を見るためのラベル。
+  Future<String?> getUserName();
+  Future<void> setUserName(String? value);
 }

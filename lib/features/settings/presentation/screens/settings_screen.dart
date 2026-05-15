@@ -63,6 +63,8 @@ class SettingsScreen extends ConsumerWidget {
               children: <Widget>[
                 const _DeviceHeaderSection(),
                 const SizedBox(height: TofuTokens.space7),
+                const _UserNameSection(),
+                const SizedBox(height: TofuTokens.space7),
                 const _TransportSection(),
                 const SizedBox(height: TofuTokens.space7),
                 const _RoleSection(),
@@ -128,6 +130,93 @@ class _DeviceHeaderSection extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ユーザー名: presence 経由で他端末から見える担当者名 (任意)。
+// ---------------------------------------------------------------------------
+class _UserNameSection extends ConsumerStatefulWidget {
+  const _UserNameSection();
+
+  @override
+  ConsumerState<_UserNameSection> createState() => _UserNameSectionState();
+}
+
+class _UserNameSectionState extends ConsumerState<_UserNameSection> {
+  final TextEditingController _controller = TextEditingController();
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    final String? name = await ref.read(settingsRepositoryProvider).getUserName();
+    if (!mounted) return;
+    setState(() {
+      _controller.text = name ?? '';
+      _loaded = true;
+    });
+  }
+
+  Future<void> _save() async {
+    final String value = _controller.text.trim();
+    await ref.read(settingsRepositoryProvider).setUserName(
+          value.isEmpty ? null : value,
+        );
+    // 反映のため presence を再接続。
+    ref.invalidate(peerPresenceServiceProvider);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('ユーザー名を保存しました'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const PaneTitle(
+            title: 'ユーザー名',
+            subtitle: '任意。接続中の他端末から見える担当者名',
+          ),
+          const SizedBox(height: TofuTokens.space4),
+          TextField(
+            controller: _controller,
+            enabled: _loaded,
+            decoration: const InputDecoration(
+              hintText: '例: 山田 (空欄可)',
+              border: OutlineInputBorder(),
+            ),
+            onSubmitted: (_) => unawaited(_save()),
+          ),
+          const SizedBox(height: TofuTokens.space3),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TofuButton(
+              label: '保存',
+              icon: Icons.save,
+              variant: TofuButtonVariant.primary,
+              onPressed: _loaded ? () => unawaited(_save()) : null,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

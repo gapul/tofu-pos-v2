@@ -79,11 +79,19 @@ class _FakeSettingsRepo implements SettingsRepository {
 
   @override
   Future<String> getOrCreateDeviceId() async => 'device-test';
+
+  String? _userName;
+  @override
+  Future<String?> getUserName() async => _userName;
+  @override
+  Future<void> setUserName(String? value) async {
+    _userName = (value ?? '').trim().isEmpty ? null : value!.trim();
+  }
 }
 
 void main() {
   testWidgets('SettingsScreen renders all section cards', (tester) async {
-    tester.view.physicalSize = const Size(1024, 1600);
+    tester.view.physicalSize = const Size(1024, 2600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);

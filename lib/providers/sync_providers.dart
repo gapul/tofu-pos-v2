@@ -94,11 +94,13 @@ final FutureProvider<PeerPresenceService?> peerPresenceServiceProvider =
         return null;
       }
       final String deviceId = await settings.getOrCreateDeviceId();
+      final String? userName = await settings.getUserName();
       final service = PeerPresenceService(
         client: Supabase.instance.client,
         shopId: shopId.value,
         role: role,
         deviceId: deviceId,
+        userName: userName,
       );
       try {
         await service.connect();

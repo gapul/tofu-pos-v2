@@ -78,6 +78,12 @@ class _FakeSettingsRepository implements SettingsRepository {
 
   @override
   Future<String> getOrCreateDeviceId() => throw UnimplementedError();
+
+  @override
+  Future<String?> getUserName() async => null;
+
+  @override
+  Future<void> setUserName(String? value) async {}
 }
 
 ProviderContainer _makeContainer(_FakeSettingsRepository repo) {

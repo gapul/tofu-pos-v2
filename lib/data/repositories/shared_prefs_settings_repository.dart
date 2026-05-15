@@ -26,6 +26,7 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   static const String _kLanSendTimeoutMs = 'lanSendTimeoutMs';
   static const String _kBleSendTimeoutMs = 'bleSendTimeoutMs';
   static const String _kDeviceId = 'deviceId';
+  static const String _kUserName = 'user_name';
 
   static const Duration _defaultLanTimeout = Duration(seconds: 5);
   static const Duration _defaultBleTimeout = Duration(seconds: 10);
@@ -154,6 +155,23 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
     final String fresh = const Uuid().v4();
     await _prefs.setString(_kDeviceId, fresh);
     return fresh;
+  }
+
+  @override
+  Future<String?> getUserName() async {
+    final String? raw = _prefs.getString(_kUserName);
+    if (raw == null || raw.isEmpty) return null;
+    return raw;
+  }
+
+  @override
+  Future<void> setUserName(String? value) async {
+    final String trimmed = (value ?? '').trim();
+    if (trimmed.isEmpty) {
+      await _prefs.remove(_kUserName);
+      return;
+    }
+    await _prefs.setString(_kUserName, trimmed);
   }
 
   /// プロセス終了 / ProviderContainer 破棄時に呼ぶ。

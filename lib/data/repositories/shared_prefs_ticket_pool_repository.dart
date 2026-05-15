@@ -54,6 +54,16 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
     try {
       final Map<String, dynamic> json =
           jsonDecode(raw) as Map<String, dynamic>;
+      final Map<int, int> lastUsedAt = <int, int>{};
+      final dynamic rawLast = json['lastUsedAt'];
+      if (rawLast is Map) {
+        rawLast.forEach((k, v) {
+          final int? key = int.tryParse(k.toString());
+          if (key == null) return;
+          final int? value = (v is num) ? v.toInt() : null;
+          if (value != null) lastUsedAt[key] = value;
+        });
+      }
       return TicketNumberPool(
         maxNumber: json['maxNumber'] as int,
         bufferSize: json['bufferSize'] as int,
@@ -61,6 +71,7 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
         recentlyReleased: (json['recentlyReleased'] as List<dynamic>)
             .cast<int>()
             .toList(),
+        lastUsedAt: lastUsedAt,
       );
     } catch (e, st) {
       // 永続層が壊れている。空に倒すと整理券番号の再利用が起きるため
@@ -89,11 +100,16 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
 
   @override
   Future<void> save(TicketNumberPool pool) async {
+    final Map<String, int> lastUsedAtStr = <String, int>{};
+    pool.lastUsedAtSnapshot.forEach((k, v) {
+      lastUsedAtStr[k.toString()] = v;
+    });
     final Map<String, Object> json = <String, Object>{
       'maxNumber': pool.maxNumber,
       'bufferSize': pool.bufferSize,
       'inUse': pool.inUseNumbers.toList()..sort(),
       'recentlyReleased': pool.recentlyReleasedNumbers,
+      'lastUsedAt': lastUsedAtStr,
     };
     await _prefs.setString(_kPool, jsonEncode(json));
   }

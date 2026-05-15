@@ -6,6 +6,7 @@ import '../../../core/logging/app_logger.dart';
 import '../../../core/transport/transport.dart';
 import '../../../core/transport/transport_event.dart';
 import '../../../domain/repositories/settings_repository.dart';
+import '../../../domain/repositories/ticket_number_pool_repository.dart';
 import '../../../domain/value_objects/feature_flags.dart';
 
 /// レジ端末で動くイベントルーター。
@@ -20,17 +21,20 @@ class ServedToCallRouter {
     required Transport transport,
     required SettingsRepository settingsRepository,
     required String shopId,
+    TicketNumberPoolRepository? ticketPoolRepository,
     Uuid uuid = const Uuid(),
     DateTime Function() now = DateTime.now,
   }) : _transport = transport,
        _settings = settingsRepository,
        _shopId = shopId,
+       _ticketPool = ticketPoolRepository,
        _uuid = uuid,
        _now = now;
 
   final Transport _transport;
   final SettingsRepository _settings;
   final String _shopId;
+  final TicketNumberPoolRepository? _ticketPool;
   final Uuid _uuid;
   final DateTime Function() _now;
 
@@ -48,6 +52,28 @@ class ServedToCallRouter {
   }
 
   Future<void> _onEvent(TransportEvent event) async {
+    if (event is OrderPickedUpEvent) {
+      if (event.shopId != _shopId) return;
+      // 受取完了 → ticket pool に return（3 分クールタイムは pool 内部で吸収）。
+      final TicketNumberPoolRepository? pool = _ticketPool;
+      if (pool == null) return;
+      try {
+        await pool.release(event.ticketNumber);
+        AppLogger.event(
+          'regi',
+          'ticket_returned_on_picked_up',
+          fields: <String, Object?>{'ticket': event.ticketNumber.value},
+          level: AppLogLevel.debug,
+        );
+      } catch (e, st) {
+        AppLogger.w(
+          'ServedToCallRouter: release on picked_up failed',
+          error: e,
+          stackTrace: st,
+        );
+      }
+      return;
+    }
     if (event is! OrderServedEvent) {
       return;
     }

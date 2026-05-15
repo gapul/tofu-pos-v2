@@ -118,6 +118,27 @@ class CallCompletedEvent extends TransportEvent {
   bool get isHighPriority => false;
 }
 
+/// 受取完了通知（呼び出し → レジ、低緊急）。
+///
+/// 呼び出し端末で「受取完了」マークを付けたタイミングで発行する。
+/// レジ側は受信時に整理券プールを release（クールタイム経由）する。
+@immutable
+class OrderPickedUpEvent extends TransportEvent {
+  const OrderPickedUpEvent({
+    required super.shopId,
+    required super.eventId,
+    required super.occurredAt,
+    required this.orderId,
+    required this.ticketNumber,
+  });
+
+  final int orderId;
+  final TicketNumber ticketNumber;
+
+  @override
+  bool get isHighPriority => false;
+}
+
 /// 注文取消通知（レジ → キッチン／呼び出し、高緊急）。
 ///
 /// キッチン側ではこれを「調理中止」として扱う（§6.6.5）。

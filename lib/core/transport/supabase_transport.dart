@@ -52,6 +52,14 @@ class SupabaseTransport implements Transport {
   /// ことはあるが、それ以上は業務継続を優先して諦める（HTTP 経由の送信は動く）。
   static const Duration _subscribeTimeout = Duration(seconds: 5);
 
+  /// subscribe 失敗時に自動再試行する間隔。Wi-Fi の一時瞬断や Supabase 側
+  /// チャネルの timeout/closed をリカバリするための保険。
+  static const Duration _resubscribeDelay = Duration(seconds: 30);
+
+  Timer? _resubscribeTimer;
+  bool _disposed = false;
+  bool _subscribed = false;
+
   bool get isConnected => _channel != null;
 
   @override
@@ -83,15 +91,39 @@ class SupabaseTransport implements Transport {
           callback: _handlePayload,
         );
     _channel = ch;
+    _subscribed = false;
     ch.subscribe((status, [_]) {
       if (status == RealtimeSubscribeStatus.subscribed) {
+        _subscribed = true;
         if (!ready.isCompleted) ready.complete();
+        AppLogger.event(
+          'transport.supabase',
+          'subscribe.ok',
+          fields: <String, Object?>{'shop_id': shopId},
+        );
       } else if (status == RealtimeSubscribeStatus.channelError ||
           status == RealtimeSubscribeStatus.closed ||
           status == RealtimeSubscribeStatus.timedOut) {
         // subscribe 失敗は send には影響しない。ready を完了させて connect
         // をブロックしないようにする（receive ができないだけで業務継続）。
         if (!ready.isCompleted) ready.complete();
+        // ただし receive ができないままだと P2 として致命なので、自動再試行を
+        // スケジュールする。途中で disconnect/dispose されたら止まる。
+        final bool wasSubscribed = _subscribed;
+        _subscribed = false;
+        AppLogger.w(
+          'SupabaseTransport: channel status=$status (wasSubscribed=$wasSubscribed); '
+          'will resubscribe in ${_resubscribeDelay.inSeconds}s',
+        );
+        Telemetry.instance.warn(
+          'transport.supabase.subscribe.lost',
+          attrs: <String, Object?>{
+            'shop_id': shopId,
+            'status': status.toString(),
+            'was_subscribed': wasSubscribed,
+          },
+        );
+        _scheduleResubscribe();
       }
     });
     try {
@@ -112,13 +144,52 @@ class SupabaseTransport implements Transport {
           'timeout_seconds': _subscribeTimeout.inSeconds,
         },
       );
+      _scheduleResubscribe();
     }
+  }
+
+  /// 一定遅延後に subscribe を張り直す。disconnect/dispose で停止。
+  void _scheduleResubscribe() {
+    if (_disposed) return;
+    _resubscribeTimer?.cancel();
+    _resubscribeTimer = Timer(_resubscribeDelay, () async {
+      if (_disposed) return;
+      AppLogger.event(
+        'transport.supabase',
+        'subscribe.retry',
+        fields: <String, Object?>{'shop_id': shopId},
+      );
+      try {
+        // 既存チャネルを捨てて、新しく張り直す。
+        final RealtimeChannel? old = _channel;
+        _channel = null;
+        if (old != null) {
+          try {
+            await _client.removeChannel(old);
+          } catch (_) {
+            /* ignore */
+          }
+        }
+        await connect();
+      } catch (e, st) {
+        AppLogger.w(
+          'SupabaseTransport: resubscribe attempt failed',
+          error: e,
+          stackTrace: st,
+        );
+        // さらに延ばして retry。
+        _scheduleResubscribe();
+      }
+    });
   }
 
   @override
   Future<void> disconnect() async {
     // チャネルだけを閉じる。StreamController は閉じないので、`connect()` で
     // 再購読すれば同じ Stream で受信を再開できる（既存リスナーを切らない）。
+    _resubscribeTimer?.cancel();
+    _resubscribeTimer = null;
+    _subscribed = false;
     final RealtimeChannel? ch = _channel;
     _channel = null;
     if (ch != null) {
@@ -129,6 +200,7 @@ class SupabaseTransport implements Transport {
   /// アプリ終了時の完全な後始末。これを呼ぶと `events()` の Stream は close
   /// され、以降の `connect()` でも新規 Stream を張り直すことになる。
   Future<void> dispose() async {
+    _disposed = true;
     await disconnect();
     if (!_events.isClosed) {
       await _events.close();
@@ -222,6 +294,7 @@ class SupabaseTransport implements Transport {
       OrderServedEvent() => 'order_served',
       CallNumberEvent() => 'call_number',
       CallCompletedEvent() => 'call_completed',
+      OrderPickedUpEvent() => 'order_picked_up',
       OrderCancelledEvent() => 'order_cancelled',
       ProductMasterUpdateEvent() => 'product_master_update',
     };
@@ -251,6 +324,14 @@ class SupabaseTransport implements Transport {
           'ticket_number': ticketNumber.value,
         },
       CallCompletedEvent(
+        :final int orderId,
+        :final TicketNumber ticketNumber,
+      ) =>
+        <String, Object?>{
+          'order_id': orderId,
+          'ticket_number': ticketNumber.value,
+        },
+      OrderPickedUpEvent(
         :final int orderId,
         :final TicketNumber ticketNumber,
       ) =>
@@ -334,6 +415,15 @@ class SupabaseTransport implements Transport {
         case 'call_completed':
           if (orderId == null || ticket == null) return null;
           return CallCompletedEvent(
+            shopId: shopId,
+            eventId: eventId,
+            occurredAt: occurredAt,
+            orderId: orderId,
+            ticketNumber: TicketNumber(ticket),
+          );
+        case 'order_picked_up':
+          if (orderId == null || ticket == null) return null;
+          return OrderPickedUpEvent(
             shopId: shopId,
             eventId: eventId,
             occurredAt: occurredAt,

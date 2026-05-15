@@ -361,9 +361,12 @@ class _PeerPresenceBadge extends ConsumerWidget {
       message: list.isEmpty
           ? '接続中の端末はありません'
           : list
-              .map((p) => '${p.role.label}: ${p.deviceId.substring(0, p.deviceId.length.clamp(0, 6))}')
+              .map((p) => '${p.role.label}: ${p.userName ?? p.deviceId.substring(0, p.deviceId.length.clamp(0, 6))}')
               .join('\n'),
-      child: Container(
+      child: InkWell(
+        onTap: () => _showPeerSheet(context, list),
+        borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
+        child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: TofuTokens.space3,
           vertical: TofuTokens.space2,
@@ -387,6 +390,82 @@ class _PeerPresenceBadge extends ConsumerWidget {
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  void _showPeerSheet(BuildContext context, List<PeerInfo> peers) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (c) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: TofuTokens.space6,
+              vertical: TofuTokens.space5,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Text('接続中の端末', style: TofuTextStyles.h4),
+                const SizedBox(height: TofuTokens.space3),
+                if (peers.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: TofuTokens.space6,
+                    ),
+                    child: Text(
+                      '接続中の端末はありません',
+                      style: TofuTextStyles.bodyMd.copyWith(
+                        color: TofuTokens.textTertiary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  ...peers.map(
+                    (p) => Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: TofuTokens.space2,
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          Icon(switch (p.role) {
+                            DeviceRole.register => Icons.point_of_sale,
+                            DeviceRole.kitchen => Icons.restaurant,
+                            DeviceRole.calling => Icons.campaign,
+                          }, size: 18, color: TofuTokens.brandPrimary),
+                          const SizedBox(width: TofuTokens.space3),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  p.role.label,
+                                  style: TofuTextStyles.bodyMdBold,
+                                ),
+                                Text(
+                                  p.userName?.isNotEmpty == true
+                                      ? p.userName!
+                                      : 'ユーザー名未設定 (${p.deviceId.substring(0, p.deviceId.length.clamp(0, 6))})',
+                                  style: TofuTextStyles.caption.copyWith(
+                                    color: TofuTokens.textTertiary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: TofuTokens.space3),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -34,6 +34,7 @@ final FutureProvider<ServedToCallRouter?> servedToCallRouterProvider =
         transport: transport,
         settingsRepository: ref.watch(settingsRepositoryProvider),
         shopId: shopId.value,
+        ticketPoolRepository: ref.watch(ticketNumberPoolRepositoryProvider),
       );
       ref.onDispose(router.stop);
       return router;

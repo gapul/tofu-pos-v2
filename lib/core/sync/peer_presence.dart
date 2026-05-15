@@ -9,23 +9,32 @@ import '../logging/app_logger.dart';
 /// 1 端末を識別する presence エントリ。
 @immutable
 class PeerInfo {
-  const PeerInfo({required this.role, required this.deviceId});
+  const PeerInfo({
+    required this.role,
+    required this.deviceId,
+    this.userName,
+  });
 
   final DeviceRole role;
   final String deviceId;
+
+  /// 任意のユーザー名（presence 経由で広報される担当者名）。
+  final String? userName;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is PeerInfo &&
           role == other.role &&
-          deviceId == other.deviceId);
+          deviceId == other.deviceId &&
+          userName == other.userName);
 
   @override
-  int get hashCode => Object.hash(role, deviceId);
+  int get hashCode => Object.hash(role, deviceId, userName);
 
   @override
-  String toString() => 'PeerInfo(role=$role, deviceId=$deviceId)';
+  String toString() =>
+      'PeerInfo(role=$role, deviceId=$deviceId, userName=$userName)';
 }
 
 /// Supabase Realtime Presence を使って同一店舗内の他端末状況を取得するサービス。
@@ -38,12 +47,14 @@ class PeerPresenceService {
     required this.shopId,
     required this.role,
     required this.deviceId,
+    this.userName,
   }) : _client = client;
 
   final SupabaseClient _client;
   final String shopId;
   final DeviceRole role;
   final String deviceId;
+  final String? userName;
 
   RealtimeChannel? _channel;
   final StreamController<List<PeerInfo>> _peersController =
@@ -84,6 +95,7 @@ class PeerPresenceService {
           await ch.track(<String, dynamic>{
             'role': role.name,
             'device_id': deviceId,
+            if (userName != null && userName!.isNotEmpty) 'user_name': userName,
           });
         } catch (e, st) {
           AppLogger.w(
@@ -108,6 +120,7 @@ class PeerPresenceService {
           final Map<String, dynamic> payload = p.payload;
           final String? roleStr = payload['role'] as String?;
           final String? did = payload['device_id'] as String?;
+          final String? uName = payload['user_name'] as String?;
           if (roleStr == null || did == null) continue;
           final DeviceRole? r = DeviceRole.values
               .where((e) => e.name == roleStr)
@@ -115,7 +128,7 @@ class PeerPresenceService {
               .firstWhere((_) => true, orElse: () => null);
           if (r == null) continue;
           if (!seen.add(did)) continue;
-          peers.add(PeerInfo(role: r, deviceId: did));
+          peers.add(PeerInfo(role: r, deviceId: did, userName: uName));
         }
       }
       _lastPeers = peers;

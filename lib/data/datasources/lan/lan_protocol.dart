@@ -88,6 +88,16 @@ class LanProtocol {
           'orderId': orderId,
           'ticketNumber': ticketNumber.value,
         },
+      OrderPickedUpEvent(
+        :final int orderId,
+        :final TicketNumber ticketNumber,
+      ) =>
+        <String, Object?>{
+          ...base,
+          'kind': 'OrderPickedUp',
+          'orderId': orderId,
+          'ticketNumber': ticketNumber.value,
+        },
       OrderCancelledEvent(
         :final int orderId,
         :final TicketNumber ticketNumber,
@@ -190,6 +200,16 @@ class LanProtocol {
         );
       case 'CallCompleted':
         return CallCompletedEvent(
+          shopId: shopId,
+          eventId: eventId,
+          occurredAt: occurredAt,
+          orderId: (json['orderId'] as num?)?.toInt() ?? 0,
+          ticketNumber: TicketNumber(
+            (json['ticketNumber'] as num?)?.toInt() ?? 1,
+          ),
+        );
+      case 'OrderPickedUp':
+        return OrderPickedUpEvent(
           shopId: shopId,
           eventId: eventId,
           occurredAt: occurredAt,

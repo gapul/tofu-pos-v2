@@ -23,10 +23,11 @@ void main() {
     });
 
     test('released number is buffered, then reusable', () {
-      // バッファ2、最大10で運用
+      // バッファ2、最大10で運用。クールタイムはこのテストでは無効化。
       TicketNumberPool pool = TicketNumberPool.empty(
         maxNumber: 10,
         bufferSize: 2,
+        cooldown: Duration.zero,
       );
 
       // 番号1を払い出して解放
