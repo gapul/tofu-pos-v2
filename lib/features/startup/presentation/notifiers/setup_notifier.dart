@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -64,6 +66,9 @@ class SetupNotifier extends AsyncNotifier<SetupState> {
     ref.invalidate(transportProvider);
     ref.invalidate(supabaseRealtimeListenerProvider);
     ref.invalidate(peerPresenceServiceProvider);
+    ref.invalidate(masterDataCloudSyncProvider);
+    // 商品・釣銭の初回アップロードを発火させる
+    unawaited(ref.read(masterDataCloudSyncProvider.future));
     try {
       await ref.read(telemetryInitProvider.future);
     } catch (_) {

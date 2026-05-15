@@ -71,6 +71,11 @@ StartupPipeline buildStartupPipeline(WidgetRef ref) {
       run: () async => ref.read(syncServiceProvider).start(),
     ),
     StartupStep(
+      name: 'master_data_cloud_sync.start',
+      // shop_id 未設定なら null になって何もしない。設定後の初回起動で発火。
+      run: () async => ref.read(masterDataCloudSyncProvider.future),
+    ),
+    StartupStep(
       name: 'role_starter.start',
       run: () => ref.read(roleStarterProvider).start(),
     ),

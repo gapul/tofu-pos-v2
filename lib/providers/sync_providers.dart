@@ -3,8 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/config/env.dart';
 import '../core/sync/cloud_sync_client.dart';
+import '../core/sync/master_data_cloud_sync.dart';
 import '../core/sync/peer_presence.dart';
+import '../core/sync/supabase_cash_drawer_sync_client.dart';
 import '../core/sync/supabase_cloud_sync_client.dart';
+import '../core/sync/supabase_product_sync_client.dart';
 import '../core/sync/supabase_realtime_listener.dart';
 import '../core/sync/sync_service.dart';
 import '../core/time/clock.dart';
@@ -183,3 +186,37 @@ SyncWarningLevel evaluateSyncWarningNow(
   SyncService service, {
   Clock clock = const SystemClock(),
 }) => _evaluate(service.lastFailureSince, clock);
+
+/// 商品マスタ / 釣銭スナップショットを Supabase にアップロードするオートランナー。
+///
+/// 店舗 ID + Supabase 接続情報が揃ったタイミングで起動する。
+/// `ref.watch(masterDataCloudSyncProvider.future)` を main 起動時に
+/// 1 回 await すれば start 済みになる。
+final FutureProvider<MasterDataCloudSync?> masterDataCloudSyncProvider =
+    FutureProvider<MasterDataCloudSync?>((ref) async {
+      if (!Env.hasSupabaseCredentials) {
+        return null;
+      }
+      final ShopId? shopId = await ref
+          .watch(settingsRepositoryProvider)
+          .getShopId();
+      if (shopId == null) {
+        return null;
+      }
+      final SupabaseClient client;
+      try {
+        client = Supabase.instance.client;
+      } catch (_) {
+        return null;
+      }
+      final MasterDataCloudSync sync = MasterDataCloudSync(
+        productRepository: ref.watch(productRepositoryProvider),
+        cashDrawerRepository: ref.watch(cashDrawerRepositoryProvider),
+        productClient: SupabaseProductSyncClient(client),
+        cashClient: SupabaseCashDrawerSyncClient(client),
+        shopId: shopId.value,
+      );
+      sync.start();
+      ref.onDispose(sync.stop);
+      return sync;
+    });
