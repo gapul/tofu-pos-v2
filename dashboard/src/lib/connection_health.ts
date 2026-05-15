@@ -55,33 +55,78 @@ export function validateFormat(s: Settings): HealthStatus {
   return { kind: 'ok' };
 }
 
-// REST ルートに HEAD を打って疎通と認証を確認する。
-// 200: 正常 / 401: key 無効 / その他: 到達不可
+// Supabase へ疎通と認証を確認する。
+// 新 publishable key は /rest/v1/ ルートを叩けない (Secret API key required)
+// 仕様のため、まず /auth/v1/health で URL 自体の到達性を確認し、
+// key 検証は /rest/v1/<table> を limit=0 で叩いてみる。
 export async function probeConnection(s: Settings, signal?: AbortSignal): Promise<HealthStatus> {
   const format = validateFormat(s);
   if (format.kind !== 'ok') return format;
-  const url = `${s.url.replace(/\/$/, '')}/rest/v1/`;
+  const base = s.url.replace(/\/$/, '');
+
+  // Step 1: URL 到達性 (auth health は認証不要 / publishable / JWT どちらでも参照可)
   try {
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: { apikey: s.key, Authorization: `Bearer ${s.key}` },
-      signal,
-    });
-    if (res.status === 401 || res.status === 403) {
+    const health = await fetch(`${base}/auth/v1/health`, { method: 'GET', signal });
+    if (health.status >= 500) {
+      return { kind: 'unreachable', detail: `Supabase 側のサーバーエラー (HTTP ${health.status})` };
+    }
+    if (health.status === 404) {
       return {
-        kind: 'unauthorized',
-        detail: `anon key が拒否されました (HTTP ${res.status})。Supabase ダッシュボードの値と一致しているか確認してください。`,
+        kind: 'unreachable',
+        detail: `${base} は Supabase プロジェクトとして応答していません (HTTP 404)。URL のスペルを確認してください。`,
       };
     }
-    if (res.status >= 500) {
-      return { kind: 'unreachable', detail: `Supabase サーバーエラー (HTTP ${res.status})` };
-    }
-    return { kind: 'ok' };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return {
       kind: 'unreachable',
-      detail: `Supabase に到達できません: ${msg} (URL のスペルを確認してください)`,
+      detail: `Supabase に到達できません: ${msg} (URL のスペル / プロジェクト稼働状態を確認してください)`,
+    };
+  }
+
+  // Step 2: key 検証。アプリが実際に読む order_lines テーブルを limit=0 で叩く。
+  //   200/206: 読める (ok)
+  //   401:     key 自体が無効 / 別プロジェクトの key
+  //   403:     RLS で拒否 (key は OK だがポリシー次第。バナーには出さない方が無難)
+  //   404:     テーブル未作成 → スキーマ未デプロイの可能性
+  try {
+    const probe = await fetch(`${base}/rest/v1/order_lines?select=id&limit=0`, {
+      method: 'GET',
+      headers: { apikey: s.key, Authorization: `Bearer ${s.key}` },
+      signal,
+    });
+    if (probe.status === 200 || probe.status === 206 || probe.status === 403) {
+      // 403 (RLS) は key 自体は正しいので OK 扱い (アプリの実クエリで再評価)
+      return { kind: 'ok' };
+    }
+    if (probe.status === 401) {
+      const body = await probe.text().catch(() => '');
+      // 新 publishable で /rest/v1/ ルートを誤って叩いた等の "Secret API key required"
+      // は到達性の証左なので OK 扱い (本来 /rest/v1/<table> は publishable で通る)
+      if (/Secret API key required/i.test(body)) {
+        return { kind: 'ok' };
+      }
+      return {
+        kind: 'unauthorized',
+        detail: `anon key が拒否されました (HTTP 401)。Supabase ダッシュボード → Project Settings → API Keys の Publishable を再コピーして登録しなおしてください。`,
+      };
+    }
+    if (probe.status === 404) {
+      return {
+        kind: 'unreachable',
+        detail:
+          'テーブル "order_lines" が見つかりません (HTTP 404)。Supabase 側のスキーママイグレーション未適用の可能性があります。',
+      };
+    }
+    return {
+      kind: 'unreachable',
+      detail: `予期せぬレスポンス HTTP ${probe.status}`,
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return {
+      kind: 'unreachable',
+      detail: `Supabase REST に到達できません: ${msg}`,
     };
   }
 }
