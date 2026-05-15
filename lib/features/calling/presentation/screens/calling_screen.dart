@@ -9,9 +9,9 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/sync/refresh_from_server.dart';
+import '../../../../core/theme/tokens.dart';
 import '../../../../core/transport/transport.dart';
 import '../../../../core/transport/transport_event.dart';
-import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/lordicon.dart';
 import '../../../../core/ui/page_title.dart';
@@ -694,8 +694,6 @@ class _FullScreenCallDialogState extends State<_FullScreenCallDialog> {
   @override
   Widget build(BuildContext context) {
     return PopScope<bool>(
-      // ハードウェアバック等で閉じた場合は markCalled しない。
-      canPop: true,
       onPopInvokedWithResult: (didPop, _) {},
       child: Dialog.fullscreen(
         backgroundColor: TofuTokens.brandPrimary,
@@ -711,7 +709,6 @@ class _FullScreenCallDialogState extends State<_FullScreenCallDialog> {
                   TofuTokens.space7,
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: <Widget>[
                     Text(
                       'お呼び出し',
@@ -758,7 +755,6 @@ class _FullScreenCallDialogState extends State<_FullScreenCallDialog> {
                 child: TofuButton(
                   label: '呼び出し済み',
                   icon: Icons.check_circle,
-                  variant: TofuButtonVariant.primary,
                   onPressed: () => Navigator.of(context).pop(true),
                 ),
               ),

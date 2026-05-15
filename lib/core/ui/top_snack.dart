@@ -61,9 +61,7 @@ class TopSnack {
     );
     overlay.insert(entry);
     _current = entry;
-    _timer = Timer(duration + const Duration(milliseconds: 220), () {
-      _scheduleDismiss();
-    });
+    _timer = Timer(duration + const Duration(milliseconds: 220), _scheduleDismiss);
   }
 
   /// 表示中があれば消す。テストや画面遷移直前のクリーンアップに使う。
@@ -164,7 +162,6 @@ class _TopSnackContentState extends State<_TopSnackContent>
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: <Widget>[
                         if (widget.icon != null) ...<Widget>[
                           Icon(widget.icon, color: widget.foreground, size: 20),

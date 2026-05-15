@@ -77,7 +77,7 @@ void main() {
   test('decrements stock when stockManagement is on', () async {
     await usecase.execute(
       draft: makeDraft(),
-      flags: const FeatureFlags(stockManagement: true),
+      flags: const FeatureFlags(),
     );
     final Product? p = await productRepo.findById('p1');
     expect(p!.stock, 8); // 10 - 2
@@ -103,7 +103,7 @@ void main() {
     expect(
       () => usecase.execute(
         draft: draft,
-        flags: const FeatureFlags(stockManagement: true),
+        flags: const FeatureFlags(),
       ),
       throwsA(isA<InsufficientStockException>()),
     );
@@ -117,7 +117,7 @@ void main() {
 
     await usecase.execute(
       draft: makeDraft(cashDelta: const <int, int>{1000: 1, 100: -2}),
-      flags: const FeatureFlags(cashManagement: true),
+      flags: const FeatureFlags(),
     );
     final drawer = await cashRepo.get();
     // 開始時 500円 → +1000 - 200 = 1300円
@@ -216,7 +216,7 @@ void main() {
       await expectLater(
         u.execute(
           draft: draft,
-          flags: const FeatureFlags(stockManagement: true),
+          flags: const FeatureFlags(),
         ),
         throwsA(isA<InsufficientStockException>()),
       );
@@ -241,7 +241,7 @@ void main() {
       await expectLater(
         usecase.execute(
           draft: draft,
-          flags: const FeatureFlags(stockManagement: true),
+          flags: const FeatureFlags(),
         ),
         throwsA(isA<InsufficientStockException>()),
       );

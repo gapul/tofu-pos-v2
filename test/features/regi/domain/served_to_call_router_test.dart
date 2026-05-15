@@ -99,7 +99,7 @@ void main() {
     final ServedToCallRouter router = ServedToCallRouter(
       transport: transport,
       settingsRepository: _FakeSettings(
-        const FeatureFlags(kitchenLink: true, callingLink: true),
+        const FeatureFlags(),
       ),
       shopId: 'shop',
       now: () => DateTime(2026, 5, 7, 12, 30),
@@ -154,7 +154,7 @@ void main() {
     final ServedToCallRouter router = ServedToCallRouter(
       transport: transport,
       settingsRepository: _FakeSettings(
-        const FeatureFlags(kitchenLink: true, callingLink: true),
+        const FeatureFlags(),
       ),
       shopId: 'shop',
     );
@@ -178,7 +178,7 @@ void main() {
     final ServedToCallRouter router = ServedToCallRouter(
       transport: transport,
       settingsRepository: _FakeSettings(
-        const FeatureFlags(kitchenLink: true, callingLink: true),
+        const FeatureFlags(),
       ),
       shopId: 'shop',
     );

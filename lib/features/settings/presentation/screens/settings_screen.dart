@@ -61,26 +61,26 @@ class SettingsScreen extends ConsumerWidget {
                 horizontal: wide ? TofuTokens.space8 : TofuTokens.space5,
                 vertical: TofuTokens.space7,
               ),
-              children: <Widget>[
-                const _DeviceHeaderSection(),
-                const SizedBox(height: TofuTokens.space7),
-                const _UserNameSection(),
-                const SizedBox(height: TofuTokens.space7),
-                const _TransportSection(),
-                const SizedBox(height: TofuTokens.space7),
-                const _RoleSection(),
-                const SizedBox(height: TofuTokens.space7),
-                const _FeatureFlagsSection(),
-                const SizedBox(height: TofuTokens.space7),
-                const _ExportSection(),
-                const SizedBox(height: TofuTokens.space7),
-                const _LogoutSection(),
+              children: const <Widget>[
+                _DeviceHeaderSection(),
+                SizedBox(height: TofuTokens.space7),
+                _UserNameSection(),
+                SizedBox(height: TofuTokens.space7),
+                _TransportSection(),
+                SizedBox(height: TofuTokens.space7),
+                _RoleSection(),
+                SizedBox(height: TofuTokens.space7),
+                _FeatureFlagsSection(),
+                SizedBox(height: TofuTokens.space7),
+                _ExportSection(),
+                SizedBox(height: TofuTokens.space7),
+                _LogoutSection(),
                 // 開発者設定は debug ビルドでのみ表示。
                 if (!kReleaseMode) ...<Widget>[
-                  const SizedBox(height: TofuTokens.space7),
-                  const _DeveloperSection(),
+                  SizedBox(height: TofuTokens.space7),
+                  _DeveloperSection(),
                 ],
-                const SizedBox(height: TofuTokens.space11),
+                SizedBox(height: TofuTokens.space11),
               ],
             );
             return Center(
@@ -211,7 +211,6 @@ class _UserNameSectionState extends ConsumerState<_UserNameSection> {
             child: TofuButton(
               label: '保存',
               icon: Icons.save,
-              variant: TofuButtonVariant.primary,
               onPressed: _loaded ? () => unawaited(_save()) : null,
             ),
           ),
@@ -634,22 +633,22 @@ class _DeveloperSection extends StatelessWidget {
       child: Theme(
         // ExpansionTile のデフォルト分割線を消す。
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(
+        child: const ExpansionTile(
+          tilePadding: EdgeInsets.symmetric(
             horizontal: TofuTokens.space6,
             vertical: TofuTokens.space2,
           ),
-          childrenPadding: const EdgeInsets.fromLTRB(
+          childrenPadding: EdgeInsets.fromLTRB(
             TofuTokens.space5,
             0,
             TofuTokens.space5,
             TofuTokens.space5,
           ),
-          title: const PaneTitle(
+          title: PaneTitle(
             title: '開発者設定',
             subtitle: '実機検証・不可逆な管理操作 / 本番運用では使用しません',
           ),
-          children: const <Widget>[
+          children: <Widget>[
             _DangerSection(),
             SizedBox(height: TofuTokens.space5),
             _DevToolsSection(),

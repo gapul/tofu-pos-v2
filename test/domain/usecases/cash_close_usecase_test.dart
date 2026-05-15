@@ -135,7 +135,7 @@ void main() {
         CashDrawer(<Denomination, int>{const Denomination(1000): 3}),
       );
       final DailySummary s = await usecase.getDailySummary(
-        flags: const FeatureFlags(cashManagement: true),
+        flags: const FeatureFlags(),
       );
       expect(s.theoreticalDrawer, isNotNull);
       expect(s.theoreticalDrawer!.totalAmount, const Money(3000));

@@ -116,7 +116,7 @@ Future<ScenarioResult> _runStockDecrement(ScenarioContext ctx) async {
   final Product p = await _seedProduct(ctx, stock: 5);
   await ctx.checkout.execute(
     draft: _draft(p, qty: 2),
-    flags: const FeatureFlags(stockManagement: true),
+    flags: const FeatureFlags(),
   );
   final Product? after = await ctx.productRepo.findById(p.id);
   if (after?.stock != 3) {
@@ -137,7 +137,7 @@ Future<ScenarioResult> _runStockInsufficient(ScenarioContext ctx) async {
   try {
     await ctx.checkout.execute(
       draft: _draft(p, qty: 5),
-      flags: const FeatureFlags(stockManagement: true),
+      flags: const FeatureFlags(),
     );
     return ScenarioResult.fail('expected exception was not thrown');
   } on InsufficientStockException {
@@ -162,8 +162,7 @@ Future<ScenarioResult> _runCancelRollback(ScenarioContext ctx) async {
     CashDrawer(<Denomination, int>{const Denomination(100): 5}),
   );
   const FeatureFlags flags = FeatureFlags(
-    stockManagement: true,
-    cashManagement: true,
+    
   );
   const Map<int, int> delta = <int, int>{1000: 1, 100: -2};
   final Order saved = await ctx.checkout.execute(
@@ -211,7 +210,7 @@ Future<ScenarioResult> _runCashDrawer(ScenarioContext ctx) async {
       receivedCash: const Money(1000),
       cashDelta: const <int, int>{1000: 1, 100: -2},
     ),
-    flags: const FeatureFlags(cashManagement: true),
+    flags: const FeatureFlags(),
   );
   final CashDrawer d = await ctx.cashRepo.get();
   if (d.totalAmount != const Money(1300)) {

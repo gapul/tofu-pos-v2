@@ -105,11 +105,11 @@ void main() {
     );
     final Order placed = await checkout.execute(
       draft: draft,
-      flags: const FeatureFlags(kitchenLink: true),
+      flags: const FeatureFlags(),
     );
     await u.execute(
       orderId: placed.id,
-      flags: const FeatureFlags(kitchenLink: true),
+      flags: const FeatureFlags(),
       originalCashDelta: const <int, int>{},
     );
     expect(transport.sent.single, isA<OrderCancelledEvent>());
@@ -128,11 +128,11 @@ void main() {
     );
     final Order placed = await checkout.execute(
       draft: draft,
-      flags: const FeatureFlags(callingLink: true),
+      flags: const FeatureFlags(),
     );
     await u.execute(
       orderId: placed.id,
-      flags: const FeatureFlags(callingLink: true),
+      flags: const FeatureFlags(),
       originalCashDelta: const <int, int>{},
     );
     expect(transport.sent.single, isA<OrderCancelledEvent>());
@@ -146,13 +146,13 @@ void main() {
     );
     final Order placed = await checkout.execute(
       draft: draft,
-      flags: const FeatureFlags(kitchenLink: true),
+      flags: const FeatureFlags(),
     );
 
     expect(
       () => u.execute(
         orderId: placed.id,
-        flags: const FeatureFlags(kitchenLink: true),
+        flags: const FeatureFlags(),
         originalCashDelta: const <int, int>{},
       ),
       throwsA(isA<TransportDeliveryException>()),

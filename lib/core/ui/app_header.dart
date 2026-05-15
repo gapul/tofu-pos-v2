@@ -3,15 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/enums/device_role.dart';
 import '../../domain/enums/transport_mode.dart';
-import '../sync/peer_presence.dart';
 import '../../domain/value_objects/ticket_number.dart' as vo;
+import '../../features/calling/presentation/notifiers/calling_providers.dart';
+import '../../features/kitchen/presentation/notifiers/kitchen_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/role_router_providers.dart';
 import '../../providers/settings_providers.dart';
 import '../../providers/sync_providers.dart';
-import '../../features/calling/presentation/notifiers/calling_providers.dart';
-import '../../features/kitchen/presentation/notifiers/kitchen_providers.dart';
 import '../../providers/usecase_providers.dart';
+import '../sync/peer_presence.dart';
 import '../sync/refresh_from_server.dart';
 import '../theme/tokens.dart';
 import 'status_indicator.dart';
@@ -310,7 +310,7 @@ class _RefreshButton extends ConsumerWidget {
   }
 
   Future<void> _refresh(BuildContext context, WidgetRef ref) async {
-    TopSnack.show(context, '再読み込み中…', duration: const Duration(seconds: 2));
+    TopSnack.show(context, '再読み込み中…');
     // 1. 未送信データを先に push
     try {
       await ref.read(syncServiceProvider).runOnce();
@@ -413,7 +413,7 @@ class _PeerPresenceBadge extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Text('接続中の端末', style: TofuTextStyles.h4),
+                const Text('接続中の端末', style: TofuTextStyles.h4),
                 const SizedBox(height: TofuTokens.space3),
                 if (peers.isEmpty)
                   Padding(

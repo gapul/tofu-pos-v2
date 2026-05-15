@@ -94,7 +94,7 @@ void main() {
 
       final Order order = await flow.execute(
         draft: draft,
-        flags: const FeatureFlags(kitchenLink: true),
+        flags: const FeatureFlags(),
       );
 
       expect(order.orderStatus, OrderStatus.sent);
@@ -123,7 +123,7 @@ void main() {
       expect(
         () => flow.execute(
           draft: draft,
-          flags: const FeatureFlags(kitchenLink: true),
+          flags: const FeatureFlags(),
         ),
         throwsA(isA<TransportDeliveryException>()),
       );

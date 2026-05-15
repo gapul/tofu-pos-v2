@@ -85,7 +85,7 @@ void main() {
         receivedCash: Money(1000),
         cashDelta: <int, int>{1000: 1, 100: -2},
       ),
-      flags: const FeatureFlags(stockManagement: true, cashManagement: true),
+      flags: const FeatureFlags(),
     );
 
     // 注文・明細・整理券・在庫・金種・プールがすべて永続化されている
@@ -108,8 +108,7 @@ void main() {
     );
 
     const FeatureFlags flags = FeatureFlags(
-      stockManagement: true,
-      cashManagement: true,
+      
     );
     const Map<int, int> cashDelta = <int, int>{1000: 1, 100: -2};
 

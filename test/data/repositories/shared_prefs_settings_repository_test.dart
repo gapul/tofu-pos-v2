@@ -34,10 +34,7 @@ void main() {
   });
 
   test('feature flags round-trip', () async {
-    const FeatureFlags flags = FeatureFlags(
-      stockManagement: true,
-      kitchenLink: true,
-    );
+    const FeatureFlags flags = FeatureFlags.allOff;
     await repo.setFeatureFlags(flags);
     expect(await repo.getFeatureFlags(), flags);
   });
