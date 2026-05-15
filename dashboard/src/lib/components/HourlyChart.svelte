@@ -9,6 +9,10 @@
   function render(data: number[]) {
     if (!canvas) return;
     chart?.destroy();
+    // Chart.js は受け取った array を defineProperty で内部書換するため、
+    // Svelte 5 の $state proxy をそのまま渡すと state_descriptors_fixed で
+    // クラッシュする。プレーン配列にコピーしてから渡す。
+    const plain = [...data];
     chart = new Chart(canvas, {
       type: 'bar',
       data: {
@@ -16,7 +20,7 @@
         datasets: [
           {
             label: '売上',
-            data,
+            data: plain,
             backgroundColor: '#173a5e',
             hoverBackgroundColor: '#b83b3b',
             borderRadius: 4,

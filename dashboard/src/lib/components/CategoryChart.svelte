@@ -9,15 +9,19 @@
   function render(map: Map<string, number>) {
     if (!canvas) return;
     chart?.destroy();
+    // entries.map() で生成した配列はプレーンな array なので問題ないが、
+    // 念のため明示的にコピーして Svelte $state proxy が紛れ込まないようにする。
     const entries = [...map.entries()].sort((a, b) => b[1] - a[1]);
+    const labels = entries.map(([k]) => String(k));
+    const values = entries.map(([, v]) => Number(v));
     chart = new Chart(canvas, {
       type: 'bar',
       data: {
-        labels: entries.map(([k]) => k),
+        labels,
         datasets: [
           {
             label: '注文数',
-            data: entries.map(([, v]) => v),
+            data: values,
             backgroundColor: '#173a5e',
             borderRadius: 4,
             barThickness: 14,
