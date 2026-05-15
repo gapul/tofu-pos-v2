@@ -84,6 +84,20 @@ class ServedToCallRouter {
     // キッチン連携オン + 呼び出し連携オンの組み合わせのみ自動転送する。
     // キッチン連携オフ時は手動「呼び出す」ボタン経由（仕様書 §6.3 後段）
     if (!flags.kitchenLink || !flags.callingLink) {
+      // P3 調査用: 「キッチンで提供完了を押しても呼び出し端末に番号が出ない」
+      // 報告の主因の一つ。レジ側のフィーチャーフラグが OFF のとき、
+      // OrderServedEvent は受信できているのに自動転送されない、という
+      // ことを telemetry で見えるようにしておく。
+      AppLogger.event(
+        'regi',
+        'auto_route_skipped_flags_off',
+        fields: <String, Object?>{
+          'ticket': event.ticketNumber.value,
+          'kitchen_link': flags.kitchenLink,
+          'calling_link': flags.callingLink,
+        },
+        level: AppLogLevel.warn,
+      );
       return;
     }
 

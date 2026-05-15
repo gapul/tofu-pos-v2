@@ -15,26 +15,82 @@ class CallingIngestUseCase {
   final CallingOrderRepository _repo;
   final DateTime Function() _now;
 
+  /// 会計確定通知（OrderSubmittedEvent）を「調理待ち」状態で取り込む。
+  ///
+  /// 業務要件: 会計確定の瞬間から呼び出し端末の「呼び出し前」タブに整理券を
+  /// 表示しておきたい（オペレータが調理状況を一覧で把握するため）。ただし
+  /// 自動ポップアップ（整理券大画面）は **発火させない**。ポップアップは
+  /// CallNumberEvent（提供完了がレジから転送）で [CallingStatus.pending] に
+  /// 昇格したタイミングで初めて出す。
+  ///
+  /// 既に同 orderId が存在する場合は status を保持する（既に pending /
+  /// called / pickedUp / cancelled に進んでいるなら戻さない）。
+  Future<void> ingestSubmitted(OrderSubmittedEvent ev) async {
+    final CallingOrder? existing = await _repo.findByOrderId(ev.orderId);
+    final CallingOrder next = existing != null
+        ? existing.copyWith(ticketNumber: ev.ticketNumber)
+        : CallingOrder(
+            orderId: ev.orderId,
+            ticketNumber: ev.ticketNumber,
+            status: CallingStatus.awaitingKitchen,
+            receivedAt: _now(),
+          );
+    await _repo.upsert(next);
+    AppLogger.event(
+      'calling',
+      'ingest_submitted',
+      fields: <String, Object?>{
+        'order_id': ev.orderId,
+        'ticket': ev.ticketNumber.value,
+        'preserved_status': existing?.status.name,
+      },
+    );
+  }
+
   /// 呼び出し依頼を未呼び出し状態で永続化。
   ///
-  /// 既に同 `orderId` が存在する場合（backfill replay や Realtime の冪等性
-  /// 再受信）は、現在のステータス（called / pickedUp / cancelled 等）を
-  /// 保持したまま ticketNumber のみ最新値で更新する。
+  /// 既存があれば:
+  ///   - [CallingStatus.awaitingKitchen] → [CallingStatus.pending] に昇格
+  ///     （会計確定で先行作成された行を、料理完成で呼び出し可能に切り替える）
+  ///   - それ以外（called / pickedUp / cancelled）は status 保持
+  ///     （backfill replay や Realtime の冪等性再受信に備える）
+  ///
   /// 以前は無条件で `pending` 上書きしていたため、backfill 再生で
   /// 「呼び出し済」が「呼び出し前」に戻る不具合があった。
   Future<void> ingestCallNumber(CallNumberEvent ev) async {
     final CallingOrder? existing = await _repo.findByOrderId(ev.orderId);
-    final CallingOrder next = existing != null
-        ? existing.copyWith(
-            ticketNumber: ev.ticketNumber,
-            // status / receivedAt は既存値を保持
-          )
-        : CallingOrder(
-            orderId: ev.orderId,
-            ticketNumber: ev.ticketNumber,
-            status: CallingStatus.pending,
-            receivedAt: _now(),
-          );
+    final CallingOrder next;
+    if (existing == null) {
+      next = CallingOrder(
+        orderId: ev.orderId,
+        ticketNumber: ev.ticketNumber,
+        status: CallingStatus.pending,
+        receivedAt: _now(),
+      );
+    } else if (existing.status == CallingStatus.awaitingKitchen) {
+      // awaitingKitchen → pending に昇格（料理完成）。
+      next = existing.copyWith(
+        ticketNumber: ev.ticketNumber,
+        status: CallingStatus.pending,
+      );
+    } else {
+      // called / pickedUp / cancelled / 既に pending: status 保持
+      next = existing.copyWith(ticketNumber: ev.ticketNumber);
+      if (existing.status == CallingStatus.cancelled) {
+        // P3 調査: 取消済みに対する CallNumberEvent はオペレータが
+        // 「呼び出しが出ない」と感じる原因になり得る。手動再投入の
+        // 判断材料として明示的に警告ログを残す。
+        AppLogger.event(
+          'calling',
+          'call_number_on_cancelled',
+          fields: <String, Object?>{
+            'order_id': ev.orderId,
+            'ticket': ev.ticketNumber.value,
+          },
+          level: AppLogLevel.warn,
+        );
+      }
+    }
     await _repo.upsert(next);
     AppLogger.event(
       'calling',
@@ -43,6 +99,8 @@ class CallingIngestUseCase {
         'order_id': ev.orderId,
         'ticket': ev.ticketNumber.value,
         'preserved_status': existing?.status.name,
+        'promoted_to_pending':
+            existing?.status == CallingStatus.awaitingKitchen,
       },
     );
   }

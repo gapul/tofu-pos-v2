@@ -107,7 +107,6 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
           context,
           '他端末への呼び出し通知に失敗: $e',
           color: TofuTokens.dangerBgStrong,
-          duration: const Duration(seconds: 5),
         );
       }
     }
@@ -183,6 +182,11 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
   }
 
   /// pending リストの変化を見て、新規 pending を自動全画面表示する。
+  ///
+  /// 自動ポップアップは **[CallingStatus.pending] のみ** が対象。
+  /// [CallingStatus.awaitingKitchen]（会計確定済み・調理中）は「呼び出し前」
+  /// リストへの表示はするが、ポップアップは料理完成 (CallNumberEvent) で
+  /// pending に昇格した瞬間に初めて発火する。
   void _handleOrdersChange(
     List<CallingOrder>? previous,
     List<CallingOrder> next,
@@ -274,9 +278,21 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
                 },
                 child: orders.when(
                   data: (all) {
-                    final List<CallingOrder> pending = all
+                    // 「呼び出し前」ペインには awaitingKitchen（調理待ち）と
+                    // pending（呼び出し可能）の両方を表示する。視認しやすい
+                    // よう pending を先頭、awaitingKitchen を後ろに並べる。
+                    final List<CallingOrder> readyToCall = all
                         .where((o) => o.status == CallingStatus.pending)
                         .toList();
+                    final List<CallingOrder> awaiting = all
+                        .where(
+                          (o) => o.status == CallingStatus.awaitingKitchen,
+                        )
+                        .toList();
+                    final List<CallingOrder> pending = <CallingOrder>[
+                      ...readyToCall,
+                      ...awaiting,
+                    ];
                     final List<CallingOrder> called = all
                         .where(
                           (o) =>
@@ -544,6 +560,7 @@ class _LargeTicketCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isCancelled = order.status == CallingStatus.cancelled;
+    final bool isAwaiting = order.status == CallingStatus.awaitingKitchen;
     // Figma 76:91 — 角丸は tl/tr=xl(16), bl/br=2xl(24) の非対称
     const BorderRadius cardRadius = BorderRadius.only(
       topLeft: Radius.circular(TofuTokens.radiusXl),
@@ -551,12 +568,28 @@ class _LargeTicketCard extends StatelessWidget {
       bottomLeft: Radius.circular(TofuTokens.radius2xl),
       bottomRight: Radius.circular(TofuTokens.radius2xl),
     );
+    // 調理待ち(awaitingKitchen) は灰系・タップ不可で「料理まだ」を示す。
+    final Color bg = isCancelled
+        ? TofuTokens.dangerBg
+        : isAwaiting
+            ? TofuTokens.bgMuted
+            : TofuTokens.brandPrimarySubtle;
+    final Color borderColor = isCancelled
+        ? TofuTokens.dangerBorder
+        : isAwaiting
+            ? TofuTokens.borderSubtle
+            : TofuTokens.brandPrimary;
+    final Color numberColor = isCancelled
+        ? TofuTokens.dangerText
+        : isAwaiting
+            ? TofuTokens.textTertiary
+            : TofuTokens.brandPrimary;
     return Material(
-      color: isCancelled ? TofuTokens.dangerBg : TofuTokens.brandPrimarySubtle,
+      color: bg,
       borderRadius: cardRadius,
       child: InkWell(
         borderRadius: cardRadius,
-        onTap: isCancelled ? null : onTap,
+        onTap: (isCancelled || isAwaiting) ? null : onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(
             horizontal: TofuTokens.space8,
@@ -564,9 +597,7 @@ class _LargeTicketCard extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             border: Border.all(
-              color: isCancelled
-                  ? TofuTokens.dangerBorder
-                  : TofuTokens.brandPrimary,
+              color: borderColor,
               width: TofuTokens.strokeThick,
             ),
             borderRadius: cardRadius,
@@ -583,24 +614,29 @@ class _LargeTicketCard extends StatelessWidget {
                     tone: StatusIndicatorTone.danger,
                     dense: true,
                   ),
+                )
+              else if (isAwaiting)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: TofuTokens.space2),
+                  child: StatusIndicator.custom(
+                    label: '調理中',
+                    icon: Icons.restaurant,
+                    tone: StatusIndicatorTone.neutral,
+                    dense: true,
+                  ),
                 ),
               Expanded(
                 child: Center(
                   child: FittedBox(
                     child: Text(
                       order.ticketNumber.toString(),
-                      style:
-                          const TextStyle(
-                            fontFamily: TofuTokens.fontFamily,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 72,
-                            height: 80 / 72,
-                            letterSpacing: -1.44,
-                          ).copyWith(
-                            color: isCancelled
-                                ? TofuTokens.dangerText
-                                : TofuTokens.brandPrimary,
-                          ),
+                      style: const TextStyle(
+                        fontFamily: TofuTokens.fontFamily,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 72,
+                        height: 80 / 72,
+                        letterSpacing: -1.44,
+                      ).copyWith(color: numberColor),
                     ),
                   ),
                 ),

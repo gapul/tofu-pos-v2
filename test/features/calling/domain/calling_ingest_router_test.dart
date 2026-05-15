@@ -101,11 +101,68 @@ void main() {
     expect(await repo.findByOrderId(1), isNull);
   });
 
-  test('non-relevant events (OrderSubmitted) are ignored', () async {
+  test(
+    'OrderSubmittedEvent is ingested as awaitingKitchen (no popup yet)',
+    () async {
+      router.start();
+      transport.incoming.add(
+        OrderSubmittedEvent(
+          shopId: 'shop',
+          eventId: 's1',
+          occurredAt: DateTime(2026, 5, 7, 12),
+          orderId: 1,
+          ticketNumber: const TicketNumber(7),
+          itemsJson: '[]',
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      final saved = await repo.findByOrderId(1);
+      expect(saved, isNotNull);
+      expect(saved!.status, CallingStatus.awaitingKitchen);
+      expect(saved.ticketNumber.value, 7);
+    },
+  );
+
+  test(
+    'OrderSubmittedEvent then CallNumberEvent promotes awaitingKitchen to pending',
+    () async {
+      router.start();
+      // 1. 会計確定 → awaitingKitchen
+      transport.incoming.add(
+        OrderSubmittedEvent(
+          shopId: 'shop',
+          eventId: 's1',
+          occurredAt: DateTime(2026, 5, 7, 12),
+          orderId: 1,
+          ticketNumber: const TicketNumber(7),
+          itemsJson: '[]',
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(
+        (await repo.findByOrderId(1))!.status,
+        CallingStatus.awaitingKitchen,
+      );
+      // 2. キッチン提供完了 → CallNumberEvent → pending（ポップアップ対象）
+      transport.incoming.add(
+        CallNumberEvent(
+          shopId: 'shop',
+          eventId: 'c1',
+          occurredAt: DateTime(2026, 5, 7, 12, 5),
+          orderId: 1,
+          ticketNumber: const TicketNumber(7),
+        ),
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect((await repo.findByOrderId(1))!.status, CallingStatus.pending);
+    },
+  );
+
+  test('OrderSubmittedEvent from foreign shop is ignored', () async {
     router.start();
     transport.incoming.add(
       OrderSubmittedEvent(
-        shopId: 'shop',
+        shopId: 'OTHER',
         eventId: 's1',
         occurredAt: DateTime(2026, 5, 7, 12),
         orderId: 1,
@@ -114,6 +171,6 @@ void main() {
       ),
     );
     await Future<void>.delayed(const Duration(milliseconds: 20));
-    expect(await repo.findAll(), isEmpty);
+    expect(await repo.findByOrderId(1), isNull);
   });
 }

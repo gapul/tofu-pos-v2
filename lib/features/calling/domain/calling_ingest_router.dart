@@ -8,7 +8,10 @@ import 'calling_ingest_usecase.dart';
 /// 呼び出し端末で動くイベントルーター（仕様書 §6.3 / §6.6.6）。
 ///
 /// Transport.events() を購読し、event 種別に応じて適切な UseCase を呼ぶ:
+///  - OrderSubmittedEvent  → CallingIngestUseCase.ingestSubmitted
+///      (会計確定 → awaitingKitchen で先行作成、ポップアップは出さない)
 ///  - CallNumberEvent      → CallingIngestUseCase.ingestCallNumber
+///      (料理完成 → awaitingKitchen を pending に昇格、ポップアップ対象に)
 ///  - OrderCancelledEvent  → CallingIngestUseCase.ingestCancelled
 ///
 /// shop_id が一致しないイベントは無視する。
@@ -49,7 +52,9 @@ class CallingIngestRouter {
       return;
     }
     try {
-      if (event is CallNumberEvent) {
+      if (event is OrderSubmittedEvent) {
+        await _ingest.ingestSubmitted(event);
+      } else if (event is CallNumberEvent) {
         await _ingest.ingestCallNumber(event);
       } else if (event is OrderCancelledEvent) {
         await _ingest.ingestCancelled(event);

@@ -22,10 +22,29 @@ class TopSnack {
   static OverlayEntry? _current;
   static Timer? _timer;
 
+  /// 現在ライブな (entry, timer) を一意に識別する世代番号。
+  ///
+  /// 旧仕様では `_TopSnackContent.dispose()` がグローバル `_timer` を無条件に
+  /// cancel していたため、以下の順序で「新しい SnackBar が永遠に消えない」
+  /// バグが起きていた:
+  ///
+  ///   1. show() #1 が entry1 + timer1 を立てる
+  ///   2. show() #2 が timer1 を cancel → entry1.remove() を呼ぶ
+  ///   3. show() #2 が entry2 を insert → timer2 を立てる
+  ///   4. 次フレームで entry1 の Widget が dispose → グローバル _timer
+  ///      (= 既に timer2) を cancel してしまい、entry2 が自動消去されない
+  ///
+  /// `_generation` を per-show でインクリメントし、dispose 側は自分の世代と
+  /// 現行世代が一致するときだけ cancel するようにして race を断つ。
+  static int _generation = 0;
+  static int get _currentGeneration => _generation;
+  static const Duration _enterAnim = Duration(milliseconds: 220);
+
   /// 上部にトーストを表示する。`context` から Overlay を解決する。
   ///
   /// [color] は背景色。デフォルトは `bgInverse`（暗色 + 白文字）。
-  /// [duration] は表示時間。デフォルト 2 秒。
+  /// [duration] は表示時間。**2 秒を超える指定は強制的に 2 秒に丸める**
+  /// （業務要件: 学園祭オペレーションで「SnackBar が消えない」誤認を避ける）。
   static void show(
     BuildContext context,
     String message, {
@@ -40,7 +59,13 @@ class TopSnack {
     if (overlay == null) {
       return;
     }
+    // 業務要件: 全 TopSnack を 2 秒以内に自動消去する。呼び出し側で
+    // うっかり長い duration を渡しても安全側に丸める。
+    const Duration cap = Duration(seconds: 2);
+    final Duration effective = duration > cap ? cap : duration;
+
     _scheduleDismiss(immediate: true);
+    _generation++;
 
     final Color bg = color ?? TofuTokens.bgInverse;
     final Color fg = foreground ?? TofuTokens.brandOnPrimary;
@@ -61,10 +86,7 @@ class TopSnack {
     );
     overlay.insert(entry);
     _current = entry;
-    _timer = Timer(
-      duration + const Duration(milliseconds: 220),
-      _scheduleDismiss,
-    );
+    _timer = Timer(effective + _enterAnim, _scheduleDismiss);
   }
 
   /// 表示中があれば消す。テストや画面遷移直前のクリーンアップに使う。
@@ -110,13 +132,21 @@ class _TopSnackContentState extends State<_TopSnackContent>
     duration: const Duration(milliseconds: 220),
   )..forward();
 
+  /// 自分が属する show() 呼び出しの世代。dispose 時に「現行世代が
+  /// 自分と同じ」場合だけ Timer を片付ける（後発の show が立てた新しい
+  /// Timer を巻き込んで cancel しないため）。
+  late final int _generation = TopSnack._currentGeneration;
+
   @override
   void dispose() {
-    // Overlay 経由なので、ホストの widget tree 破棄に先んじて自身も
-    // 片付ける。タイマーが宙ぶらりんになると test の `timersPending`
-    // アサーションに引っかかる。
-    TopSnack._timer?.cancel();
-    TopSnack._timer = null;
+    // 自分の世代がまだ現行ならグローバル timer を解放。後発 show により
+    // 既に世代が進んでいる場合は何もしない（新しい SnackBar の自動消去
+    // タイマーを潰してしまわないため）。test の `timersPending` 対策は
+    // 「現行世代を消す」「自分が現行のときだけ消す」のどちらでも満たせる。
+    if (TopSnack._currentGeneration == _generation) {
+      TopSnack._timer?.cancel();
+      TopSnack._timer = null;
+    }
     _ac.dispose();
     super.dispose();
   }

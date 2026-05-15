@@ -589,7 +589,7 @@ class _LogoutSection extends ConsumerWidget {
       TopSnack.show(
         context,
         '未送信データをアップロード中…',
-        duration: const Duration(seconds: 4),
+        duration: const Duration(seconds: 2),
       );
     }
     try {

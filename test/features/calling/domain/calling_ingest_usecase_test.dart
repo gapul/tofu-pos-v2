@@ -119,6 +119,84 @@ void main() {
     expect(await repo.findAll(), isEmpty);
   });
 
+  test('ingestSubmitted persists as awaitingKitchen', () async {
+    await usecase.ingestSubmitted(
+      OrderSubmittedEvent(
+        shopId: 'shop',
+        eventId: 's1',
+        occurredAt: DateTime(2026, 5, 7, 12),
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+        itemsJson: '[]',
+      ),
+    );
+    final CallingOrder? saved = await repo.findByOrderId(1);
+    expect(saved, isNotNull);
+    expect(saved!.status, CallingStatus.awaitingKitchen);
+    expect(saved.ticketNumber.value, 7);
+  });
+
+  test(
+    'ingestSubmitted preserves existing pending/called/pickedUp status '
+    '(replay safe)',
+    () async {
+      for (final CallingStatus initial in <CallingStatus>[
+        CallingStatus.pending,
+        CallingStatus.called,
+        CallingStatus.pickedUp,
+        CallingStatus.cancelled,
+      ]) {
+        await repo.upsert(
+          CallingOrder(
+            orderId: 10,
+            ticketNumber: const TicketNumber(7),
+            status: initial,
+            receivedAt: DateTime(2026, 5, 7, 11),
+          ),
+        );
+        await usecase.ingestSubmitted(
+          OrderSubmittedEvent(
+            shopId: 'shop',
+            eventId: 's1',
+            occurredAt: DateTime(2026, 5, 7, 12),
+            orderId: 10,
+            ticketNumber: const TicketNumber(7),
+            itemsJson: '[]',
+          ),
+        );
+        expect(
+          (await repo.findByOrderId(10))!.status,
+          initial,
+          reason: 'ingestSubmitted は $initial を上書きしてはならない',
+        );
+      }
+    },
+  );
+
+  test(
+    'ingestCallNumber promotes awaitingKitchen → pending (popup-eligible)',
+    () async {
+      await repo.upsert(
+        CallingOrder(
+          orderId: 1,
+          ticketNumber: const TicketNumber(7),
+          status: CallingStatus.awaitingKitchen,
+          receivedAt: DateTime(2026, 5, 7, 11),
+        ),
+      );
+      await usecase.ingestCallNumber(
+        CallNumberEvent(
+          shopId: 'shop',
+          eventId: 'c1',
+          occurredAt: DateTime(2026, 5, 7, 12),
+          orderId: 1,
+          ticketNumber: const TicketNumber(7),
+        ),
+      );
+      expect((await repo.findByOrderId(1))!.status, CallingStatus.pending);
+    },
+  );
+
   test('markCalled and undoCall flip the status', () async {
     await repo.upsert(
       CallingOrder(
