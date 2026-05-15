@@ -12,9 +12,11 @@ import 'package:tofu_pos/providers/settings_providers.dart';
 
 /// 会計画面の golden（仕様書 §6.1.3 / §9.3）。
 class _StubCheckoutNotifier extends CheckoutSessionNotifier {
-  _StubCheckoutNotifier(CheckoutSession initial) {
-    state = initial;
-  }
+  _StubCheckoutNotifier(this._initial);
+  final CheckoutSession _initial;
+
+  @override
+  CheckoutSession build() => _initial;
 }
 
 void main() {
@@ -46,7 +48,7 @@ void main() {
             const AsyncData<TicketNumber?>(TicketNumber(7)),
           ),
           checkoutSessionProvider.overrideWith(
-            (ref) => _StubCheckoutNotifier(seeded),
+            () => _StubCheckoutNotifier(seeded),
           ),
         ],
         child: const MaterialApp(home: CheckoutScreen()),

@@ -19,98 +19,94 @@ import '../../../../domain/value_objects/discount.dart';
 import '../../../../domain/value_objects/feature_flags.dart';
 import '../../../../domain/value_objects/money.dart';
 import '../../../../providers/settings_providers.dart';
-import '../../../../providers/usecase_providers.dart';
-import '../../../regi/domain/checkout_flow_usecase.dart';
 import '../notifiers/checkout_session.dart';
 import '../notifiers/regi_providers.dart';
 
 /// 会計画面（仕様書 §6.1.3 / §9.3）。
-class CheckoutScreen extends ConsumerStatefulWidget {
+///
+/// M3 リファクタ: 会計確定の業務ロジックは
+/// `CheckoutConfirmController` (AsyncNotifier) に抽出済み。
+/// 本画面は `listen` で AsyncValue を購読し、SnackBar/遷移のみ扱う。
+class CheckoutScreen extends ConsumerWidget {
   const CheckoutScreen({super.key});
 
-  @override
-  ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
-}
+  void _showSnack(BuildContext context, String message, {Color? bg}) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message), backgroundColor: bg));
+  }
 
-class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
-  bool _confirming = false;
-
-  Future<void> _confirm() async {
-    final CheckoutSession session = ref.read(checkoutSessionProvider);
-    final FeatureFlags flags =
-        ref.read(featureFlagsProvider).value ?? FeatureFlags.allOff;
-    if (session.changeCash.isNegative) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('預り金が不足しています')));
-      return;
-    }
-    final CheckoutFlowUseCase? flow = await ref.read(
-      checkoutFlowUseCaseProvider.future,
+  void _handleConfirmResult(
+    BuildContext context,
+    AsyncValue<Order?>? previous,
+    AsyncValue<Order?> next,
+  ) {
+    // data(non-null) は確定成功 → 完了画面へ。
+    next.whenOrNull(
+      data: (order) {
+        if (order != null && previous?.value != order) {
+          unawaited(HapticFeedback.heavyImpact());
+          context.go('/regi/done', extra: order);
+        }
+      },
+      error: (error, _) {
+        if (previous?.error == error) {
+          return;
+        }
+        if (isCheckoutValidationError(error)) {
+          _showSnack(context, checkoutValidationMessage(error));
+          return;
+        }
+        if (isTransportDeliveryError(error)) {
+          final TransportDeliveryException e =
+              error as TransportDeliveryException;
+          _showSnack(
+            context,
+            e.message,
+            bg: TofuTokens.dangerBgStrong,
+          );
+          // ローカル保存は完了済 → ホームへ戻す（Controller 側で reset 済）。
+          context.go('/');
+          return;
+        }
+        if (error is TicketPoolExhaustedException) {
+          _showSnack(context, error.message);
+          return;
+        }
+        // InsufficientStockException その他
+        _showSnack(context, '$error');
+      },
     );
-    if (flow == null) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('店舗IDが未設定です。設定画面から構成してください')),
-      );
-      return;
-    }
-    setState(() => _confirming = true);
-    try {
-      final Order saved = await flow.execute(
-        draft: session.toDraft(),
-        flags: flags,
-      );
-      ref.invalidate(ticketPoolProvider);
-      ref.read(checkoutSessionProvider.notifier).reset();
-      if (!mounted) {
-        return;
-      }
-      unawaited(HapticFeedback.heavyImpact());
-      context.go('/regi/done', extra: saved);
-    } on InsufficientStockException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-    } on TicketPoolExhaustedException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
-    } on TransportDeliveryException catch (e) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: TofuTokens.dangerBgStrong,
-        ),
-      );
-      // ローカル保存は完了している → 完了画面へ進む
-      ref.invalidate(ticketPoolProvider);
-      ref.read(checkoutSessionProvider.notifier).reset();
-      context.go('/');
-    } finally {
-      if (mounted) {
-        setState(() => _confirming = false);
-      }
-    }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final CheckoutSession session = ref.watch(checkoutSessionProvider);
     final CheckoutSessionNotifier notifier = ref.read(
       checkoutSessionProvider.notifier,
     );
     final FeatureFlags flags =
         ref.watch(featureFlagsProvider).value ?? FeatureFlags.allOff;
+    final AsyncValue<Order?> confirmState = ref.watch(
+      checkoutConfirmControllerProvider,
+    );
+    final bool confirming = confirmState.isLoading;
+
+    ref.listen<AsyncValue<Order?>>(
+      checkoutConfirmControllerProvider,
+      (prev, next) => _handleConfirmResult(context, prev, next),
+    );
+
+    Future<void> onConfirm() async {
+      // 軽量ガード: 業務例外は Controller 側で AsyncValue.error にする。
+      try {
+        await ref
+            .read(checkoutConfirmControllerProvider.notifier)
+            .confirm();
+      } catch (_) {
+        // listen() 側で SnackBar 表示。ここでは握り潰し OK。
+      }
+    }
 
     return LayoutBuilder(
       builder: (c, constraints) {
@@ -132,15 +128,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     session: session,
                     notifier: notifier,
                     flags: flags,
-                    confirming: _confirming,
-                    onConfirm: _confirm,
+                    confirming: confirming,
+                    onConfirm: onConfirm,
                   )
                 : _PortraitLayout(
                     session: session,
                     notifier: notifier,
                     flags: flags,
-                    confirming: _confirming,
-                    onConfirm: _confirm,
+                    confirming: confirming,
+                    onConfirm: onConfirm,
                   ),
           ),
         );

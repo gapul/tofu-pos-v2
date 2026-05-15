@@ -115,7 +115,12 @@ class BlePeripheralService {
     }
     try {
       await _manager.removeAllServices();
-    } catch (_) {}
+    } catch (e) {
+      // 停止経路で BLE スタックが既に解放されている場合の例外は想定内。
+      AppLogger.d(
+        'BlePeripheral: removeAllServices ignored during teardown: $e',
+      );
+    }
 
     await _writeSub?.cancel();
     _writeSub = null;
@@ -240,7 +245,12 @@ class BlePeripheralService {
           args.request,
           error: GATTError.unlikelyError,
         );
-      } catch (_) {}
+      } catch (e2) {
+        // エラー応答自体の失敗は接続がすでに切れているケースが大半。
+        AppLogger.d(
+          'BlePeripheral: respondWriteRequestWithError ignored: $e2',
+        );
+      }
     }
   }
 

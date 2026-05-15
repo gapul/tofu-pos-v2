@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tofu_pos/domain/entities/customer_attributes.dart';
 import 'package:tofu_pos/domain/entities/order_item.dart';
@@ -22,10 +23,16 @@ void main() {
     stock: 20,
   );
 
+  late ProviderContainer container;
   late CheckoutSessionNotifier notifier;
 
   setUp(() {
-    notifier = CheckoutSessionNotifier();
+    container = ProviderContainer();
+    notifier = container.read(checkoutSessionProvider.notifier);
+  });
+
+  tearDown(() {
+    container.dispose();
   });
 
   group('addProduct', () {

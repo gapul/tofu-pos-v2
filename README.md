@@ -123,3 +123,9 @@ flutter test --coverage
 - [`supabase/README.md`](./supabase/README.md): Supabase セットアップ
 - [`supabase/functions/README.md`](./supabase/functions/README.md): Edge Functions
 - [`dashboard/README.md`](./dashboard/README.md): 売上可視化用 Web ダッシュボード（暫定UI / Figma 待ち）
+
+---
+
+## ライセンス
+
+[`LICENSE`](./LICENSE) — **All Rights Reserved**。ソースは透明性 / レビュー目的で公開しており、コピー・改変・再配布・派生物の作成・商用利用はいずれも明示的な書面許可なく不可。詳細は LICENSE ファイル参照。

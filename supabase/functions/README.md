@@ -16,7 +16,7 @@
 # Supabase CLI セットアップ
 brew install supabase/tap/supabase
 supabase login
-supabase link --project-ref yixdoktyhtrkcnghbjnh
+supabase link --project-ref YOUR_PROJECT_REF
 
 # デプロイ
 supabase functions deploy cancel-order

@@ -19,9 +19,11 @@ import 'package:tofu_pos/providers/settings_providers.dart';
 /// 業務ロジック（FlowUseCase）には触れないので、
 /// 画面のレンダリング構造の回帰検出だけを目的とする。
 class _StubCheckoutNotifier extends CheckoutSessionNotifier {
-  _StubCheckoutNotifier(CheckoutSession initial) {
-    state = initial;
-  }
+  _StubCheckoutNotifier(this._initial);
+  final CheckoutSession _initial;
+
+  @override
+  CheckoutSession build() => _initial;
 }
 
 void main() {
@@ -53,7 +55,7 @@ void main() {
             const AsyncData<TicketNumber?>(TicketNumber(7)),
           ),
           checkoutSessionProvider.overrideWith(
-            (ref) => _StubCheckoutNotifier(seeded),
+            () => _StubCheckoutNotifier(seeded),
           ),
         ],
         child: const MaterialApp(

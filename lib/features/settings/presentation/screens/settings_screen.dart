@@ -6,9 +6,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/export/csv_export_file_service.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../../core/ui/alert_banner.dart';
+import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/confirm_dialog.dart';
+import '../../../../core/ui/pane_title.dart';
+import '../../../../core/ui/settings_row.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
+import '../../../../core/ui/tofu_icon.dart';
+import '../../../../core/ui/tofu_toggle.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/enums/device_role.dart';
 import '../../../../domain/enums/transport_mode.dart';
@@ -17,7 +23,13 @@ import '../../../../providers/repository_providers.dart';
 import '../../../../providers/settings_providers.dart';
 import '../../../regi/presentation/notifiers/regi_providers.dart';
 
-/// 設定画面（仕様書 §4 / §6.4 / §7.1 / §8.3）。
+/// 設定画面（Figma `10-Register-Settings` / 仕様書 §4 / §6.4 / §7.1 / §8.3）。
+///
+/// landscape (1024×768) ベース。Figma 通りに 4 ブロックを縦に積む:
+///   1. 設定ヘッダー (店舗ID / バージョン)
+///   2. 通信モード + 端末役割切替 (PaneTitle + RadioGroup + RoleCard)
+///   3. 機能フラグ (SettingsRow × 5)
+///   4. データエクスポート / 管理操作 / 開発者ツール
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -25,215 +37,94 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: TofuTokens.bgCanvas,
-      appBar: AppBar(
-        title: const Text('設定'),
+      appBar: AppHeader(
+        title: '設定',
+        showStatus: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const TofuIcon(TofuIconName.chevronLeft),
           onPressed: () => context.pop(),
         ),
       ),
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: ListView(
-              padding: const EdgeInsets.all(TofuTokens.space5),
+        top: false,
+        child: LayoutBuilder(
+          builder: (c, constraints) {
+            final bool wide = constraints.maxWidth >= 720;
+            final Widget content = ListView(
+              padding: EdgeInsets.symmetric(
+                horizontal: wide ? TofuTokens.space8 : TofuTokens.space5,
+                vertical: TofuTokens.space7,
+              ),
               children: const <Widget>[
-                _DeviceSection(),
-                SizedBox(height: TofuTokens.space7),
-                _FeatureFlagsSection(),
+                _DeviceHeaderSection(),
                 SizedBox(height: TofuTokens.space7),
                 _TransportSection(),
+                SizedBox(height: TofuTokens.space7),
+                _RoleSection(),
+                SizedBox(height: TofuTokens.space7),
+                _FeatureFlagsSection(),
                 SizedBox(height: TofuTokens.space7),
                 _ExportSection(),
                 SizedBox(height: TofuTokens.space7),
                 _DangerSection(),
                 SizedBox(height: TofuTokens.space7),
                 _DevToolsSection(),
+                SizedBox(height: TofuTokens.space11),
               ],
-            ),
-          ),
+            );
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 960),
+                child: content,
+              ),
+            );
+          },
         ),
       ),
     );
   }
 }
 
-class _Card extends StatelessWidget {
-  const _Card({required this.title, required this.children});
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(TofuTokens.space5),
-      decoration: BoxDecoration(
-        color: TofuTokens.bgCanvas,
-        borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
-        border: Border.all(color: TofuTokens.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.only(bottom: TofuTokens.space4),
-            child: Text(title, style: TofuTextStyles.h4),
-          ),
-          ...children,
-        ],
-      ),
-    );
-  }
-}
-
-class _DeviceSection extends ConsumerWidget {
-  const _DeviceSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return FutureBuilder<({String? shopId, DeviceRole? role})>(
-      future: _load(ref),
-      builder:
-          (
-            c,
-            s,
-          ) {
-            final ({String? shopId, DeviceRole? role}) data =
-                s.data ?? (shopId: null, role: null);
-            return _Card(
-              title: '端末',
-              children: <Widget>[
-                _Row(
-                  icon: Icons.storefront,
-                  label: '店舗ID',
-                  value: data.shopId ?? '未設定',
-                ),
-                _Row(
-                  icon: Icons.devices,
-                  label: '役割',
-                  value: data.role?.label ?? '未設定',
-                ),
-                const SizedBox(height: TofuTokens.space3),
-                TofuButton(
-                  label: '初期設定をやり直す',
-                  icon: Icons.refresh,
-                  variant: TofuButtonVariant.secondary,
-                  onPressed: () => context.push('/setup/shop'),
-                ),
-              ],
-            );
-          },
-    );
-  }
+// ---------------------------------------------------------------------------
+// 端末ヘッダー (Figma 80:86): 「設定」見出し + 店舗ID / バージョン サブテキスト。
+// ---------------------------------------------------------------------------
+class _DeviceHeaderSection extends ConsumerWidget {
+  const _DeviceHeaderSection();
 
   Future<({String? shopId, DeviceRole? role})> _load(WidgetRef ref) async {
     final shopId = await ref.read(settingsRepositoryProvider).getShopId();
     final role = await ref.read(settingsRepositoryProvider).getDeviceRole();
     return (shopId: shopId?.value, role: role);
   }
-}
-
-class _Row extends StatelessWidget {
-  const _Row({required this.icon, required this.label, required this.value});
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: TofuTokens.space3),
-      child: Row(
-        children: <Widget>[
-          Icon(icon, size: 20, color: TofuTokens.textTertiary),
-          const SizedBox(width: TofuTokens.space3),
-          Text(label, style: TofuTextStyles.bodyMd),
-          const Spacer(),
-          Text(value, style: TofuTextStyles.bodyMdBold),
-        ],
-      ),
-    );
-  }
-}
-
-class _FeatureFlagsSection extends ConsumerWidget {
-  const _FeatureFlagsSection();
-
-  Future<void> _toggle(
-    WidgetRef ref,
-    FeatureFlags Function(FeatureFlags) update,
-  ) async {
-    final FeatureFlags current =
-        ref.read(featureFlagsProvider).value ?? FeatureFlags.allOff;
-    await ref.read(settingsRepositoryProvider).setFeatureFlags(update(current));
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final FeatureFlags flags =
-        ref.watch(featureFlagsProvider).value ?? FeatureFlags.allOff;
-
-    return _Card(
-      title: '機能フラグ',
-      children: <Widget>[
-        SwitchListTile(
-          title: const Text('在庫管理', style: TofuTextStyles.bodyMd),
-          subtitle: const Text(
-            '商品ごとの在庫数を管理し、在庫切れ商品を選択不可にします。',
-            style: TofuTextStyles.bodySm,
-          ),
-          value: flags.stockManagement,
-          onChanged: (v) =>
-              _toggle(ref, (f) => f.copyWith(stockManagement: v)),
-        ),
-        SwitchListTile(
-          title: const Text('金種管理', style: TofuTextStyles.bodyMd),
-          subtitle: const Text(
-            'レジ内の金種別枚数を管理し、レジ締めで実測値と照合できます。',
-            style: TofuTextStyles.bodySm,
-          ),
-          value: flags.cashManagement,
-          onChanged: (v) =>
-              _toggle(ref, (f) => f.copyWith(cashManagement: v)),
-        ),
-        SwitchListTile(
-          title: const Text('顧客属性入力', style: TofuTextStyles.bodyMd),
-          subtitle: const Text(
-            '会計前に年代・性別・客層を選択して売上分析に利用します。',
-            style: TofuTextStyles.bodySm,
-          ),
-          value: flags.customerAttributes,
-          onChanged: (v) => _toggle(
-            ref,
-            (f) => f.copyWith(customerAttributes: v),
-          ),
-        ),
-        SwitchListTile(
-          title: const Text('キッチン連携', style: TofuTextStyles.bodyMd),
-          subtitle: const Text(
-            '注文をキッチン端末へ送信し、提供完了通知を受信します。',
-            style: TofuTextStyles.bodySm,
-          ),
-          value: flags.kitchenLink,
-          onChanged: (v) =>
-              _toggle(ref, (f) => f.copyWith(kitchenLink: v)),
-        ),
-        SwitchListTile(
-          title: const Text('呼び出し連携', style: TofuTextStyles.bodyMd),
-          subtitle: const Text(
-            '呼び出し端末を表示用ディスプレイとして連携させます。',
-            style: TofuTextStyles.bodySm,
-          ),
-          value: flags.callingLink,
-          onChanged: (v) =>
-              _toggle(ref, (f) => f.copyWith(callingLink: v)),
-        ),
-      ],
+    return FutureBuilder<({String? shopId, DeviceRole? role})>(
+      future: _load(ref),
+      builder: (c, s) {
+        final ({String? shopId, DeviceRole? role}) data =
+            s.data ?? (shopId: null, role: null);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Text('設定', style: TofuTextStyles.h2),
+            const SizedBox(height: TofuTokens.space2),
+            Text(
+              '店舗ID: ${data.shopId ?? '未設定'} / バージョン v1.0.0',
+              style: TofuTextStyles.bodySm.copyWith(
+                color: TofuTokens.textTertiary,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
+// ---------------------------------------------------------------------------
+// 通信モード (Figma 223:76 + 223:79): PaneTitle + RadioGroup + 説明文。
+// ---------------------------------------------------------------------------
 class _TransportSection extends ConsumerWidget {
   const _TransportSection();
 
@@ -273,44 +164,184 @@ class _TransportSection extends ConsumerWidget {
     final TransportMode mode =
         ref.watch(transportModeProvider).value ?? TransportMode.online;
     return _Card(
-      title: '通信モード',
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.only(bottom: TofuTokens.space3),
-          child: Text(
-            '通常はオンライン経由。回線障害が顕在化した場合のみ手動でフォールバックします。',
-            style: TofuTextStyles.bodySm.copyWith(
-              color: TofuTokens.textTertiary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const PaneTitle(
+            title: '通信モード',
+            subtitle: 'オンライン障害時は手動で Bluetooth経路に切替',
+          ),
+          const SizedBox(height: TofuTokens.space4),
+          RadioGroup<TransportMode>(
+            groupValue: mode,
+            onChanged: (v) {
+              if (v != null) {
+                unawaited(_switch(context, ref, v));
+              }
+            },
+            child: Column(
+              children: <Widget>[
+                for (final TransportMode m in TransportMode.values)
+                  RadioListTile<TransportMode>(
+                    value: m,
+                    title: Text(_label(m), style: TofuTextStyles.bodyMd),
+                    secondary: Icon(switch (m) {
+                      TransportMode.online => Icons.cloud,
+                      TransportMode.localLan => Icons.lan,
+                      TransportMode.bluetooth => Icons.bluetooth,
+                    }),
+                  ),
+              ],
             ),
           ),
-        ),
-        RadioGroup<TransportMode>(
-          groupValue: mode,
-          onChanged: (v) {
-            if (v != null) {
-              unawaited(_switch(context, ref, v));
-            }
-          },
-          child: Column(
-            children: <Widget>[
-              for (final TransportMode m in TransportMode.values)
-                RadioListTile<TransportMode>(
-                  value: m,
-                  title: Text(_label(m), style: TofuTextStyles.bodyMd),
-                  secondary: Icon(switch (m) {
-                    TransportMode.online => Icons.cloud,
-                    TransportMode.localLan => Icons.lan,
-                    TransportMode.bluetooth => Icons.bluetooth,
-                  }),
-                ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
+// ---------------------------------------------------------------------------
+// 端末の役割 (Figma 359:223): 現在役割の表示 + 「役割を変更」ボタン。
+// ---------------------------------------------------------------------------
+class _RoleSection extends ConsumerWidget {
+  const _RoleSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<DeviceRole?>(
+      future: ref.read(settingsRepositoryProvider).getDeviceRole(),
+      builder: (c, snap) {
+        final DeviceRole? role = snap.data;
+        return _Card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              const PaneTitle(title: '端末の役割'),
+              const SizedBox(height: TofuTokens.space4),
+              Container(
+                padding: const EdgeInsets.all(TofuTokens.space5),
+                decoration: BoxDecoration(
+                  color: TofuTokens.bgSurface,
+                  borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+                  border: Border.all(color: TofuTokens.borderSubtle),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            '現在の役割: ${role?.label ?? '未設定'}',
+                            style: TofuTextStyles.bodyLgBold,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '別の役割（キッチン・呼び出し）に切り替えます',
+                            style: TofuTextStyles.bodySm.copyWith(
+                              color: TofuTokens.textTertiary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: TofuTokens.space4),
+                    TofuButton(
+                      label: '役割を変更',
+                      icon: Icons.swap_horiz,
+                      variant: TofuButtonVariant.secondary,
+                      onPressed: () => context.push('/setup/shop'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 機能フラグ (Figma 80:89 + 80:92): PaneTitle + 説明文 + SettingsRow × 5。
+// ---------------------------------------------------------------------------
+class _FeatureFlagsSection extends ConsumerWidget {
+  const _FeatureFlagsSection();
+
+  Future<void> _toggle(
+    WidgetRef ref,
+    FeatureFlags Function(FeatureFlags) update,
+  ) async {
+    final FeatureFlags current =
+        ref.read(featureFlagsProvider).value ?? FeatureFlags.allOff;
+    await ref.read(settingsRepositoryProvider).setFeatureFlags(update(current));
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final FeatureFlags flags =
+        ref.watch(featureFlagsProvider).value ?? FeatureFlags.allOff;
+
+    final List<({String title, String subtitle, bool value, void Function(bool) on})>
+        rows = <({String title, String subtitle, bool value, void Function(bool) on})>[
+      (
+        title: '在庫管理',
+        subtitle: '商品ごとの在庫数を管理。在庫切れ商品は注文画面で選択不可になります。',
+        value: flags.stockManagement,
+        on: (v) => unawaited(_toggle(ref, (f) => f.copyWith(stockManagement: v))),
+      ),
+      (
+        title: '金種管理',
+        subtitle: 'レジ内の金種別枚数（理論値）を管理し、レジ締め時に実測値と照合できます。',
+        value: flags.cashManagement,
+        on: (v) => unawaited(_toggle(ref, (f) => f.copyWith(cashManagement: v))),
+      ),
+      (
+        title: '顧客属性入力',
+        subtitle: '会計前に顧客の年代・性別・客層を記録します。売上分析に利用されます。',
+        value: flags.customerAttributes,
+        on: (v) => unawaited(_toggle(ref, (f) => f.copyWith(customerAttributes: v))),
+      ),
+      (
+        title: 'キッチン連携',
+        subtitle: '確定した注文をキッチン端末へ自動送信し、提供完了通知を受け取ります。',
+        value: flags.kitchenLink,
+        on: (v) => unawaited(_toggle(ref, (f) => f.copyWith(kitchenLink: v))),
+      ),
+      (
+        title: '呼び出し連携',
+        subtitle: '呼び出し端末を表示用ディスプレイとして連携し、整理券番号を表示します。',
+        value: flags.callingLink,
+        on: (v) => unawaited(_toggle(ref, (f) => f.copyWith(callingLink: v))),
+      ),
+    ];
+
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const PaneTitle(
+            title: '機能フラグ',
+            subtitle: '店舗の運用形態に合わせて機能をオン/オフできます',
+          ),
+          const SizedBox(height: TofuTokens.space4),
+          for (final r in rows)
+            SettingsRow(
+              title: r.title,
+              subtitle: r.subtitle,
+              showChevron: false,
+              trailing: TofuToggle(value: r.value, onChanged: r.on),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// データエクスポート: PaneTitle + 説明文 + CSV ボタン。
+// ---------------------------------------------------------------------------
 class _ExportSection extends ConsumerStatefulWidget {
   const _ExportSection();
 
@@ -357,25 +388,33 @@ class _ExportSectionState extends ConsumerState<_ExportSection> {
   @override
   Widget build(BuildContext context) {
     return _Card(
-      title: 'データエクスポート',
-      children: <Widget>[
-        Text(
-          'クラウド同期のバックアップ／端末故障時の救出手段として、ローカルデータをCSVで書き出します。',
-          style: TofuTextStyles.bodySm.copyWith(color: TofuTokens.textTertiary),
-        ),
-        const SizedBox(height: TofuTokens.space4),
-        TofuButton(
-          label: 'CSVを書き出す',
-          icon: Icons.file_download,
-          variant: TofuButtonVariant.secondary,
-          loading: _busy,
-          onPressed: _busy ? null : _export,
-        ),
-      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const PaneTitle(
+            title: 'データエクスポート',
+            subtitle: 'クラウド同期のバックアップ・端末故障時の救出手段',
+          ),
+          const SizedBox(height: TofuTokens.space4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TofuButton(
+              label: 'CSVを書き出す',
+              icon: Icons.file_download,
+              variant: TofuButtonVariant.secondary,
+              loading: _busy,
+              onPressed: _busy ? null : _export,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
+// ---------------------------------------------------------------------------
+// 管理操作: 不可逆操作 warning + 整理券プール初期化。
+// ---------------------------------------------------------------------------
 class _DangerSection extends ConsumerStatefulWidget {
   const _DangerSection();
 
@@ -413,48 +452,92 @@ class _DangerSectionState extends ConsumerState<_DangerSection> {
   @override
   Widget build(BuildContext context) {
     return _Card(
-      title: '管理操作',
-      children: <Widget>[
-        const StatusIndicator.custom(
-          label: '不可逆操作です。実行前に内容をよく確認してください。',
-          icon: Icons.warning_amber,
-          tone: StatusIndicatorTone.warning,
-        ),
-        const SizedBox(height: TofuTokens.space4),
-        TofuButton(
-          label: '整理券プールを初期化',
-          icon: Icons.restart_alt,
-          variant: TofuButtonVariant.danger,
-          onPressed: _resetTicketPool,
-        ),
-      ],
+      accent: TofuTokens.dangerText,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const PaneTitle(title: '管理操作', accent: TofuTokens.dangerText),
+          const SizedBox(height: TofuTokens.space4),
+          const AlertBanner(
+            variant: AlertBannerVariant.warning,
+            title: '不可逆操作です',
+            message: '実行前に内容をよく確認してください。',
+          ),
+          const SizedBox(height: TofuTokens.space4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TofuButton(
+              label: '整理券プールを初期化',
+              icon: Icons.restart_alt,
+              variant: TofuButtonVariant.danger,
+              onPressed: _resetTicketPool,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
+// ---------------------------------------------------------------------------
+// 開発者ツール: DevConsole 起動。
+// ---------------------------------------------------------------------------
 class _DevToolsSection extends StatelessWidget {
   const _DevToolsSection();
 
   @override
   Widget build(BuildContext context) {
     return _Card(
-      title: '開発者ツール',
-      children: <Widget>[
-        Text(
-          '実機検証用。自動シナリオテスト・通信モード詳細・テレメトリ確認・'
-          '直接DB書き換え等が含まれます。本番運用では使用しません。',
-          style: TofuTextStyles.bodySm.copyWith(
-            color: TofuTokens.textTertiary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const PaneTitle(
+            title: '開発者ツール',
+            subtitle: '実機検証用 / 本番運用では使用しません',
           ),
+          const SizedBox(height: TofuTokens.space4),
+          const StatusIndicator.custom(
+            label: '自動シナリオテスト・通信モード詳細・直接DB書き換え等',
+            icon: Icons.info_outline,
+            tone: StatusIndicatorTone.info,
+          ),
+          const SizedBox(height: TofuTokens.space4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TofuButton(
+              label: 'DevConsole を開く',
+              icon: Icons.code,
+              variant: TofuButtonVariant.secondary,
+              onPressed: () => context.push('/dev'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 共通カード。bgCanvas + borderSubtle で subtle に区切る。
+// ---------------------------------------------------------------------------
+class _Card extends StatelessWidget {
+  const _Card({required this.child, this.accent});
+  final Widget child;
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(TofuTokens.space6),
+      decoration: BoxDecoration(
+        color: TofuTokens.bgCanvas,
+        borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+        border: Border.all(
+          color: accent ?? TofuTokens.borderSubtle,
+          width: accent != null ? TofuTokens.strokeThick : TofuTokens.strokeHairline,
         ),
-        const SizedBox(height: TofuTokens.space4),
-        TofuButton(
-          label: 'DevConsole を開く',
-          icon: Icons.code,
-          variant: TofuButtonVariant.secondary,
-          onPressed: () => context.push('/dev'),
-        ),
-      ],
+      ),
+      child: child,
     );
   }
 }

@@ -33,7 +33,7 @@
 ```bash
 brew install supabase/tap/supabase
 supabase login
-supabase link --project-ref yixdoktyhtrkcnghbjnh
+supabase link --project-ref YOUR_PROJECT_REF
 supabase db push
 ```
 

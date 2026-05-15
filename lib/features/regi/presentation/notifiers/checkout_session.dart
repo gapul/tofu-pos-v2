@@ -1,11 +1,20 @@
-import 'package:flutter_riverpod/legacy.dart';
+import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/error/app_exceptions.dart';
 import '../../../../domain/entities/customer_attributes.dart';
+import '../../../../domain/entities/order.dart';
 import '../../../../domain/entities/order_item.dart';
 import '../../../../domain/entities/product.dart';
 import '../../../../domain/value_objects/checkout_draft.dart';
 import '../../../../domain/value_objects/discount.dart';
+import '../../../../domain/value_objects/feature_flags.dart';
 import '../../../../domain/value_objects/money.dart';
+import '../../../../providers/settings_providers.dart';
+import '../../../../providers/usecase_providers.dart';
+import '../../domain/checkout_flow_usecase.dart';
+import 'regi_providers.dart';
 
 /// 会計セッション（仕様書 §6.1）。
 ///
@@ -81,8 +90,13 @@ class CheckoutSession {
   );
 }
 
-class CheckoutSessionNotifier extends StateNotifier<CheckoutSession> {
-  CheckoutSessionNotifier() : super(CheckoutSession.empty());
+/// 会計セッションの Notifier（Riverpod 3 系の `Notifier` ベース）。
+///
+/// 旧 `StateNotifier` から移行（M1）。API（メソッド名・引数）は互換のまま、
+/// `state = state.copyWith(...)` のミューテーション方式も同じ。
+class CheckoutSessionNotifier extends Notifier<CheckoutSession> {
+  @override
+  CheckoutSession build() => CheckoutSession.empty();
 
   /// 商品をカートに追加（既存なら quantity += delta）。
   /// [maxStock] が指定された場合、上限を超える追加は無視する（仕様書 §9.2）。
@@ -163,8 +177,114 @@ class CheckoutSessionNotifier extends StateNotifier<CheckoutSession> {
   }
 }
 
-final StateNotifierProvider<CheckoutSessionNotifier, CheckoutSession>
+/// 会計セッション Provider（旧 `StateNotifierProvider` → `NotifierProvider`、M1）。
+///
+/// レジ全体フローで共有されるため autoDispose にしない（画面遷移で状態破棄禁止）。
+final NotifierProvider<CheckoutSessionNotifier, CheckoutSession>
 checkoutSessionProvider =
-    StateNotifierProvider<CheckoutSessionNotifier, CheckoutSession>(
-      (_) => CheckoutSessionNotifier(),
+    NotifierProvider<CheckoutSessionNotifier, CheckoutSession>(
+      CheckoutSessionNotifier.new,
     );
+
+/// 会計確定アクションの結果状態（M3）。
+///
+/// 画面側 (`checkout_screen`) はこの `AsyncValue` を listen して
+/// SnackBar / 遷移を行う。例外は Notifier 内で AsyncValue.error に変換し、
+/// 業務例外を画面コードから追い出すのが目的。
+class CheckoutConfirmController extends AsyncNotifier<Order?> {
+  @override
+  Future<Order?> build() async => null;
+
+  /// 会計確定アクション。
+  ///
+  /// 戻り値:
+  ///  - `Order`: ローカル保存 + 配信成功。完了画面へ進む。
+  ///  - `null`: 入力不備や前提未充足（預り金不足・店舗未設定）。SnackBar のみ。
+  ///
+  /// 失敗時は `AsyncValue.error` を state にセットして throw する。
+  /// 画面は `listen` で error を拾い、SnackBar を表示する。
+  ///
+  /// [TransportDeliveryException] は「ローカル保存は成功・配信のみ失敗」を
+  /// 表す特殊なケース。state.error にセットしつつも、すでに `saved` は確定
+  /// しているのでメンバ `_lastTransportError` 経由で画面に通知する。
+  Future<Order?> confirm() async {
+    final CheckoutSession session = ref.read(checkoutSessionProvider);
+    final FeatureFlags flags =
+        ref.read(featureFlagsProvider).value ?? FeatureFlags.allOff;
+
+    if (session.changeCash.isNegative) {
+      state = AsyncValue<Order?>.error(
+        const _CheckoutValidationError('預り金が不足しています'),
+        StackTrace.current,
+      );
+      return null;
+    }
+    final CheckoutFlowUseCase? flow = await ref.read(
+      checkoutFlowUseCaseProvider.future,
+    );
+    if (flow == null) {
+      state = AsyncValue<Order?>.error(
+        const _CheckoutValidationError('店舗IDが未設定です。設定画面から構成してください'),
+        StackTrace.current,
+      );
+      return null;
+    }
+
+    state = const AsyncValue<Order?>.loading();
+    try {
+      final Order saved = await flow.execute(
+        draft: session.toDraft(),
+        flags: flags,
+      );
+      ref.invalidate(ticketPoolProvider);
+      ref.read(checkoutSessionProvider.notifier).reset();
+      state = AsyncValue<Order?>.data(saved);
+      return saved;
+    } on TransportDeliveryException catch (e, st) {
+      // ローカル保存は完了している。配信エラーは別扱い。
+      ref.invalidate(ticketPoolProvider);
+      ref.read(checkoutSessionProvider.notifier).reset();
+      state = AsyncValue<Order?>.error(e, st);
+      rethrow;
+    } on InsufficientStockException catch (e, st) {
+      state = AsyncValue<Order?>.error(e, st);
+      rethrow;
+    } on TicketPoolExhaustedException catch (e, st) {
+      state = AsyncValue<Order?>.error(e, st);
+      rethrow;
+    }
+  }
+}
+
+/// 会計確定コントローラ Provider（M3）。
+///
+/// 画面スコープのアクション状態のため autoDispose（M4）。
+/// CheckoutScreen を離れたらアクション状態を破棄して、次回会計時に
+/// 古い error が残らないようにする。
+final AsyncNotifierProvider<CheckoutConfirmController, Order?>
+checkoutConfirmControllerProvider =
+    AsyncNotifierProvider.autoDispose<CheckoutConfirmController, Order?>(
+      CheckoutConfirmController.new,
+    );
+
+/// 預り金不足など、ユーザー入力起因の軽量バリデーションエラー。
+///
+/// 画面側で `is _CheckoutValidationError` を判定して SnackBar を出す。
+class _CheckoutValidationError implements Exception {
+  const _CheckoutValidationError(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
+/// 会計バリデーションエラーかどうか（画面側からの判定用）。
+bool isCheckoutValidationError(Object error) =>
+    error is _CheckoutValidationError;
+
+/// バリデーションエラーのメッセージ抽出。
+String checkoutValidationMessage(Object error) =>
+    error is _CheckoutValidationError ? error.message : '$error';
+
+/// `TransportDeliveryException` かどうかの判定（画面側からの判定用）。
+bool isTransportDeliveryError(Object error) =>
+    error is TransportDeliveryException;

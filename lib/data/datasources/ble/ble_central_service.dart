@@ -172,7 +172,12 @@ class _ConnectedPeer {
     _connSub = null;
     try {
       await _device.disconnect();
-    } catch (_) {}
+    } catch (e) {
+      // disconnect() の失敗は既に切断済 / スタック未初期化が大半で無害。
+      AppLogger.d(
+        'BleCentral: disconnect ignored during teardown: $e',
+      );
+    }
   }
 
   /// イベント種別に応じて適切な characteristic に書き込む。
