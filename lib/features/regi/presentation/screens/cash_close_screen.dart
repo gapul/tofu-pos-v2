@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/format.dart';
-import '../../../../core/ui/numeric_stepper.dart';
+import '../../../../core/ui/num_stepper.dart';
 import '../../../../core/ui/status_chip.dart';
 import '../../../../domain/entities/cash_drawer.dart';
 import '../../../../domain/value_objects/cash_close_difference.dart';
@@ -264,11 +264,11 @@ class _CashReconciliationSection extends StatelessWidget {
                     ),
                   ),
                 ),
-                NumericStepper(
+                TofuNumStepper(
                   value: actualCounts[d.yen] ?? 0,
                   onChanged: (v) => onChanged(d.yen, v),
                   suffix: '枚',
-                  compact: true,
+                  size: TofuNumStepperSize.sm,
                 ),
               ],
             ),

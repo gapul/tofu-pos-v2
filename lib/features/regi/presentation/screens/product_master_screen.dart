@@ -9,7 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/confirm_dialog.dart';
 import '../../../../core/ui/format.dart';
-import '../../../../core/ui/numeric_stepper.dart';
+import '../../../../core/ui/num_stepper.dart';
 import '../../../../core/ui/status_chip.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/product.dart';
@@ -294,7 +294,7 @@ class _ProductEditorState extends State<_ProductEditor> {
               Row(
                 children: <Widget>[
                   Expanded(
-                    child: NumericStepper(
+                    child: TofuNumStepper(
                       label: '価格',
                       value: _price,
                       onChanged: (v) => setState(() => _price = v),
@@ -308,7 +308,7 @@ class _ProductEditorState extends State<_ProductEditor> {
                   const SizedBox(width: TofuTokens.space5),
                   if (widget.stockEnabled)
                     Expanded(
-                      child: NumericStepper(
+                      child: TofuNumStepper(
                         label: '在庫',
                         value: _stock,
                         onChanged: (v) => setState(() => _stock = v),

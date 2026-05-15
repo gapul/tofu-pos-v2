@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/format.dart';
-import '../../../../core/ui/numeric_stepper.dart';
+import '../../../../core/ui/num_stepper.dart';
 import '../../../../domain/entities/order_item.dart';
 import '../../../../domain/entities/product.dart';
 import '../notifiers/checkout_session.dart';
@@ -226,14 +226,14 @@ class _CartRow extends StatelessWidget {
               ],
             ),
           ),
-          NumericStepper(
+          TofuNumStepper(
             value: item.quantity,
             onChanged: onChanged,
             min: 1,
             max: stockEnabled
                 ? (product?.stock ?? item.quantity).clamp(1, 9999)
                 : 99,
-            compact: true,
+            size: TofuNumStepperSize.sm,
           ),
           const SizedBox(width: TofuTokens.space3),
           IconButton(

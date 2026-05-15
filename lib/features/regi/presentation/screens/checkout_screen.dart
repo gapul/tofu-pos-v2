@@ -9,7 +9,7 @@ import '../../../../core/error/app_exceptions.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/format.dart';
-import '../../../../core/ui/numeric_stepper.dart';
+import '../../../../core/ui/num_stepper.dart';
 import '../../../../core/ui/status_chip.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/order.dart';
@@ -460,7 +460,7 @@ class _SimpleCashInput extends StatelessWidget {
         children: <Widget>[
           const Text('預り金', style: TofuTextStyles.h4),
           const SizedBox(height: TofuTokens.space4),
-          NumericStepper(
+          TofuNumStepper(
             value: session.receivedCash.yen,
             onChanged: (v) => notifier.setReceivedCash(Money(v)),
             max: 1000000,
@@ -520,7 +520,7 @@ class _CashManagementSection extends StatelessWidget {
                   child: Text('¥${d.yen}', style: TofuTextStyles.bodyLgBold),
                 ),
                 Expanded(
-                  child: NumericStepper(
+                  child: TofuNumStepper(
                     value: session.cashDelta[d.yen] ?? 0,
                     onChanged: (v) {
                       final int diff = v - (session.cashDelta[d.yen] ?? 0);
