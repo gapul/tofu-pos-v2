@@ -139,6 +139,10 @@ class CheckoutSessionNotifier extends Notifier<CheckoutSession> {
     );
   }
 
+  void clearItems() {
+    state = state.copyWith(items: const <OrderItem>[]);
+  }
+
   void setQuantity(String productId, int quantity, {int? maxStock}) {
     if (quantity <= 0) {
       removeProduct(productId);

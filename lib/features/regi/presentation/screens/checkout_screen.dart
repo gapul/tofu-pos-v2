@@ -585,7 +585,7 @@ class _RightActions extends StatelessWidget {
           ),
           const SizedBox(height: TofuTokens.space5),
           if (!flags.cashManagement) ...<Widget>[
-            const Text('クイック加算', style: TofuTextStyles.bodySmBold),
+            const Text('クイック金額', style: TofuTextStyles.bodySmBold),
             const SizedBox(height: TofuTokens.space3),
             Wrap(
               spacing: TofuTokens.space3,
@@ -593,13 +593,13 @@ class _RightActions extends StatelessWidget {
               children: <Widget>[
                 for (final int v in <int>[100, 500, 1000, 5000, 10000])
                   _QuickButton(
-                    label: '+¥$v',
+                    label: '+${TofuFormat.yenInt(v).replaceAll('¥', '')}円',
                     onPressed: () => notifier.setReceivedCash(
                       session.receivedCash + Money(v),
                     ),
                   ),
                 _QuickButton(
-                  label: 'ぴったり',
+                  label: 'ピッタリ',
                   onPressed: () => notifier.setReceivedCash(finalPrice),
                 ),
                 _QuickButton(
@@ -614,6 +614,7 @@ class _RightActions extends StatelessWidget {
           TofuButton(
             label: '会計確定',
             icon: Icons.check_circle,
+            lordicon: 'check',
             size: TofuButtonSize.lg,
             fullWidth: true,
             loading: confirming,

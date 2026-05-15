@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/format.dart';
 import '../../../../core/ui/num_stepper.dart';
+import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/order_item.dart';
 import '../../../../domain/entities/product.dart';
 import '../notifiers/checkout_session.dart';
@@ -57,16 +58,12 @@ class CartPanel extends StatelessWidget {
                 const Text('カート', style: TofuTextStyles.h4),
                 const Spacer(),
                 if (session.items.isNotEmpty)
-                  TextButton.icon(
-                    onPressed: () {
-                      for (final OrderItem it in List<OrderItem>.from(
-                        session.items,
-                      )) {
-                        notifier.removeProduct(it.productId);
-                      }
-                    },
-                    icon: const Icon(Icons.delete_sweep, size: 18),
-                    label: const Text('全削除'),
+                  TofuButton(
+                    label: '全削除',
+                    icon: Icons.delete_sweep,
+                    lordicon: 'trash',
+                    variant: TofuButtonVariant.ghost,
+                    onPressed: notifier.clearItems,
                   ),
               ],
             ),

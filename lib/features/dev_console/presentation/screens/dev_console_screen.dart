@@ -817,14 +817,16 @@ class _AutoTestSectionState extends ConsumerState<_AutoTestSection> {
               ),
             ),
           ),
-          Row(
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               FilledButton.icon(
                 onPressed: _running ? null : _runAll,
                 icon: const Icon(Icons.play_arrow),
                 label: const Text('全シナリオ実行'),
               ),
-              const SizedBox(width: 16),
               if (_results.isNotEmpty)
                 Text(
                   '$passed / ${_results.length} pass'

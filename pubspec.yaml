@@ -51,6 +51,12 @@ dependencies:
   logger: ^2.4.0
   package_info_plus: ^10.1.0
 
+  # アニメーション基盤 (Phase 1)
+  # Lottie ベースで Lordicon (CC BY 4.0) JSON を再生する。
+  lottie: ^3.1.2
+  # widget 単位の declarative なマイクロインタラクション (tap scale 等)。
+  flutter_animate: ^4.5.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -69,3 +75,8 @@ flutter:
   # シークレットを読み取られる経路になる。本番ビルドは必ず --dart-define
   # （または --dart-define-from-file=.env.json）で値を渡す。
   # ローカル開発で .env を使いたい場合は tools/run-dev.sh 経由で起動する。
+
+  # Lordicon (CC BY 4.0) の Lottie JSON を配置。
+  # ファイルが無い場合は TofuButton 側で Material Icon にフォールバックする。
+  assets:
+    - assets/lordicons/

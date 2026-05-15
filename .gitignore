@@ -60,3 +60,9 @@ supabase/.temp/
 
 # Figma export (バイナリ、リポジトリに含めない)
 *.fig
+
+# Golden test failure outputs
+test/**/failures/
+
+# Claude Code workspace
+.claude/

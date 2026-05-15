@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,10 +11,20 @@ import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/enums/order_status.dart';
 
-/// 会計完了画面（仕様書 §6.1）。
+/// 会計完了画面（Figma `06-Register-Complete` / 仕様書 §6.1）。
 ///
-/// 整理券番号を大画面表示。確定操作の成功時の軽いバウンスは Hero ではなく
-/// TweenAnimationBuilder で表現する（仕様書 §12.1）。
+/// レイアウト (Figma 1024×768, 中央寄せ):
+/// - TicketNumber (display)
+/// - H2「会計を承りました」
+/// - サブ「整理券は番号順にお呼びします。番号札をお渡しください。」
+/// - 注文サマリーカード (bgSurface, radius=lg, padding=20):
+///   - 行 1: 「点数」 + 内訳「商品名×N / ...」
+///   - 行 2: 「合計」 + 金額 (H3)
+///   - 行 3: 「預り」 + 金額
+///   - 行 4: 「お釣り」 + 金額
+/// - 主要ボタン「次のお客様 →」(fullWidth, primary lg)
+///
+/// 確定後の軽いバウンスは TicketNumber を Tween で表現 (仕様書 §12.1)。
 class CheckoutDoneScreen extends ConsumerStatefulWidget {
   const CheckoutDoneScreen({required this.order, super.key});
   final Order order;
@@ -22,101 +34,152 @@ class CheckoutDoneScreen extends ConsumerStatefulWidget {
 }
 
 class _CheckoutDoneScreenState extends ConsumerState<CheckoutDoneScreen> {
+  static const Duration _autoAdvance = Duration(seconds: 3);
+  Timer? _autoTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _autoTimer = Timer(_autoAdvance, () {
+      if (!mounted) return;
+      context.go('/');
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoTimer?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final bool sent = widget.order.orderStatus == OrderStatus.sent;
+    final bool unsent = widget.order.orderStatus == OrderStatus.unsent;
+    final int itemCount = widget.order.items.length;
+    final String itemSummary = widget.order.items
+        .map((it) => '${it.productName} × ${it.quantity}')
+        .join(' / ');
+
     return Scaffold(
       backgroundColor: TofuTokens.bgCanvas,
       body: SafeArea(
         child: Center(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(TofuTokens.space8),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
+              constraints: const BoxConstraints(maxWidth: 560),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  TweenAnimationBuilder<double>(
-                    duration: TofuTokens.motionMedium,
-                    tween: Tween<double>(begin: 0.85, end: 1.05),
-                    curve: Curves.easeOutBack,
-                    builder: (c, scale, child) =>
-                        Transform.scale(scale: scale, child: child),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: TofuTokens.successBg,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: TofuTokens.successBorder,
-                          width: 3,
-                        ),
-                      ),
-                      padding: const EdgeInsets.all(TofuTokens.space5),
-                      child: const Icon(
-                        Icons.check,
-                        size: 56,
-                        color: TofuTokens.successIcon,
+                  // 1. TicketNumber (display)
+                  Center(
+                    child: TweenAnimationBuilder<double>(
+                      duration: TofuTokens.motionMedium,
+                      tween: Tween<double>(begin: 0.85, end: 1),
+                      curve: Curves.easeOutBack,
+                      builder: (c, scale, child) =>
+                          Transform.scale(scale: scale, child: child),
+                      child: TicketNumber(
+                        number: widget.order.ticketNumber.toString(),
+                        label: '整理券',
+                        size: TicketNumberSize.display,
                       ),
                     ),
                   ),
-                  const SizedBox(height: TofuTokens.space7),
-                  const Text('会計が完了しました', style: TofuTextStyles.h2),
-                  const SizedBox(height: TofuTokens.space7),
-                  TicketNumber(
-                    number: widget.order.ticketNumber.toString(),
-                    label: '整理券',
-                    size: TicketNumberSize.display,
+                  const SizedBox(height: TofuTokens.space7), // 24
+                  // 2. タイトル
+                  const Text(
+                    '会計を承りました',
+                    style: TofuTextStyles.h2,
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: TofuTokens.space7),
+                  const SizedBox(height: TofuTokens.space4), // 12
+                  // 3. サブテキスト
                   Text(
-                    '請求金額  ${TofuFormat.yen(widget.order.finalPrice)}',
-                    style: TofuTextStyles.h3,
+                    '整理券は番号順にお呼びします。番号札をお渡しください。',
+                    style: TofuTextStyles.bodySm.copyWith(
+                      color: TofuTokens.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  if (widget.order.changeCash.isPositive) ...<Widget>[
-                    const SizedBox(height: TofuTokens.space2),
-                    Text(
-                      'お釣り  ${TofuFormat.yen(widget.order.changeCash)}',
-                      style: TofuTextStyles.bodyLg.copyWith(
-                        color: TofuTokens.textSecondary,
+                  const SizedBox(height: TofuTokens.space7),
+                  // 4. 注文サマリーカード
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: TofuTokens.space6, // 20
+                      vertical: TofuTokens.space5, // 16
+                    ),
+                    decoration: BoxDecoration(
+                      color: TofuTokens.bgSurface,
+                      borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+                      border: Border.all(color: TofuTokens.borderSubtle),
+                    ),
+                    child: Column(
+                      children: <Widget>[
+                        _SummaryRow(
+                          label: '$itemCount点',
+                          value: itemSummary,
+                          valueStyle: TofuTextStyles.bodyMd.copyWith(
+                            color: TofuTokens.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: TofuTokens.space4),
+                        _SummaryRow(
+                          label: '合計',
+                          value: TofuFormat.yen(widget.order.finalPrice),
+                          valueStyle: TofuTextStyles.h3,
+                        ),
+                        const SizedBox(height: TofuTokens.space4),
+                        _SummaryRow(
+                          label: '預り',
+                          value: TofuFormat.yen(widget.order.receivedCash),
+                          valueStyle: TofuTextStyles.bodyMdBold,
+                        ),
+                        const SizedBox(height: TofuTokens.space4),
+                        _SummaryRow(
+                          label: 'お釣り',
+                          value: TofuFormat.yen(widget.order.changeCash),
+                          valueStyle: TofuTextStyles.bodyMdBold,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (unsent) ...<Widget>[
+                    const SizedBox(height: TofuTokens.space4),
+                    Container(
+                      padding: const EdgeInsets.all(TofuTokens.space4),
+                      decoration: BoxDecoration(
+                        color: TofuTokens.warningBg,
+                        border: Border.all(color: TofuTokens.warningBorder),
+                        borderRadius: BorderRadius.circular(
+                          TofuTokens.radiusMd,
+                        ),
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(
+                            Icons.warning_amber,
+                            color: TofuTokens.warningIcon,
+                          ),
+                          const SizedBox(width: TofuTokens.space3),
+                          Expanded(
+                            child: Text(
+                              'キッチンへの送信ができていません。会計データはローカルに保存済みです。',
+                              style: TofuTextStyles.bodySm.copyWith(
+                                color: TofuTokens.warningText,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                  const SizedBox(height: TofuTokens.space5),
-                  if (!sent && widget.order.orderStatus == OrderStatus.unsent)
-                    Padding(
-                      padding: const EdgeInsets.only(top: TofuTokens.space3),
-                      child: Container(
-                        padding: const EdgeInsets.all(TofuTokens.space4),
-                        decoration: BoxDecoration(
-                          color: TofuTokens.warningBg,
-                          border: Border.all(color: TofuTokens.warningBorder),
-                          borderRadius: BorderRadius.circular(
-                            TofuTokens.radiusMd,
-                          ),
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            const Icon(
-                              Icons.warning_amber,
-                              color: TofuTokens.warningIcon,
-                            ),
-                            const SizedBox(width: TofuTokens.space3),
-                            Expanded(
-                              child: Text(
-                                'キッチンへの送信ができていません。会計データはローカルに保存済みです。',
-                                style: TofuTextStyles.bodySm.copyWith(
-                                  color: TofuTokens.warningText,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: TofuTokens.space11),
+                  const SizedBox(height: TofuTokens.space8), // 32
+                  // 5. 主要ボタン
                   TofuButton(
-                    label: '次のお客様へ',
+                    label: '次のお客様',
                     icon: Icons.arrow_forward,
+                    lordicon: 'arrow-right',
                     size: TofuButtonSize.lg,
                     fullWidth: true,
                     onPressed: () => context.go('/'),
@@ -127,6 +190,45 @@ class _CheckoutDoneScreenState extends ConsumerState<CheckoutDoneScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({
+    required this.label,
+    required this.value,
+    required this.valueStyle,
+  });
+
+  final String label;
+  final String value;
+  final TextStyle valueStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: <Widget>[
+        SizedBox(
+          width: 56,
+          child: Text(
+            label,
+            style: TofuTextStyles.bodySm.copyWith(
+              color: TofuTokens.textTertiary,
+            ),
+          ),
+        ),
+        const SizedBox(width: TofuTokens.space5),
+        Expanded(
+          child: Text(
+            value,
+            style: valueStyle,
+            textAlign: TextAlign.right,
+          ),
+        ),
+      ],
     );
   }
 }

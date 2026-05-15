@@ -120,9 +120,9 @@ class _ShopIdScreenState extends ConsumerState<ShopIdScreen> {
                           textAlign: TextAlign.center,
                         ),
                         SizedBox(height: sectionGap),
-                        // サブタイトル
+                        // サブタイトル（Figma: 2 行構成）
                         Text(
-                          '同店舗の端末群を識別する文字列を\n入力してください',
+                          '同じ店舗の端末群を識別する文字列を入力してください。\n例: yakisoba_A, takoyaki_2025',
                           style: TofuTextStyles.bodySm.copyWith(
                             color: TofuTokens.textSecondary,
                           ),
@@ -196,7 +196,7 @@ class _StoreIdForm extends StatelessWidget {
         const SizedBox(height: TofuTokens.space4),
         // helper
         const Text(
-          '同じ店舗のすべての端末で同じ文字列を入力',
+          '同じ店舗のすべての端末で同じ文字列を入力してください。',
           style: TofuTextStyles.caption,
         ),
         const SizedBox(height: TofuTokens.space7),

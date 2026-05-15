@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
+import '../../../../core/ui/lordicon.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/value_objects/feature_flags.dart';
@@ -40,7 +41,11 @@ class RegiHomeScreen extends ConsumerWidget {
           ),
           IconButton(
             tooltip: '設定',
-            icon: const Icon(Icons.settings),
+            icon: const Lordicon(
+              name: 'settings',
+              fallbackIcon: Icons.settings,
+              semanticLabel: '設定',
+            ),
             onPressed: () => context.push('/settings'),
           ),
         ],

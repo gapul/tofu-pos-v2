@@ -9,15 +9,15 @@ import '../notifiers/setup_notifier.dart';
 
 /// 役割選択画面（Figma `02-Setup-Role` / 仕様書 §3.2）。
 ///
-/// レイアウト軸 (portrait, 375×812):
-/// - 縦方向 VERTICAL, padding 64/24/32/24, itemSpacing 24, counterAxis CENTER。
-/// - タイトル「役割を選択」(H2 / center) + サブタイトル「この端末の役割を選んでください」(bodySm / center)
-/// - 役割カード 3 枚（HORIZONTAL, padding 20, radius 16, spacing 16）
-///   - 選択中: bg = brandPrimarySubtle (#EDF2F6), border = brandPrimary
-///   - 非選択: bg = bgSurface, border = brandPrimary (Figma の Theme 藍)
-/// - 末尾に主要ボタン「決定」。
-///
-/// landscape (1024×768) は padding 80 で余白だけ拡大する。
+/// landscape (1024×768):
+/// - タイトル「役割を選択」(H2 / center) + サブタイトル「この端末の役割を
+///   選んでください。後から変更できます。」(bodySm / center)
+/// - 役割カード 3 枚を横並び (HORIZONTAL, spacing 24, padding 20, radius 16)。
+///   - 各カード内は縦並び: Icon (40px) → 上部小余白 → ラベル (H3) →
+///     description (caption) → 選択時のみチェックアイコン。
+///   - 選択中: bg = brandPrimarySubtle (#EDF2F6), border = brandPrimary (2px)
+///   - 非選択: bg = bgSurface, border = borderDefault (1px)
+/// - 末尾に「← 戻る」(secondary) と「決定」(primary) の 2 ボタン行。
 class RoleSelectScreen extends ConsumerStatefulWidget {
   const RoleSelectScreen({super.key});
 
@@ -39,12 +39,12 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
     (
       role: DeviceRole.kitchen,
       icon: Icons.restaurant,
-      description: '調理対象表示・提供完了報告',
+      description: '注文の調理状況を管理・報告',
     ),
     (
       role: DeviceRole.calling,
       icon: Icons.campaign,
-      description: '整理券番号の表示',
+      description: '整理券番号を顧客向けに表示',
     ),
   ];
 
@@ -71,6 +71,14 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
     context.go('/');
   }
 
+  void _back() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/setup/shop-id');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final SetupState? s = ref.watch(setupNotifierProvider).value;
@@ -83,7 +91,12 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
           builder: (context, constraints) {
             final bool isWide = constraints.maxWidth >= 720;
             final EdgeInsets pad = isWide
-                ? const EdgeInsets.all(TofuTokens.space12) // 80
+                ? const EdgeInsets.fromLTRB(
+                    TofuTokens.space12, // 80
+                    TofuTokens.space11, // 64
+                    TofuTokens.space12,
+                    TofuTokens.space10, // 48
+                  )
                 : const EdgeInsets.fromLTRB(
                     TofuTokens.space7, // 24
                     TofuTokens.space11, // 64
@@ -91,63 +104,100 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
                     TofuTokens.space8, // 32
                   );
 
-            // Figma: portrait itemSpacing=24, landscape itemSpacing=48
-            final double sectionGap = isWide
-                ? TofuTokens.space10 // 48
-                : TofuTokens.space7; // 24
-
             return SingleChildScrollView(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 560),
-                  child: Padding(
-                    padding: pad,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        const Text(
-                          '役割を選択',
-                          style: TofuTextStyles.h2,
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: sectionGap),
-                        Text(
-                          'この端末の役割を選んでください',
-                          style: TofuTextStyles.bodySm.copyWith(
-                            color: TofuTokens.textSecondary,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: sectionGap),
-                        // 役割カード群 (vertical, spacing 12)
-                        for (int i = 0; i < _options.length; i++) ...<Widget>[
-                          if (i > 0) const SizedBox(height: TofuTokens.space4),
-                          _RoleCard(
-                            role: _options[i].role,
-                            icon: _options[i].icon,
-                            description: _options[i].description,
-                            selected: _selected == _options[i].role,
-                            onTap: _saving
-                                ? null
-                                : () => setState(
-                                    () => _selected = _options[i].role,
-                                  ),
-                          ),
+              child: Padding(
+                padding: pad,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    const Text(
+                      '役割を選択',
+                      style: TofuTextStyles.h2,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: TofuTokens.space4), // 12
+                    Text(
+                      'この端末の役割を選んでください。後から変更できます。',
+                      style: TofuTextStyles.bodySm.copyWith(
+                        color: TofuTokens.textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: TofuTokens.space8), // 32
+                    // 役割カード群: landscape は横並び、portrait は縦並び
+                    if (isWide)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          for (int i = 0; i < _options.length; i++) ...<Widget>[
+                            if (i > 0)
+                              const SizedBox(width: TofuTokens.space7), // 24
+                            Expanded(
+                              child: _RoleCard(
+                                role: _options[i].role,
+                                icon: _options[i].icon,
+                                description: _options[i].description,
+                                selected: _selected == _options[i].role,
+                                onTap: _saving
+                                    ? null
+                                    : () => setState(
+                                        () => _selected = _options[i].role,
+                                      ),
+                              ),
+                            ),
+                          ],
                         ],
-                        SizedBox(height: sectionGap),
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          for (int i = 0; i < _options.length; i++) ...<Widget>[
+                            if (i > 0)
+                              const SizedBox(height: TofuTokens.space4),
+                            _RoleCard(
+                              role: _options[i].role,
+                              icon: _options[i].icon,
+                              description: _options[i].description,
+                              selected: _selected == _options[i].role,
+                              onTap: _saving
+                                  ? null
+                                  : () => setState(
+                                      () => _selected = _options[i].role,
+                                    ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    const SizedBox(height: TofuTokens.space8), // 32
+                    // 「← 戻る」/「決定」の 2 ボタン
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
                         TofuButton(
-                          label: '決定',
-                          icon: Icons.check,
+                          label: '戻る',
+                          icon: Icons.arrow_back,
+                          variant: TofuButtonVariant.secondary,
                           size: TofuButtonSize.lg,
-                          fullWidth: true,
-                          loading: _saving,
-                          onPressed: (_selected == null || _saving)
-                              ? null
-                              : _submit,
+                          onPressed: _saving ? null : _back,
+                        ),
+                        const SizedBox(width: TofuTokens.space5), // 16
+                        SizedBox(
+                          width: 280,
+                          child: TofuButton(
+                            label: '決定',
+                            icon: Icons.check,
+                            size: TofuButtonSize.lg,
+                            fullWidth: true,
+                            loading: _saving,
+                            onPressed: (_selected == null || _saving)
+                                ? null
+                                : _submit,
+                          ),
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
               ),
             );
@@ -158,10 +208,11 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
   }
 }
 
-/// 役割カード（Figma `85:9` / `85:16` / `85:21`）。
+/// 役割カード（Figma `02-Setup-Role` の 3 枚）。
 ///
-/// HORIZONTAL, padding 20, spacing 16, radius 16。
-/// 選択時は bgSurface を primarySubtle、border を brandPrimary に切り替え。
+/// VERTICAL, padding 20, radius 16, gap 12。
+/// - 選択中: bg=brandPrimarySubtle, border=brandPrimary (2px), 末尾にチェック
+/// - 非選択: bg=bgSurface, border=borderDefault (1px)
 class _RoleCard extends StatelessWidget {
   const _RoleCard({
     required this.role,
@@ -182,7 +233,9 @@ class _RoleCard extends StatelessWidget {
     final Color bg = selected
         ? TofuTokens.brandPrimarySubtle
         : TofuTokens.bgSurface;
-    const Color border = TofuTokens.brandPrimary;
+    final Color border = selected
+        ? TofuTokens.brandPrimary
+        : TofuTokens.borderDefault;
 
     return Material(
       color: bg,
@@ -191,7 +244,10 @@ class _RoleCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(TofuTokens.radiusXl),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(TofuTokens.space6), // 20
+          padding: const EdgeInsets.symmetric(
+            horizontal: TofuTokens.space6, // 20
+            vertical: TofuTokens.space8, // 32
+          ),
           decoration: BoxDecoration(
             border: Border.all(
               color: border,
@@ -201,45 +257,39 @@ class _RoleCard extends StatelessWidget {
             ),
             borderRadius: BorderRadius.circular(TofuTokens.radiusXl),
           ),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              // Icon 48×48
+              Icon(icon, size: 48, color: TofuTokens.brandPrimary),
+              const SizedBox(height: TofuTokens.space5), // 16
+              Text(role.label, style: TofuTextStyles.h3),
+              const SizedBox(height: TofuTokens.space3), // 8
+              Text(
+                description,
+                style: TofuTextStyles.caption.copyWith(
+                  color: TofuTokens.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: TofuTokens.space5),
+              // 選択時のみチェックアイコンを下端に表示
               SizedBox(
-                width: 48,
-                height: 48,
-                child: Icon(
-                  icon,
-                  size: 40,
-                  color: TofuTokens.brandPrimary,
-                ),
-              ),
-              const SizedBox(width: TofuTokens.space5), // 16
-              // ラベル + 説明 (vertical, spacing 2)
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(role.label, style: TofuTextStyles.h4),
-                    const SizedBox(height: TofuTokens.space1), // 2
-                    Text(
-                      description,
-                      style: TofuTextStyles.caption.copyWith(
-                        color: TofuTokens.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: TofuTokens.space5),
-              // ラジオインジケータ 32×32
-              Icon(
-                selected
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
-                color: selected
-                    ? TofuTokens.brandPrimary
-                    : TofuTokens.textTertiary,
-                size: 32,
+                height: 32,
+                child: selected
+                    ? Container(
+                        width: 32,
+                        height: 32,
+                        decoration: const BoxDecoration(
+                          color: TofuTokens.brandPrimary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check,
+                          color: TofuTokens.textInverse,
+                          size: 20,
+                        ),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ],
           ),

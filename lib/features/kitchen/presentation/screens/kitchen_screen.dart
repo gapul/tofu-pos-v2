@@ -554,6 +554,7 @@ class _PendingCard extends StatelessWidget {
             TofuButton(
               label: '提供完了',
               icon: Icons.done_all,
+              lordicon: 'check',
               size: TofuButtonSize.lg,
               fullWidth: true,
               onPressed: onAction,

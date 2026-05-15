@@ -10,7 +10,7 @@
 
 - Flutter 3.38.1
 - Dart 3.10.0
-- iOS 12+ / Android 6.0+ (API 23+)
+- iOS 12+ / Android 6.0+ (API 23+) / macOS 11+（開発・検証用）
 - Supabase（オンライン同期用、無料枠で完結）
 
 ---
@@ -61,6 +61,16 @@ tools/run-dev.sh build ipa --release   # IPA を作る場合も同じ
 
 **注意**: 直接 `flutter run` で起動すると `.env` の値は読み込まれず、
 Supabase 接続情報なしで起動します（dotenv の asset 同梱はセキュリティ理由で廃止済み）。
+
+macOS デスクトップで動かす場合（開発・検証用）:
+
+```bash
+tools/run-dev.sh -d macos              # macOS desktop で起動
+# もしくは直接（.env 不要な場合）
+flutter run -d macos
+```
+
+初回は Bluetooth / ローカルネットワーク（mDNS）の許可ダイアログが出るので許可してください。
 
 起動すると **DevConsole**（仮UI）が開きます。Figma デザイン確定後に本番UIに差し替え予定。
 
