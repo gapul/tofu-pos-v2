@@ -295,8 +295,8 @@ class _Section extends StatelessWidget {
         Text(title, style: TofuTextStyles.h4),
         const SizedBox(height: TofuTokens.space3),
         Wrap(
-          spacing: TofuTokens.space3,
-          runSpacing: TofuTokens.space3,
+          spacing: TofuTokens.space5,
+          runSpacing: TofuTokens.space5,
           children: chips,
         ),
       ],

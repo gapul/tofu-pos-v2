@@ -16,6 +16,7 @@ import '../sync/refresh_from_server.dart';
 import '../theme/tokens.dart';
 import 'status_indicator.dart';
 import 'ticket_number.dart' as widget;
+import 'top_snack.dart';
 
 /// Figma `Organisms/AppHeader` (id `433:29`) を Flutter で再現。
 ///
@@ -301,15 +302,8 @@ class _RefreshButton extends ConsumerWidget {
   }
 
   Future<void> _refresh(BuildContext context, WidgetRef ref) async {
-    final ScaffoldMessengerState? messenger = ScaffoldMessenger.maybeOf(context);
-    messenger
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text('再読み込み中…'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+    TopSnack.show(context, '再読み込み中…',
+        duration: const Duration(seconds: 2));
     // 1. 未送信データを先に push
     try {
       await ref.read(syncServiceProvider).runOnce();

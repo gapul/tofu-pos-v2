@@ -11,6 +11,7 @@ import '../../../../core/export/csv_export_file_service.dart';
 import '../../../../core/export/csv_export_service.dart';
 import '../../../../core/sync/supabase_realtime_listener.dart';
 import '../../../../core/sync/sync_service.dart';
+import '../../../../core/ui/top_snack.dart';
 import '../../../../domain/entities/operation_log.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/entities/order_item.dart';
@@ -46,9 +47,7 @@ class _DevConsoleScreenState extends ConsumerState<DevConsoleScreen> {
 
   void _show(String message) {
     setState(() => _lastResult = message);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    TopSnack.show(context, message);
   }
 
   @override

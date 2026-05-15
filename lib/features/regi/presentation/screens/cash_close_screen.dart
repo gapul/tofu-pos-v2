@@ -15,6 +15,7 @@ import '../../../../core/ui/pane_title.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../core/ui/tofu_icon.dart';
+import '../../../../core/ui/top_snack.dart';
 import '../../../../domain/entities/cash_drawer.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/value_objects/cash_close_difference.dart';
@@ -80,16 +81,13 @@ class _CashCloseScreenState extends ConsumerState<CashCloseScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('CSV を共有しました ($path)')));
+      TopSnack.show(context, 'CSV を共有しました ($path)');
     } catch (e) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('エクスポートに失敗: $e')));
+      TopSnack.show(context, 'エクスポートに失敗: $e',
+          color: TofuTokens.dangerBgStrong);
     } finally {
       if (mounted) {
         setState(() => _csvBusy = false);

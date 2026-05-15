@@ -16,6 +16,7 @@ import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../core/ui/tofu_icon.dart';
 import '../../../../core/ui/tofu_toggle.dart';
+import '../../../../core/ui/top_snack.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/enums/device_role.dart';
 import '../../../../domain/enums/transport_mode.dart';
@@ -171,12 +172,7 @@ class _UserNameSectionState extends ConsumerState<_UserNameSection> {
     // 反映のため presence を再接続。
     ref.invalidate(peerPresenceServiceProvider);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('ユーザー名を保存しました'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    TopSnack.show(context, 'ユーザー名を保存しました');
   }
 
   @override
@@ -301,9 +297,8 @@ class _TransportSection extends ConsumerWidget {
               icon: Icons.refresh,
               variant: TofuButtonVariant.secondary,
               onPressed: () async {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('未送信データをアップロード中…')),
-                );
+                TopSnack.show(context, '未送信データをアップロード中…',
+                    duration: const Duration(seconds: 4));
                 // 1. 先に未同期データをサーバへ push（再接続より優先）
                 try {
                   await ref.read(syncServiceProvider).runOnce();
@@ -315,11 +310,7 @@ class _TransportSection extends ConsumerWidget {
                 ref.invalidate(supabaseRealtimeListenerProvider);
                 await ref.read(roleStarterProvider).start();
                 if (!context.mounted) return;
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    const SnackBar(content: Text('サーバーに再接続しました')),
-                  );
+                TopSnack.show(context, 'サーバーに再接続しました');
               },
             ),
           ),
@@ -503,16 +494,13 @@ class _ExportSectionState extends ConsumerState<_ExportSection> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('CSV を共有しました ($path)')));
+      TopSnack.show(context, 'CSV を共有しました ($path)');
     } catch (e) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('エクスポートに失敗: $e')));
+      TopSnack.show(context, 'エクスポートに失敗: $e',
+          color: TofuTokens.dangerBgStrong);
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -567,6 +555,15 @@ class _LogoutSection extends ConsumerWidget {
     if (!ok) {
       return;
     }
+    // 未送信注文が残っているとログアウト後の同期トリガが無くなるので
+    // ログアウト前に push を試みる。失敗は telemetry に既に出ているので無視。
+    if (context.mounted) {
+      TopSnack.show(context, '未送信データをアップロード中…',
+          duration: const Duration(seconds: 4));
+    }
+    try {
+      await ref.read(syncServiceProvider).runOnce();
+    } catch (_) {/* 失敗してもログアウトは続行 */}
     await ref.read(setupNotifierProvider.notifier).clearShop();
     if (!context.mounted) return;
     context.go('/setup/shop');
@@ -675,9 +672,7 @@ class _DangerSectionState extends ConsumerState<_DangerSection> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('整理券プールを初期化しました')));
+    TopSnack.show(context, '整理券プールを初期化しました');
   }
 
   @override

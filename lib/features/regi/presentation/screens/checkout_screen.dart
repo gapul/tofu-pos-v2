@@ -13,6 +13,7 @@ import '../../../../core/ui/num_stepper.dart';
 import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/quick_amount_btn.dart';
 import '../../../../core/ui/tofu_button.dart';
+import '../../../../core/ui/top_snack.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/entities/order_item.dart';
 import '../../../../domain/services/change_suggestion.dart';
@@ -39,9 +40,7 @@ class CheckoutScreen extends ConsumerWidget {
   const CheckoutScreen({super.key});
 
   void _showSnack(BuildContext context, String message, {Color? bg}) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message), backgroundColor: bg));
+    TopSnack.show(context, message, color: bg);
   }
 
   void _handleConfirmResult(

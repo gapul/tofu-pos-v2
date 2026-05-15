@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/tofu_button.dart';
+import '../../../../core/ui/top_snack.dart';
 import '../../../../domain/enums/device_role.dart';
 import '../notifiers/setup_notifier.dart';
 
@@ -58,11 +59,8 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('保存に失敗しました。もう一度お試しください。'),
-        ),
-      );
+      TopSnack.show(context, '保存に失敗しました。もう一度お試しください。',
+          color: TofuTokens.dangerBgStrong);
       return;
     }
     if (!mounted) {

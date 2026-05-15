@@ -59,12 +59,24 @@ class SyncService {
   final Duration _retryInterval;
   final Duration _runOnceTimeout;
 
-  /// 「最後に開始した run のトークン」を永続化するキー。
-  /// 起動時に [_kLastCompletedToken] と比較し、不一致なら前回クラッシュとみなす。
-  static const String _kLastStartedToken = 'sync.lastStartedToken';
+  // 旧キー（プレフィクスなし）。後方互換でクラッシュ検出時の元参照に使う。
+  static const String _kLegacyLastStartedToken = 'sync.lastStartedToken';
+  static const String _kLegacyLastCompletedToken = 'sync.lastCompletedToken';
 
-  /// 「最後に正常終了した run のトークン」を永続化するキー。
-  static const String _kLastCompletedToken = 'sync.lastCompletedToken';
+  /// 「最後に開始した run のトークン」を永続化するキー（shop_id スコープ）。
+  /// 起動時に [_lastCompletedTokenKey] と比較し、不一致なら前回クラッシュとみなす。
+  Future<String> _lastStartedTokenKey() async {
+    final shop = await _settingsRepo.getShopId();
+    if (shop == null) return _kLegacyLastStartedToken;
+    return 'sync.lastStartedToken:${shop.value}';
+  }
+
+  /// 「最後に正常終了した run のトークン」を永続化するキー（shop_id スコープ）。
+  Future<String> _lastCompletedTokenKey() async {
+    final shop = await _settingsRepo.getShopId();
+    if (shop == null) return _kLegacyLastCompletedToken;
+    return 'sync.lastCompletedToken:${shop.value}';
+  }
 
   /// 起動直後に 1 度だけ「前回クラッシュ」チェックを行うためのフラグ。
   bool _crashCheckPerformed = false;
@@ -149,13 +161,37 @@ class SyncService {
   /// 前回プロセスで「開始したが完了しなかった runOnce」がいたかどうかを検出する。
   /// 検出時は WARN ログと telemetry を出し、prefs から started を消す
   /// （次回 runOnce が始まれば新しい started が書かれる）。
-  void _detectPreviousCrash() {
+  Future<void> _detectPreviousCrash() async {
     final SharedPreferences? prefs = _prefs;
     if (prefs == null) return;
-    final String? started = prefs.getString(_kLastStartedToken);
-    final String? completed = prefs.getString(_kLastCompletedToken);
+    final String startedKey = await _lastStartedTokenKey();
+    final String completedKey = await _lastCompletedTokenKey();
+    String? started = prefs.getString(startedKey);
+    String? completed = prefs.getString(completedKey);
+    // 旧スキーマ（プレフィクスなし）からの移行ユーザへのフォールバック。
+    // 初回起動時に shop_id スコープのキーが空なら legacy を 1 度だけ参照し、
+    // 検出後は legacy を削除する。
+    String? legacyConsumedKey;
+    if (started == null && completed == null) {
+      final String? legacyStarted =
+          prefs.getString(_kLegacyLastStartedToken);
+      final String? legacyCompleted =
+          prefs.getString(_kLegacyLastCompletedToken);
+      if (legacyStarted != null || legacyCompleted != null) {
+        started = legacyStarted;
+        completed = legacyCompleted;
+        legacyConsumedKey = _kLegacyLastStartedToken;
+      }
+    }
     if (started == null) return; // 初回起動 or 前回が綺麗に終わった
-    if (started == completed) return; // 前回も正常終了
+    if (started == completed) {
+      // legacy も含めて整合してたら 旧キーは掃除しておく。
+      if (legacyConsumedKey != null) {
+        unawaited(prefs.remove(_kLegacyLastStartedToken));
+        unawaited(prefs.remove(_kLegacyLastCompletedToken));
+      }
+      return;
+    }
     AppLogger.w(
       'Sync: previous run did not complete (started=$started, completed=$completed)',
     );
@@ -167,7 +203,11 @@ class SyncService {
       },
     );
     // started を消すことで「以前のクラッシュを 1 回だけ通知する」を担保。
-    unawaited(prefs.remove(_kLastStartedToken));
+    if (legacyConsumedKey != null) {
+      unawaited(prefs.remove(_kLegacyLastStartedToken));
+    } else {
+      unawaited(prefs.remove(startedKey));
+    }
   }
 
   Future<void> _writeToken(String key, String value) async {
@@ -189,7 +229,7 @@ class SyncService {
     // 「気付けるようにする」のがここの目的（仕様書 §8.2 の長期失敗観測の補助）。
     if (!_crashCheckPerformed) {
       _crashCheckPerformed = true;
-      _detectPreviousCrash();
+      await _detectPreviousCrash();
     }
     _running = true;
     final Object myToken = Object();
@@ -197,7 +237,8 @@ class SyncService {
     // 開始トークンを永続化（成功で同じ値が completed に書かれる）。
     final String tokenId = '${_clock.now().microsecondsSinceEpoch}'
         '_${identityHashCode(myToken)}';
-    unawaited(_writeToken(_kLastStartedToken, tokenId));
+    final String startedKey = await _lastStartedTokenKey();
+    unawaited(_writeToken(startedKey, tokenId));
     try {
       if (_connectivity.current != ConnectivityStatus.online) {
         return const SyncResult(successCount: 0, failureCount: 0);
@@ -268,7 +309,8 @@ class SyncService {
       // 正常終了（全件失敗でも runOnce 自体は完了）。completed トークンを更新。
       // タイムアウトや例外で抜けた場合は finally でも completed を書かないため、
       // 次回起動で「started != completed」が検出される。
-      unawaited(_writeToken(_kLastCompletedToken, tokenId));
+      final String completedKey = await _lastCompletedTokenKey();
+      unawaited(_writeToken(completedKey, tokenId));
       return SyncResult(successCount: success, failureCount: failure);
     } finally {
       // _runOnceGuarded のタイムアウトで token がすり替わっていたら

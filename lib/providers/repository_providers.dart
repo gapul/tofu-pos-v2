@@ -56,8 +56,13 @@ final Provider<SettingsRepository> settingsRepositoryProvider =
 
 final Provider<TicketNumberPoolRepository> ticketNumberPoolRepositoryProvider =
     Provider<TicketNumberPoolRepository>(
-      (ref) =>
-          SharedPrefsTicketPoolRepository(ref.watch(sharedPreferencesProvider)),
+      (ref) {
+        final prefs = ref.watch(sharedPreferencesProvider);
+        return SharedPrefsTicketPoolRepository(
+          prefs,
+          currentShopId: () => prefs.getString('shopId'),
+        );
+      },
     );
 
 final Provider<OperationLogRepository> operationLogRepositoryProvider =
@@ -68,8 +73,13 @@ final Provider<OperationLogRepository> operationLogRepositoryProvider =
 
 final Provider<DailyResetRepository> dailyResetRepositoryProvider =
     Provider<DailyResetRepository>(
-      (ref) =>
-          SharedPrefsDailyResetRepository(ref.watch(sharedPreferencesProvider)),
+      (ref) {
+        final prefs = ref.watch(sharedPreferencesProvider);
+        return SharedPrefsDailyResetRepository(
+          prefs,
+          currentShopId: () => prefs.getString('shopId'),
+        );
+      },
     );
 
 final Provider<KitchenOrderRepository> kitchenOrderRepositoryProvider =

@@ -16,6 +16,7 @@ import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../core/ui/tofu_chip.dart';
 import '../../../../core/ui/tofu_icon.dart';
+import '../../../../core/ui/top_snack.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/enums/order_status.dart';
 import '../../../../domain/enums/sync_status.dart';
@@ -65,9 +66,8 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('店舗IDが未設定です')));
+      TopSnack.show(context, '店舗IDが未設定です',
+          color: TofuTokens.dangerBgStrong);
       return;
     }
     try {
@@ -80,19 +80,14 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('整理券 ${order.ticketNumber} を取消しました')),
-      );
+      TopSnack.show(
+          context, '整理券 ${order.ticketNumber} を取消しました');
     } on AppException catch (e) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: TofuTokens.dangerBgStrong,
-        ),
-      );
+      TopSnack.show(context, e.message,
+          color: TofuTokens.dangerBgStrong);
     }
   }
 
@@ -112,16 +107,13 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('CSV を共有しました ($path)')));
+      TopSnack.show(context, 'CSV を共有しました ($path)');
     } catch (e) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('エクスポートに失敗: $e')));
+      TopSnack.show(context, 'エクスポートに失敗: $e',
+          color: TofuTokens.dangerBgStrong);
     } finally {
       if (mounted) {
         setState(() => _csvBusy = false);

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/logging/app_logger.dart';
 import '../../../../domain/enums/device_role.dart';
@@ -84,6 +85,13 @@ class SetupNotifier extends AsyncNotifier<SetupState> {
     final ShopId? before = await _repo.getShopId();
     final bool shopChanged = before != null && before.value != shopId.value;
 
+    // 初回 shop_id 設定時、旧スキーマ（プレフィクスなし）の店舗依存キーを
+    // 新スキーマ（`key:<shopId>`）にリネーム移行する。複数 shop_id 切替で
+    // 番号衝突や日次リセット誤判定を起こさないため、確実に 1 回だけ行う。
+    if (before == null) {
+      await _migrateLegacyShopScopedKeys(shopId.value);
+    }
+
     await _repo.setShopId(shopId);
 
     if (shopChanged) {
@@ -105,6 +113,41 @@ class SetupNotifier extends AsyncNotifier<SetupState> {
     final SetupState current = state.value ?? SetupState.empty;
     state = AsyncData<SetupState>(current.copyWith(shopId: shopId));
     await _reconfigureAfterSetupChange();
+  }
+
+  /// 旧スキーマで保存された店舗依存キーを `<key>:<shopId>` 形式へ移行する。
+  /// 既存ユーザの初回起動（または shop_id 未設定状態からのログイン）でのみ実行。
+  /// 失敗してもログだけ残して続行（リネーム失敗 = 一部データ取り溢しになるが
+  /// 整理券プールの番号衝突よりは小さい問題）。
+  Future<void> _migrateLegacyShopScopedKeys(String shopId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      const List<String> legacyKeys = <String>[
+        'ticketPool',
+        'ticketPool.pendingReleases',
+        'lastResetDate',
+        'sync.lastStartedToken',
+        'sync.lastCompletedToken',
+      ];
+      for (final String key in legacyKeys) {
+        final String? value = prefs.getString(key);
+        if (value == null) continue;
+        final String scoped = '$key:$shopId';
+        if (prefs.getString(scoped) != null) {
+          // 既に新スキーマがあるなら旧を捨てる（同居させない）。
+          await prefs.remove(key);
+          continue;
+        }
+        await prefs.setString(scoped, value);
+        await prefs.remove(key);
+      }
+    } catch (e, st) {
+      AppLogger.w(
+        'SetupNotifier: legacy shop-scoped key migration failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   Future<void> saveRole(DeviceRole role) async {

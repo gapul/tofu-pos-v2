@@ -78,8 +78,8 @@ class AttributeChip extends StatelessWidget {
         child: Container(
           constraints: const BoxConstraints(minHeight: TofuTokens.touchMin),
           padding: const EdgeInsets.symmetric(
-            horizontal: TofuTokens.space5,
-            vertical: TofuTokens.space3,
+            horizontal: TofuTokens.space7,
+            vertical: TofuTokens.space4,
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(TofuTokens.radiusFull),
@@ -89,7 +89,7 @@ class AttributeChip extends StatelessWidget {
             widthFactor: 1,
             child: Text(
               label,
-              style: TofuTextStyles.bodyMdBold.copyWith(color: p.fg),
+              style: TofuTextStyles.bodyLgBold.copyWith(color: p.fg),
             ),
           ),
         ),

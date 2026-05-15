@@ -18,6 +18,7 @@ import '../../../../core/ui/lordicon.dart';
 import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
+import '../../../../core/ui/top_snack.dart';
 import '../../../../domain/entities/kitchen_order.dart';
 import '../../../../domain/enums/kitchen_status.dart';
 import '../../domain/kitchen_alert.dart';
@@ -87,36 +88,30 @@ class _KitchenScreenState extends ConsumerState<KitchenScreen>
         return;
       }
       unawaited(HapticFeedback.mediumImpact());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('提供完了'),
-          action: SnackBarAction(
-            label: '取り消し',
-            onPressed: () async {
-              try {
-                await uc.undo(orderId);
-              } on AppException catch (e) {
-                if (!mounted) {
-                  return;
-                }
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(SnackBar(content: Text(e.message)));
-              }
-            },
-          ),
-          duration: const Duration(seconds: 6),
-        ),
+      TopSnack.show(
+        context,
+        '提供完了',
+        duration: const Duration(seconds: 6),
+        actionLabel: '取り消し',
+        onAction: () async {
+          try {
+            await uc.undo(orderId);
+          } on AppException catch (e) {
+            if (!mounted) {
+              return;
+            }
+            TopSnack.show(context, e.message);
+          }
+        },
       );
     } on AppException catch (e) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: TofuTokens.dangerBgStrong,
-        ),
+      TopSnack.show(
+        context,
+        e.message,
+        color: TofuTokens.dangerBgStrong,
       );
     }
   }

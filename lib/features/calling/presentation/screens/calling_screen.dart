@@ -17,6 +17,7 @@ import '../../../../core/ui/lordicon.dart';
 import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
+import '../../../../core/ui/top_snack.dart';
 import '../../../../domain/entities/calling_order.dart';
 import '../../../../domain/enums/calling_status.dart';
 import '../../../../domain/value_objects/shop_id.dart';
@@ -81,11 +82,9 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
       );
     }
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('整理券 ${order.ticketNumber} を受取完了にしました'),
-        duration: const Duration(seconds: 2),
-      ),
+    TopSnack.show(
+      context,
+      '整理券 ${order.ticketNumber} を受取完了にしました',
     );
   }
 
@@ -103,12 +102,11 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
     } catch (e) {
       broadcastOk = false;
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('他端末への呼び出し通知に失敗: $e'),
-            backgroundColor: TofuTokens.dangerBgStrong,
-            duration: const Duration(seconds: 5),
-          ),
+        TopSnack.show(
+          context,
+          '他端末への呼び出し通知に失敗: $e',
+          color: TofuTokens.dangerBgStrong,
+          duration: const Duration(seconds: 5),
         );
       }
     }
@@ -117,11 +115,9 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
       return;
     }
     if (broadcastOk) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('整理券 ${order.ticketNumber} を呼び出しました'),
-          duration: const Duration(seconds: 2),
-        ),
+      TopSnack.show(
+        context,
+        '整理券 ${order.ticketNumber} を呼び出しました',
       );
     }
   }

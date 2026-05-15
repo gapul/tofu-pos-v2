@@ -27,24 +27,40 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
     this._prefs, {
     int defaultMaxNumber = 99,
     int defaultBufferSize = 10,
+    String? Function()? currentShopId,
   }) : _defaultMax = defaultMaxNumber,
-       _defaultBuffer = defaultBufferSize;
+       _defaultBuffer = defaultBufferSize,
+       _currentShopId = currentShopId;
 
   final SharedPreferences _prefs;
   final int _defaultMax;
   final int _defaultBuffer;
+  final String? Function()? _currentShopId;
 
   /// 直列化用のテール。allocate / release は前回の完了を待ってから走る。
   Future<void> _lock = Future<void>.value();
 
-  static const String _kPool = 'ticketPool';
+  // 旧（プレフィクスなし）キー。一段階前のスキーマから移行する際の元参照。
+  static const String _kLegacyPool = 'ticketPool';
+  static const String _kLegacyPendingReleases = 'ticketPool.pendingReleases';
 
-  /// 補償 release 失敗時の未処理キュー。`int` の配列を JSON 文字列で保存。
-  static const String _kPendingReleases = 'ticketPool.pendingReleases';
+  /// 店舗 ID を抽出するためのプレフィクス。`ticketPool:<shopId>` に分離する。
+  /// shopId 未設定時は legacy キーをそのまま使う（セットアップ未完了 ≡ 既存挙動）。
+  String _poolKey() {
+    final String? sid = _currentShopId?.call();
+    if (sid == null || sid.isEmpty) return _kLegacyPool;
+    return 'ticketPool:$sid';
+  }
+
+  String _pendingKey() {
+    final String? sid = _currentShopId?.call();
+    if (sid == null || sid.isEmpty) return _kLegacyPendingReleases;
+    return 'ticketPool.pendingReleases:$sid';
+  }
 
   @override
   Future<TicketNumberPool> load() async {
-    final String? raw = _prefs.getString(_kPool);
+    final String? raw = _prefs.getString(_poolKey());
     if (raw == null) {
       return TicketNumberPool.empty(
         maxNumber: _defaultMax,
@@ -111,7 +127,7 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
       'recentlyReleased': pool.recentlyReleasedNumbers,
       'lastUsedAt': lastUsedAtStr,
     };
-    await _prefs.setString(_kPool, jsonEncode(json));
+    await _prefs.setString(_poolKey(), jsonEncode(json));
   }
 
   /// 内部ロック: `body` を直列化して実行する。
@@ -251,7 +267,7 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
   }
 
   List<int> _readPendingRaw() {
-    final String? raw = _prefs.getString(_kPendingReleases);
+    final String? raw = _prefs.getString(_pendingKey());
     if (raw == null || raw.isEmpty) return <int>[];
     try {
       final dynamic decoded = jsonDecode(raw);
@@ -276,9 +292,9 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
 
   Future<void> _writePendingRaw(List<int> values) async {
     if (values.isEmpty) {
-      await _prefs.remove(_kPendingReleases);
+      await _prefs.remove(_pendingKey());
       return;
     }
-    await _prefs.setString(_kPendingReleases, jsonEncode(values));
+    await _prefs.setString(_pendingKey(), jsonEncode(values));
   }
 }
