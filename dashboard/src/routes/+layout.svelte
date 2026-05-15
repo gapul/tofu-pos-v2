@@ -47,7 +47,15 @@
     checkHealth();
   }
 
-  let activeTab = $derived(page.url.pathname.startsWith('/tester') ? 'tester' : 'sales');
+  let activeTab = $derived(
+    page.url.pathname.startsWith('/tester')
+      ? 'tester'
+      : page.url.pathname.startsWith('/products')
+        ? 'products'
+        : page.url.pathname.startsWith('/cash')
+          ? 'cash'
+          : 'sales',
+  );
   let bannerText = $derived(describe(health));
   let bannerSeverity = $derived(severity(health));
   let showBanner = $derived(health.kind !== 'ok' && health.kind !== 'idle');
@@ -71,6 +79,22 @@
           class:text-ink={activeTab === 'sales'}
           class:shadow-sm={activeTab === 'sales'}
           class:text-ink-tertiary={activeTab !== 'sales'}>📈 売上</a
+        >
+        <a
+          href="/products/"
+          class="rounded px-3 py-1.5 transition"
+          class:bg-canvas={activeTab === 'products'}
+          class:text-ink={activeTab === 'products'}
+          class:shadow-sm={activeTab === 'products'}
+          class:text-ink-tertiary={activeTab !== 'products'}>📦 商品</a
+        >
+        <a
+          href="/cash/"
+          class="rounded px-3 py-1.5 transition"
+          class:bg-canvas={activeTab === 'cash'}
+          class:text-ink={activeTab === 'cash'}
+          class:shadow-sm={activeTab === 'cash'}
+          class:text-ink-tertiary={activeTab !== 'cash'}>🪙 釣銭</a
         >
         <a
           href="/tester/"
