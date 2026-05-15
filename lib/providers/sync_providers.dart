@@ -13,12 +13,20 @@ import 'database_providers.dart';
 import 'repository_providers.dart';
 
 /// CloudSyncClient: Supabase接続情報があれば本実装、無ければ Noop。
+///
+/// `Supabase.instance.client` は `Supabase.initialize` が未完了 / 失敗時に
+/// `LateInitializationError` を投げる。起動順の競合で発生し得るため
+/// try/catch で Noop に落として、sync.start で全体が落ちないようにする。
 final Provider<CloudSyncClient> cloudSyncClientProvider =
     Provider<CloudSyncClient>((ref) {
-      if (Env.hasSupabaseCredentials) {
-        return SupabaseCloudSyncClient(Supabase.instance.client);
+      if (!Env.hasSupabaseCredentials) {
+        return NoopCloudSyncClient();
       }
-      return NoopCloudSyncClient();
+      try {
+        return SupabaseCloudSyncClient(Supabase.instance.client);
+      } catch (_) {
+        return NoopCloudSyncClient();
+      }
     });
 
 /// SupabaseRealtimeListener: 店舗ID と Supabase 接続情報が揃っていれば購読、無ければ null。

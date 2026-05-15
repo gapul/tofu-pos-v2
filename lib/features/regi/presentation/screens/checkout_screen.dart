@@ -123,7 +123,7 @@ class CheckoutScreen extends ConsumerWidget {
             upcomingTicket: ref.watch(upcomingTicketProvider).value,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.pop(),
+              onPressed: () => context.canPop() ? context.pop() : context.go('/'),
               tooltip: '戻る',
             ),
           ),

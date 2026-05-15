@@ -139,7 +139,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
         title: 'レジ',
         leading: IconButton(
           icon: const TofuIcon(TofuIconName.chevronLeft),
-          onPressed: () => context.pop(),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
         ),
       ),
       body: SafeArea(

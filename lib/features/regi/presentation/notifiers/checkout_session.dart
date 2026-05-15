@@ -10,6 +10,7 @@ import '../../../../domain/entities/product.dart';
 import '../../../../domain/value_objects/checkout_draft.dart';
 import '../../../../domain/value_objects/discount.dart';
 import '../../../../domain/value_objects/feature_flags.dart';
+import '../../../../providers/repository_providers.dart';
 import '../../../../domain/value_objects/money.dart';
 import '../../../../providers/settings_providers.dart';
 import '../../../../providers/usecase_providers.dart';
@@ -239,8 +240,12 @@ class CheckoutConfirmController extends AsyncNotifier<Order?> {
   /// しているのでメンバ `_lastTransportError` 経由で画面に通知する。
   Future<Order?> confirm() async {
     final CheckoutSession session = ref.read(checkoutSessionProvider);
-    final FeatureFlags flags =
-        ref.read(featureFlagsProvider).value ?? FeatureFlags.allOff;
+    // StreamProvider 初回 emit 前に呼ばれると .value が null になり
+    // 既定 allOff（全 OFF）にフォールバックしてしまい、kitchenLink が
+    // 暗黙 OFF として送信スキップされる事故を起こしていた。
+    // 確定時はリポジトリから直接読み、現在保存値を必ず取得する。
+    final FeatureFlags flags = ref.read(featureFlagsProvider).value ??
+        await ref.read(settingsRepositoryProvider).getFeatureFlags();
 
     if (session.changeCash.isNegative) {
       state = AsyncValue<Order?>.error(

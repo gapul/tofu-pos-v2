@@ -44,7 +44,7 @@ class CustomerAttributesScreen extends ConsumerWidget {
             upcomingTicket: ref.watch(upcomingTicketProvider).value,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.pop(),
+              onPressed: () => context.canPop() ? context.pop() : context.go('/'),
               tooltip: '戻る',
             ),
           ),
@@ -304,7 +304,7 @@ class _FooterBar extends StatelessWidget {
             label: '戻る',
             icon: Icons.arrow_back,
             variant: TofuButtonVariant.secondary,
-            onPressed: () => context.pop(),
+            onPressed: () => context.canPop() ? context.pop() : context.go('/'),
           ),
           const SizedBox(width: TofuTokens.space3),
           TofuButton(

@@ -108,7 +108,7 @@ class _CashCloseScreenState extends ConsumerState<CashCloseScreen> {
         title: 'レジ',
         leading: IconButton(
           icon: const TofuIcon(TofuIconName.chevronLeft),
-          onPressed: () => context.pop(),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
         ),
         actions: <Widget>[
           IconButton(

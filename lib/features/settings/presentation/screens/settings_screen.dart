@@ -43,7 +43,7 @@ class SettingsScreen extends ConsumerWidget {
         showStatus: false,
         leading: IconButton(
           icon: const TofuIcon(TofuIconName.chevronLeft),
-          onPressed: () => context.pop(),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
         ),
       ),
       body: SafeArea(
