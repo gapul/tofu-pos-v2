@@ -6,7 +6,7 @@ import '../../../../core/error/app_exceptions.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/confirm_dialog.dart';
 import '../../../../core/ui/format.dart';
-import '../../../../core/ui/status_chip.dart';
+import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/enums/order_status.dart';
@@ -145,10 +145,10 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(
-            child: StatusChip(
+            child: StatusIndicator.custom(
               label: '注文の取得に失敗: $e',
               icon: Icons.error_outline,
-              tone: TofuStatusTone.danger,
+              tone: StatusIndicatorTone.danger,
             ),
           ),
         ),
@@ -168,7 +168,7 @@ class _HistoryRow extends StatelessWidget {
     final List<Widget> chips = <Widget>[];
 
     chips.add(
-      StatusChip(
+      StatusIndicator.custom(
         label: switch (order.orderStatus) {
           OrderStatus.unsent => '未送信',
           OrderStatus.sent => '送信済',
@@ -182,10 +182,10 @@ class _HistoryRow extends StatelessWidget {
           OrderStatus.cancelled => Icons.cancel,
         },
         tone: switch (order.orderStatus) {
-          OrderStatus.unsent => TofuStatusTone.warning,
-          OrderStatus.sent => TofuStatusTone.info,
-          OrderStatus.served => TofuStatusTone.success,
-          OrderStatus.cancelled => TofuStatusTone.danger,
+          OrderStatus.unsent => StatusIndicatorTone.warning,
+          OrderStatus.sent => StatusIndicatorTone.info,
+          OrderStatus.served => StatusIndicatorTone.success,
+          OrderStatus.cancelled => StatusIndicatorTone.danger,
         },
         dense: true,
       ),
@@ -193,10 +193,10 @@ class _HistoryRow extends StatelessWidget {
     if (order.syncStatus == SyncStatus.notSynced) {
       chips.add(const SizedBox(width: TofuTokens.space2));
       chips.add(
-        const StatusChip(
+        const StatusIndicator.custom(
           label: '未同期',
           icon: Icons.cloud_off,
-          tone: TofuStatusTone.warning,
+          tone: StatusIndicatorTone.warning,
           dense: true,
         ),
       );

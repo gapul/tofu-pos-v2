@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../error/app_exceptions.dart';
 import '../telemetry/telemetry.dart';
 import '../theme/tokens.dart';
+import 'alert_banner.dart';
+import 'tofu_button.dart';
 
 /// 子ツリーの build エラーを captured して、フォールバック UI に置き換える。
 ///
@@ -150,38 +152,54 @@ class _ErrorFallback extends StatelessWidget {
       color: TofuTokens.bgCanvas,
       child: SafeArea(
         child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(TofuTokens.space7),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const Icon(Icons.error_outline,
-                    size: 56, color: TofuTokens.dangerIcon),
-                const SizedBox(height: TofuTokens.space5),
-                const Text('エラーが発生しました', style: TofuTextStyles.h3),
-                const SizedBox(height: TofuTokens.space3),
-                Text(
-                  code,
-                  style: TofuTextStyles.captionBold,
-                  textAlign: TextAlign.center,
-                ),
-                if (detail.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: TofuTokens.space3),
-                  Text(
-                    detail,
-                    style: TofuTextStyles.caption,
-                    textAlign: TextAlign.center,
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Padding(
+              padding: const EdgeInsets.all(TofuTokens.space7),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  // 上部の状況サマリ。AlertBanner (Molecule) で
+                  // 色 + アイコン + テキストの 3 重表現を担保する。
+                  AlertBanner(
+                    variant: AlertBannerVariant.danger,
+                    title: 'エラーが発生しました',
+                    message: code,
                   ),
+                  if (detail.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: TofuTokens.space4),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(TofuTokens.space4),
+                      decoration: BoxDecoration(
+                        color: TofuTokens.bgSurface,
+                        borderRadius:
+                            BorderRadius.circular(TofuTokens.radiusMd),
+                        border:
+                            Border.all(color: TofuTokens.borderSubtle),
+                      ),
+                      child: Text(
+                        detail,
+                        style: TofuTextStyles.caption,
+                        maxLines: 6,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                  if (retry != null) ...<Widget>[
+                    const SizedBox(height: TofuTokens.space6),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TofuButton(
+                        label: '再試行',
+                        icon: Icons.refresh,
+                        onPressed: retry,
+                      ),
+                    ),
+                  ],
                 ],
-                const SizedBox(height: TofuTokens.space7),
-                if (retry != null)
-                  FilledButton(
-                    onPressed: retry,
-                    child: const Text('再試行'),
-                  ),
-              ],
+              ),
             ),
           ),
         ),

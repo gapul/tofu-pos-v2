@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/export/csv_export_file_service.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/confirm_dialog.dart';
-import '../../../../core/ui/status_chip.dart';
+import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/enums/device_role.dart';
@@ -415,10 +415,10 @@ class _DangerSectionState extends ConsumerState<_DangerSection> {
     return _Card(
       title: '管理操作',
       children: <Widget>[
-        const StatusChip(
+        const StatusIndicator.custom(
           label: '不可逆操作です。実行前に内容をよく確認してください。',
           icon: Icons.warning_amber,
-          tone: TofuStatusTone.warning,
+          tone: StatusIndicatorTone.warning,
         ),
         const SizedBox(height: TofuTokens.space4),
         TofuButton(

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/format.dart';
-import '../../../../core/ui/ticket_badge.dart';
+import '../../../../core/ui/ticket_number.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/enums/order_status.dart';
@@ -62,9 +62,10 @@ class _CheckoutDoneScreenState extends ConsumerState<CheckoutDoneScreen> {
                   const SizedBox(height: TofuTokens.space7),
                   const Text('会計が完了しました', style: TofuTextStyles.h2),
                   const SizedBox(height: TofuTokens.space7),
-                  TicketBadge(
-                    ticket: widget.order.ticketNumber,
-                    size: TicketBadgeSize.display,
+                  TicketNumber(
+                    number: widget.order.ticketNumber.toString(),
+                    label: '整理券',
+                    size: TicketNumberSize.display,
                   ),
                   const SizedBox(height: TofuTokens.space7),
                   Text(

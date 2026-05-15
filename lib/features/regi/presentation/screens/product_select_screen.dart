@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
-import '../../../../core/ui/status_chip.dart';
+import '../../../../core/ui/status_indicator.dart';
 import '../../../../domain/entities/product.dart';
 import '../../../../domain/value_objects/feature_flags.dart';
 import '../../../../providers/settings_providers.dart';
@@ -366,10 +366,10 @@ class _ErrorState extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(TofuTokens.space7),
-        child: StatusChip(
+        child: StatusIndicator.custom(
           label: '商品の読み込みに失敗: $message',
           icon: Icons.error_outline,
-          tone: TofuStatusTone.danger,
+          tone: StatusIndicatorTone.danger,
         ),
       ),
     );

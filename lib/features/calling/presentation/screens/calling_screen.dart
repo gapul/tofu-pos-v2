@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/format.dart';
-import '../../../../core/ui/status_chip.dart';
+import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/calling_order.dart';
 import '../../../../domain/enums/calling_status.dart';
@@ -147,10 +147,10 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => StatusChip(
+          error: (e, _) => StatusIndicator.custom(
             label: '注文の取得に失敗: $e',
             icon: Icons.error_outline,
-            tone: TofuStatusTone.danger,
+            tone: StatusIndicatorTone.danger,
           ),
         ),
       ),
@@ -223,7 +223,11 @@ class _ColumnPane extends StatelessWidget {
               const SizedBox(width: TofuTokens.space3),
               Text(title, style: TofuTextStyles.h4),
               const SizedBox(width: TofuTokens.space3),
-              StatusChip(label: '${orders.length}件', dense: true),
+              StatusIndicator.custom(
+                label: '${orders.length}件',
+                tone: StatusIndicatorTone.neutral,
+                dense: true,
+              ),
             ],
           ),
         ),
@@ -311,10 +315,10 @@ class _CallingCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
                     if (isCancelled)
-                      const StatusChip(
+                      const StatusIndicator.custom(
                         label: '取消',
                         icon: Icons.block,
-                        tone: TofuStatusTone.danger,
+                        tone: StatusIndicatorTone.danger,
                         dense: true,
                       ),
                     Text(

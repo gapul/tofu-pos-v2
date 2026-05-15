@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/format.dart';
 import '../../../../core/ui/num_stepper.dart';
-import '../../../../core/ui/status_chip.dart';
+import '../../../../core/ui/status_indicator.dart';
 import '../../../../domain/entities/cash_drawer.dart';
 import '../../../../domain/value_objects/cash_close_difference.dart';
 import '../../../../domain/value_objects/daily_summary.dart';
@@ -85,12 +85,12 @@ class _CashCloseScreenState extends ConsumerState<CashCloseScreen> {
                   padding: const EdgeInsets.all(TofuTokens.space5),
                   children: <Widget>[
                     if (s.hasUnsynced) ...<Widget>[
-                      StatusChip(
+                      StatusIndicator.custom(
                         label:
                             '未同期の注文が ${s.unsyncedCount} 件残っています。'
                             'オンラインに復帰するとまとめて送信されます。',
                         icon: Icons.cloud_off,
-                        tone: TofuStatusTone.warning,
+                        tone: StatusIndicatorTone.warning,
                       ),
                       const SizedBox(height: TofuTokens.space5),
                     ],
@@ -286,13 +286,15 @@ class _DiffCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TofuStatusTone tone = difference.isZero
-        ? TofuStatusTone.success
-        : (difference.isShort ? TofuStatusTone.danger : TofuStatusTone.warning);
+    final StatusIndicatorTone tone = difference.isZero
+        ? StatusIndicatorTone.success
+        : (difference.isShort
+            ? StatusIndicatorTone.danger
+            : StatusIndicatorTone.warning);
     final String label = difference.isZero
         ? '差額なし（一致）'
         : (difference.isShort ? '不足' : '余り');
-    return StatusChip(
+    return StatusIndicator.custom(
       label: '$label  ${TofuFormat.yen(difference.amountDiff.abs())}',
       icon: difference.isZero
           ? Icons.check_circle

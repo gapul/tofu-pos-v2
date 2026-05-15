@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
-import '../../../../core/ui/status_chip.dart';
+import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/value_objects/feature_flags.dart';
 import '../../../../domain/value_objects/ticket_number.dart';
@@ -60,10 +60,10 @@ class RegiHomeScreen extends ConsumerWidget {
                       height: 200,
                       child: Center(child: CircularProgressIndicator()),
                     ),
-                    error: (e, _) => StatusChip(
+                    error: (e, _) => StatusIndicator.custom(
                       label: '整理券プールの読み込みに失敗: $e',
                       icon: Icons.error_outline,
-                      tone: TofuStatusTone.danger,
+                      tone: StatusIndicatorTone.danger,
                     ),
                   ),
                   const SizedBox(height: TofuTokens.space8),
@@ -92,10 +92,10 @@ class _NextTicketHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (next == null) {
-      return const StatusChip(
+      return const StatusIndicator.custom(
         label: '整理券プール枯渇 — 提供完了/取消で番号が解放されるまで新規会計不可',
         icon: Icons.warning_amber,
-        tone: TofuStatusTone.danger,
+        tone: StatusIndicatorTone.danger,
       );
     }
     return Container(

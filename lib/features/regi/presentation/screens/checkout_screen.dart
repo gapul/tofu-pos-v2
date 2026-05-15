@@ -10,7 +10,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/format.dart';
 import '../../../../core/ui/num_stepper.dart';
-import '../../../../core/ui/status_chip.dart';
+import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/entities/order_item.dart';
@@ -582,10 +582,10 @@ class _RightActions extends StatelessWidget {
             label: insufficient ? '不足' : 'お釣り',
             value: TofuFormat.yen(change.abs()),
             tone: insufficient
-                ? TofuStatusTone.danger
+                ? StatusIndicatorTone.danger
                 : (change.isZero
-                      ? TofuStatusTone.neutral
-                      : TofuStatusTone.success),
+                      ? StatusIndicatorTone.neutral
+                      : StatusIndicatorTone.success),
           ),
           const SizedBox(height: TofuTokens.space5),
           if (!flags.cashManagement) ...<Widget>[
@@ -636,13 +636,13 @@ class _SummaryCard extends StatelessWidget {
     required this.label,
     required this.value,
     this.highlight = false,
-    this.tone = TofuStatusTone.neutral,
+    this.tone = StatusIndicatorTone.neutral,
   });
 
   final String label;
   final String value;
   final bool highlight;
-  final TofuStatusTone tone;
+  final StatusIndicatorTone tone;
 
   @override
   Widget build(BuildContext context) {
@@ -652,9 +652,9 @@ class _SummaryCard extends StatelessWidget {
         : TofuTokens.textTertiary;
     final Color valueColor = highlight
         ? TofuTokens.brandOnPrimary
-        : (tone == TofuStatusTone.danger
+        : (tone == StatusIndicatorTone.danger
               ? TofuTokens.dangerText
-              : (tone == TofuStatusTone.success
+              : (tone == StatusIndicatorTone.success
                     ? TofuTokens.successText
                     : TofuTokens.textPrimary));
     return Container(

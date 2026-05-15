@@ -3,11 +3,18 @@ import 'package:flutter/material.dart';
 import '../theme/tokens.dart';
 import 'tofu_button.dart';
 
-/// 不可逆・破壊的操作の確認モーダル（仕様書 §12.1）。
+/// Figma `Organisms/ConfirmModal` (id `39:24`) を Flutter で再現。
 ///
-/// - 破壊系操作は赤色 + アイコンで明示
-/// - デフォルトフォーカスはキャンセル側
-/// - 確定ボタンと破壊ボタンは隣接させない
+/// variant:
+///  - `type=standard` (39:2): info アイコン + primary 確定ボタン
+///  - `type=destructive` (39:13): warning アイコン + danger 確定ボタン
+///
+/// Figma 仕様 (standard):
+///   - container: 480 × 292、cornerRadius 24、padding (32/32/24/32)、gap 24
+///   - vertical layout、`TofuButton` lg を 2 つ右寄せ
+///
+/// 仕様書 §12.1: 破壊的操作は赤色 + アイコン、デフォルトフォーカスはキャンセル側、
+/// 確定 / 破壊ボタンと隣接させない。
 class TofuConfirmDialog extends StatelessWidget {
   const TofuConfirmDialog({
     required this.title,
@@ -55,32 +62,41 @@ class TofuConfirmDialog extends StatelessWidget {
     final IconData effectiveIcon =
         icon ??
         (destructive ? Icons.warning_amber_rounded : Icons.help_outline);
-    final Color iconColor = destructive
-        ? TofuTokens.dangerIcon
-        : TofuTokens.infoIcon;
+    final Color iconColor =
+        destructive ? TofuTokens.dangerIcon : TofuTokens.infoIcon;
+    final Color iconBg =
+        destructive ? TofuTokens.dangerBg : TofuTokens.infoBg;
 
     return Dialog(
       backgroundColor: TofuTokens.bgCanvas,
       shape: RoundedRectangleBorder(
+        // Figma cornerRadius 24 == radiusXl
         borderRadius: BorderRadius.circular(TofuTokens.radiusXl),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
         child: Padding(
-          padding: const EdgeInsets.all(TofuTokens.space7),
+          // Figma padding: top32 / right32 / bottom24 / left32
+          padding: const EdgeInsets.fromLTRB(
+            TofuTokens.space7, // 32
+            TofuTokens.space7, // 32
+            TofuTokens.space7, // 32
+            TofuTokens.space6, // 24
+          ),
           child: Column(
+            // Figma layoutMode VERTICAL, itemSpacing 24
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
+              // --- header (icon + title) ---
               Row(
                 children: <Widget>[
                   Container(
                     padding: const EdgeInsets.all(TofuTokens.space3),
                     decoration: BoxDecoration(
-                      color: destructive
-                          ? TofuTokens.dangerBg
-                          : TofuTokens.infoBg,
-                      borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
+                      color: iconBg,
+                      borderRadius:
+                          BorderRadius.circular(TofuTokens.radiusMd),
                     ),
                     child: Icon(effectiveIcon, color: iconColor, size: 24),
                   ),
@@ -88,22 +104,24 @@ class TofuConfirmDialog extends StatelessWidget {
                   Expanded(child: Text(title, style: TofuTextStyles.h3)),
                 ],
               ),
-              const SizedBox(height: TofuTokens.space5),
+              const SizedBox(height: TofuTokens.space6), // 24
+              // --- body ---
               Text(message, style: TofuTextStyles.bodyMd),
-              const SizedBox(height: TofuTokens.space8),
+              const SizedBox(height: TofuTokens.space6), // 24
+              // --- actions (右寄せ, 確定/破壊と隣接させない) ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: <Widget>[
-                  // デフォルトフォーカス（最後のフォーカス対象）。
+                  // デフォルトフォーカスはキャンセル側 (誤タップ防止)。
                   Focus(
                     autofocus: true,
                     child: TofuButton(
                       label: cancelLabel,
                       variant: TofuButtonVariant.secondary,
+                      size: TofuButtonSize.lg,
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
                   ),
-                  // 破壊と確定の間に大きめのスペース（誤タップ防止）。
                   SizedBox(
                     width: destructive
                         ? TofuTokens.destructiveSpacing
@@ -114,6 +132,7 @@ class TofuConfirmDialog extends StatelessWidget {
                     variant: destructive
                         ? TofuButtonVariant.danger
                         : TofuButtonVariant.primary,
+                    size: TofuButtonSize.lg,
                     onPressed: () => Navigator.of(context).pop(true),
                   ),
                 ],

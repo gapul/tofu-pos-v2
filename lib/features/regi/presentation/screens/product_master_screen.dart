@@ -10,7 +10,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/confirm_dialog.dart';
 import '../../../../core/ui/format.dart';
 import '../../../../core/ui/num_stepper.dart';
-import '../../../../core/ui/status_chip.dart';
+import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/product.dart';
 import '../../../../domain/value_objects/feature_flags.dart';
@@ -94,10 +94,10 @@ class ProductMasterScreen extends ConsumerWidget {
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(
-            child: StatusChip(
+            child: StatusIndicator.custom(
               label: '$e',
               icon: Icons.error_outline,
-              tone: TofuStatusTone.danger,
+              tone: StatusIndicatorTone.danger,
             ),
           ),
         ),

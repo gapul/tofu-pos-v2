@@ -16,6 +16,10 @@ enum StatusIndicatorType {
   syncError,
 }
 
+/// 任意ラベル用のトーン。Figma `StatusIndicator` の color tokens に対応。
+/// 旧 `TofuStatusTone` (status_chip) の置換先。
+enum StatusIndicatorTone { info, success, warning, danger, neutral }
+
 @immutable
 class StatusIndicator extends StatelessWidget {
   const StatusIndicator({
@@ -23,7 +27,23 @@ class StatusIndicator extends StatelessWidget {
     super.key,
     this.labelOverride,
     this.dense = false,
-  });
+  })  : _customLabel = null,
+        _customIcon = null,
+        _customTone = null;
+
+  /// 任意ラベル/アイコン/トーンで描画する派生。旧 `StatusChip` の代替。
+  /// `type` フィールドは未使用だが、`enum` の非 nullable 制約上ダミー値を入れる。
+  const StatusIndicator.custom({
+    required String label,
+    required StatusIndicatorTone tone,
+    super.key,
+    IconData? icon,
+    this.dense = false,
+  })  : type = StatusIndicatorType.online,
+        labelOverride = null,
+        _customLabel = label,
+        _customIcon = icon,
+        _customTone = tone;
 
   final StatusIndicatorType type;
 
@@ -32,6 +52,57 @@ class StatusIndicator extends StatelessWidget {
 
   /// `caption` 程度の小型表示。
   final bool dense;
+
+  final String? _customLabel;
+  final IconData? _customIcon;
+  final StatusIndicatorTone? _customTone;
+
+  ({Color bg, Color border, Color fg, IconData? icon, String label})
+      _customSpec() {
+    final StatusIndicatorTone t = _customTone!;
+    switch (t) {
+      case StatusIndicatorTone.info:
+        return (
+          bg: TofuTokens.infoBg,
+          border: TofuTokens.infoBorder,
+          fg: TofuTokens.infoText,
+          icon: _customIcon,
+          label: _customLabel!,
+        );
+      case StatusIndicatorTone.success:
+        return (
+          bg: TofuTokens.successBg,
+          border: TofuTokens.successBorder,
+          fg: TofuTokens.successText,
+          icon: _customIcon,
+          label: _customLabel!,
+        );
+      case StatusIndicatorTone.warning:
+        return (
+          bg: TofuTokens.warningBg,
+          border: TofuTokens.warningBorder,
+          fg: TofuTokens.warningText,
+          icon: _customIcon,
+          label: _customLabel!,
+        );
+      case StatusIndicatorTone.danger:
+        return (
+          bg: TofuTokens.dangerBg,
+          border: TofuTokens.dangerBorder,
+          fg: TofuTokens.dangerText,
+          icon: _customIcon,
+          label: _customLabel!,
+        );
+      case StatusIndicatorTone.neutral:
+        return (
+          bg: TofuTokens.bgSurface,
+          border: TofuTokens.borderSubtle,
+          fg: TofuTokens.textSecondary,
+          icon: _customIcon,
+          label: _customLabel!,
+        );
+    }
+  }
 
   ({Color bg, Color border, Color fg, TofuIconName icon, String label})
       _spec() {
@@ -89,17 +160,47 @@ class StatusIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ({
-      Color bg,
-      Color border,
-      Color fg,
-      TofuIconName icon,
-      String label,
-    }) s = _spec();
-    final String labelText = labelOverride ?? s.label;
+    final bool isCustom = _customTone != null;
+
+    final Color bg;
+    final Color border;
+    final Color fg;
+    final String labelText;
+    final Widget? iconWidget;
+
+    if (isCustom) {
+      final ({
+        Color bg,
+        Color border,
+        Color fg,
+        IconData? icon,
+        String label,
+      }) c = _customSpec();
+      bg = c.bg;
+      border = c.border;
+      fg = c.fg;
+      labelText = c.label;
+      iconWidget = c.icon == null
+          ? null
+          : Icon(c.icon, size: dense ? 14 : 16, color: fg);
+    } else {
+      final ({
+        Color bg,
+        Color border,
+        Color fg,
+        TofuIconName icon,
+        String label,
+      }) s = _spec();
+      bg = s.bg;
+      border = s.border;
+      fg = s.fg;
+      labelText = labelOverride ?? s.label;
+      iconWidget = TofuIcon(s.icon, size: dense ? 14 : 16, color: fg);
+    }
+
     final TextStyle textStyle =
         (dense ? TofuTextStyles.caption : TofuTextStyles.bodySmBold)
-            .copyWith(color: s.fg);
+            .copyWith(color: fg);
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -107,15 +208,17 @@ class StatusIndicator extends StatelessWidget {
         vertical: dense ? TofuTokens.space2 : TofuTokens.space3,
       ),
       decoration: BoxDecoration(
-        color: s.bg,
+        color: bg,
         borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
-        border: Border.all(color: s.border),
+        border: Border.all(color: border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          TofuIcon(s.icon, size: dense ? 14 : 16, color: s.fg),
-          const SizedBox(width: TofuTokens.space2),
+          if (iconWidget != null) ...<Widget>[
+            iconWidget,
+            const SizedBox(width: TofuTokens.space2),
+          ],
           Text(labelText, style: textStyle),
         ],
       ),

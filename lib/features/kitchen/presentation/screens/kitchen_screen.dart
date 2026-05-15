@@ -9,7 +9,7 @@ import '../../../../core/error/app_exceptions.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/format.dart';
-import '../../../../core/ui/status_chip.dart';
+import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/kitchen_order.dart';
 import '../../../../domain/enums/kitchen_status.dart';
@@ -162,10 +162,10 @@ class _KitchenScreenState extends ConsumerState<KitchenScreen>
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => StatusChip(
+                error: (e, _) => StatusIndicator.custom(
                   label: '注文の取得に失敗: $e',
                   icon: Icons.error_outline,
-                  tone: TofuStatusTone.danger,
+                  tone: StatusIndicatorTone.danger,
                 ),
               ),
             ),
@@ -437,10 +437,10 @@ class _OrderCard extends StatelessWidget {
               child: ListView(
                 children: <Widget>[
                   if (isCancelled)
-                    const StatusChip(
+                    const StatusIndicator.custom(
                       label: '取消',
                       icon: Icons.block,
-                      tone: TofuStatusTone.danger,
+                      tone: StatusIndicatorTone.danger,
                     ),
                   for (final ({String name, int qty}) it in items)
                     Padding(
