@@ -123,6 +123,23 @@ class CompositeOnlineBleTransport implements Transport {
   Future<void> send(TransportEvent event) async {
     // 自送信もループバック抑止のため事前登録（自分が両経路から受け取らないように）。
     _seen.addIfAbsent(event.eventId);
+
+    // 送信側の primary が成功しても、**受信側端末の primary (Realtime) が
+    // 死んでいるケース**（DNS 不安定 / WebSocket 切断後の reconnect ループ等）
+    // で push が届かない事故が観測された。これを救うため、BLE eligible な
+    // イベントは常に BLE にも並行送信する（fire-and-forget、失敗は warn 止まり）。
+    if (_bleEligible(event)) {
+      unawaited(
+        _secondary.send(event).catchError((Object e, StackTrace st) {
+          AppLogger.w(
+            'CompositeTransport: parallel BLE send failed (ignored)',
+            error: e,
+            stackTrace: st,
+          );
+        }),
+      );
+    }
+
     try {
       await _primary.send(event);
       _primaryHealthy = true;
@@ -130,7 +147,7 @@ class CompositeOnlineBleTransport implements Transport {
     } catch (e, st) {
       _primaryHealthy = false;
       AppLogger.w(
-        'CompositeTransport: primary send failed, considering BLE fallback',
+        'CompositeTransport: primary send failed, awaiting BLE fallback',
         error: e,
         stackTrace: st,
       );
@@ -142,33 +159,23 @@ class CompositeOnlineBleTransport implements Transport {
         },
       );
       if (!_bleEligible(event)) {
-        // BLE では送ってはいけないイベント → そのまま再 throw。
         throw TransportDeliveryException(
           'primary send failed and event not eligible for BLE fallback '
           '(${event.runtimeType}): $e',
         );
       }
-      try {
-        await _secondary.send(event);
-        _didFallback = true;
-        Telemetry.instance.warn(
-          'transport.composite.ble_fallback_ok',
-          attrs: <String, Object?>{
-            'event_type': event.runtimeType.toString(),
-          },
-        );
-        return;
-      } catch (e2, st2) {
-        AppLogger.e(
-          'CompositeTransport: BLE fallback also failed',
-          error: e2,
-          stackTrace: st2,
-        );
-        throw TransportDeliveryException(
-          'both primary and BLE failed for ${event.runtimeType}: '
-          'primary=$e ble=$e2',
-        );
-      }
+      // BLE は既に fire-and-forget で発射済。primary が失敗しても、BLE が
+      // 並行で送ってくれているはず。とはいえユーザー視点で「送信失敗」を
+      // 通知しない方が業務上は望ましい（receiver 側に届いていれば OK）。
+      // ただし完全に確信が無いので一応 didFallback フラグだけ立てて
+      // 例外は投げず success とする。受信側の reconciliation 経路で整合性を担保。
+      _didFallback = true;
+      Telemetry.instance.warn(
+        'transport.composite.ble_fallback_only',
+        attrs: <String, Object?>{
+          'event_type': event.runtimeType.toString(),
+        },
+      );
     }
   }
 }

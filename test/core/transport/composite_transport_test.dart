@@ -48,7 +48,10 @@ ProductMasterUpdateEvent _master(String id) => ProductMasterUpdateEvent(
     );
 
 void main() {
-  test('send: primary success path does not use BLE', () async {
+  test('send: primary success path also fires BLE in parallel', () async {
+    // 受信側の primary が死んでいるケース（DNS 不安定など）で push が
+    // 落ちる事故を防ぐため、BLE eligible なイベントは常に副経路にも
+    // fire-and-forget で並行送信する。
     final _RecordingTransport primary = _RecordingTransport();
     final _RecordingTransport secondary = _RecordingTransport();
     final CompositeOnlineBleTransport t = CompositeOnlineBleTransport(
@@ -57,8 +60,10 @@ void main() {
     );
     await t.connect();
     await t.send(_ev('a'));
+    // primary は同期 await、BLE は fire-and-forget なので microtask 1 巡で送られる。
+    await Future<void>.delayed(Duration.zero);
     expect(primary.sent, hasLength(1));
-    expect(secondary.sent, isEmpty);
+    expect(secondary.sent, hasLength(1));
     expect(t.didFallback, isFalse);
     await t.disconnect();
   });
