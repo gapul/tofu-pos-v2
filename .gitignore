@@ -57,3 +57,6 @@ app.*.map.json
 
 # Supabase CLI 一時ファイル
 supabase/.temp/
+
+# Figma export (バイナリ、リポジトリに含めない)
+*.fig
