@@ -344,9 +344,15 @@ class TofuTokens {
   // ===========================================================================
   // フォント
   // ===========================================================================
-  /// IBM Plex Sans JP (Figma で指定)。未インストール環境では fallback が
-  /// システムフォントに委ねられる。
-  static const String fontFamily = 'IBM Plex Sans JP';
+  /// 日本語フォントは Noto Sans JP (SIL OFL 1.1) をアプリに同梱する。
+  ///
+  /// Figma 上のデザイン指定は IBM Plex Sans JP だが、当該フォントを
+  /// bundle すると配布物が大きく肥大するため、視覚的に近く CJK 全体を
+  /// カバーする Noto Sans JP を採用する。bundle していなかった頃は
+  /// 古い Android (システムフォントに日本語が無い) で文字が豆腐 (□)
+  /// になっていたため、ファミリ名は必ず pubspec.yaml の `fonts:` 宣言
+  /// と一致させること。
+  static const String fontFamily = 'NotoSansJP';
 }
 
 /// タイポグラフィ (Figma `Typography` styles 11:2..11:19)。

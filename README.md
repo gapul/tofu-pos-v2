@@ -139,3 +139,7 @@ flutter test --coverage
 ## ライセンス
 
 [`LICENSE`](./LICENSE) — **All Rights Reserved**。ソースは透明性 / レビュー目的で公開しており、コピー・改変・再配布・派生物の作成・商用利用はいずれも明示的な書面許可なく不可。詳細は LICENSE ファイル参照。
+
+### 同梱フォント
+
+アプリは [Noto Sans JP](https://fonts.google.com/specimen/Noto+Sans+JP) を Regular / Medium / Bold の 3 ウェイト bundle している（`assets/fonts/NotoSansJP-*.otf`）。古い Android 端末のシステムフォントに日本語グリフが無く文字が豆腐化する事故を防ぐためで、ファミリ名 `NotoSansJP` は `lib/core/theme/tokens.dart` の `TofuTokens.fontFamily` から参照される。フォントは [SIL Open Font License 1.1](./LICENSES/NotoSansJP.LICENSE) で配布されており、本プロジェクトの All Rights Reserved とは別ライセンスである点に注意。

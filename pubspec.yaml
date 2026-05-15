@@ -87,3 +87,18 @@ flutter:
   # ファイルが無い場合は TofuButton 側で Material Icon にフォールバックする。
   assets:
     - assets/lordicons/
+
+  # 日本語フォントをアプリに同梱する。
+  # 同梱しない場合は OS のシステムフォントへフォールバックし、日本語
+  # グリフが無い古い Android 端末で文字が豆腐 (□) になる事故が起きた。
+  # Noto Sans JP (SIL OFL 1.1) を Regular / Medium / Bold の 3 ウェイトで
+  # bundle し、`TofuTokens.fontFamily = 'NotoSansJP'` から参照する。
+  # ライセンス全文は `LICENSES/NotoSansJP.LICENSE` に同梱している。
+  fonts:
+    - family: NotoSansJP
+      fonts:
+        - asset: assets/fonts/NotoSansJP-Regular.otf
+        - asset: assets/fonts/NotoSansJP-Medium.otf
+          weight: 500
+        - asset: assets/fonts/NotoSansJP-Bold.otf
+          weight: 700
