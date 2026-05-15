@@ -1,8 +1,140 @@
 /** @type {import('tailwindcss').Config} */
+// Figma Foundations (file: eyfHhgUYCcxk2M5bDRUChB) のトークンを Tailwind に
+// マッピング。色キーは semantic 名前空間を最優先で露出する。
 export default {
   content: ['./src/**/*.{html,js,svelte,ts}'],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['"IBM Plex Sans JP"', 'system-ui', 'sans-serif'],
+      },
+      colors: {
+        // Brand (Ai theme)
+        brand: {
+          DEFAULT: '#173a5e',
+          hover: '#102d49',
+          pressed: '#0b2236',
+          subtle: '#edf2f6',
+          subtleStrong: '#d6e0ea',
+          border: '#a9c0d6',
+          accent: '#b83b3b',
+          on: '#fbf8f1',
+        },
+        // Semantic surfaces (washi cream)
+        canvas: '#fbf8f1',
+        surface: '#f5efe2',
+        'surface-subtle': '#ede3ce',
+        'surface-muted': '#dfd0ac',
+        'surface-strong': '#c9b57c',
+        'surface-inverse': '#161513',
+        // Borders
+        'border-subtle': '#dfd0ac',
+        'border-default': '#c9b57c',
+        'border-strong': '#74716a',
+        'border-focus': '#173a5e',
+        // Text
+        ink: {
+          DEFAULT: '#161513',
+          secondary: '#2a2825',
+          tertiary: '#74716a',
+          disabled: '#a8a498',
+          inverse: '#fbf8f1',
+          link: '#102d49',
+        },
+        // Status (semantic)
+        danger: {
+          bg: '#fcefeb',
+          bgStrong: '#9a2e2e',
+          border: '#e48971',
+          text: '#7b2424',
+          icon: '#9a2e2e',
+        },
+        info: {
+          bg: '#edf2f6',
+          bgStrong: '#173a5e',
+          border: '#7196b6',
+          text: '#102d49',
+          icon: '#173a5e',
+        },
+        success: {
+          bg: '#f1f5e8',
+          bgStrong: '#445a26',
+          border: '#90b557',
+          text: '#34471d',
+          icon: '#445a26',
+        },
+        warning: {
+          bg: '#faf1e5',
+          bgStrong: '#9a5320',
+          border: '#d29553',
+          text: '#43240f',
+          icon: '#7c411a',
+        },
+        status: {
+          online: '#557030',
+          offline: '#9a5320',
+          bluetooth: '#1f4870',
+          syncing: '#3e6b95',
+          syncError: '#9a2e2e',
+        },
+      },
+      borderRadius: {
+        none: '0',
+        xs: '2px',
+        sm: '4px',
+        md: '8px',
+        lg: '12px',
+        xl: '16px',
+        '2xl': '24px',
+      },
+      spacing: {
+        0: '0px',
+        '0.5': '2px',
+        1: '4px',
+        2: '8px',
+        3: '12px',
+        4: '16px',
+        5: '20px',
+        6: '24px',
+        8: '32px',
+        10: '40px',
+        12: '48px',
+        14: '56px',
+        16: '64px',
+        20: '80px',
+        24: '96px',
+        32: '128px',
+      },
+      fontSize: {
+        // [size, { lineHeight, letterSpacing, fontWeight }]
+        'display-l': ['72px', { lineHeight: '80px', letterSpacing: '-2px', fontWeight: '700' }],
+        'display-m': ['56px', { lineHeight: '64px', letterSpacing: '-2px', fontWeight: '700' }],
+        'display-s': ['48px', { lineHeight: '56px', letterSpacing: '-1px', fontWeight: '600' }],
+        'h1': ['40px', { lineHeight: '48px', letterSpacing: '-1px', fontWeight: '600' }],
+        'h2': ['32px', { lineHeight: '40px', letterSpacing: '-0.5px', fontWeight: '600' }],
+        'h3': ['24px', { lineHeight: '32px', letterSpacing: '0', fontWeight: '500' }],
+        'h4': ['20px', { lineHeight: '28px', letterSpacing: '0', fontWeight: '500' }],
+        'body-lg': ['18px', { lineHeight: '28px', letterSpacing: '0', fontWeight: '400' }],
+        'body-lg-bold': ['18px', { lineHeight: '28px', letterSpacing: '0', fontWeight: '600' }],
+        'body': ['16px', { lineHeight: '24px', letterSpacing: '0', fontWeight: '400' }],
+        'body-bold': ['16px', { lineHeight: '24px', letterSpacing: '0', fontWeight: '600' }],
+        'body-sm': ['14px', { lineHeight: '20px', letterSpacing: '0', fontWeight: '400' }],
+        'body-sm-bold': ['14px', { lineHeight: '20px', letterSpacing: '0', fontWeight: '500' }],
+        'caption': ['12px', { lineHeight: '16px', letterSpacing: '0.5px', fontWeight: '400' }],
+        'caption-bold': ['12px', { lineHeight: '16px', letterSpacing: '0.5px', fontWeight: '500' }],
+        'number-display': ['72px', { lineHeight: '80px', letterSpacing: '-1px', fontWeight: '700' }],
+        'number-lg': ['32px', { lineHeight: '40px', letterSpacing: '0', fontWeight: '700' }],
+        'number-md': ['24px', { lineHeight: '32px', letterSpacing: '0', fontWeight: '500' }],
+      },
+      boxShadow: {
+        // Foundations Elevation
+        sm: '0 1px 2px 0 #0000000D',
+        md: '0 4px 8px -2px #00000014, 0 2px 4px -1px #0000000A',
+        lg: '0 12px 24px -6px #0000001A, 0 4px 8px -2px #0000000F',
+        xl: '0 24px 48px -12px #00000029, 0 8px 16px -4px #0000001A',
+        ring: '0 0 0 3px #3B82F566',
+      },
+    },
   },
   plugins: [],
 };

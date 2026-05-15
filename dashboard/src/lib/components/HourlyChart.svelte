@@ -17,7 +17,8 @@
           {
             label: '売上',
             data,
-            backgroundColor: 'rgba(15, 23, 42, 0.85)',
+            backgroundColor: '#173a5e',
+            hoverBackgroundColor: '#b83b3b',
             borderRadius: 4,
           },
         ],

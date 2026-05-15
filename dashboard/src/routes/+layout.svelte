@@ -25,7 +25,6 @@
       health = fmt;
       return;
     }
-    // 形式 OK なら起動時に 1 度だけ疎通確認
     health = { kind: 'idle' };
     health = await probeConnection(s);
   }
@@ -36,9 +35,7 @@
     checkHealth();
   });
 
-  // settings が変わったら (設定モーダル保存など) 再チェック
   $effect(() => {
-    // 依存させたい値を読む
     void $settings.url;
     void $settings.key;
     checkHealth();
@@ -56,58 +53,59 @@
   let showBanner = $derived(health.kind !== 'ok' && health.kind !== 'idle');
 </script>
 
-<header class="border-b border-slate-200 bg-white">
-  <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-    <div class="flex items-center gap-2">
-      <span class="text-2xl">🍢</span>
-      <h1 class="text-lg font-bold tracking-tight">Tofu POS Dashboard</h1>
+<header class="sticky top-0 z-30 border-b border-border-subtle bg-canvas/85 backdrop-blur">
+  <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+    <div class="flex items-center gap-3">
+      <span class="grid h-9 w-9 place-items-center rounded-md bg-brand text-xl text-brand-on shadow-sm">🍢</span>
+      <div class="leading-tight">
+        <div class="text-h4 font-semibold tracking-tight text-ink">Tofu POS</div>
+        <div class="text-caption text-ink-tertiary">Operations Dashboard</div>
+      </div>
     </div>
-    <div class="flex items-center gap-2 text-sm">
-      <nav class="flex rounded-md bg-slate-100 p-0.5" role="tablist">
+    <div class="flex items-center gap-2">
+      <nav class="flex rounded-md border border-border-subtle bg-surface p-0.5 text-body-sm-bold">
         <a
           href="/"
-          class="rounded px-3 py-1"
-          class:bg-white={activeTab === 'sales'}
-          class:shadow-sm={activeTab === 'sales'}>📈 売上</a
+          class="rounded px-3 py-1.5 transition"
+          class:bg-canvas={activeTab === 'sales'}
+          class:text-ink={activeTab === 'sales'}
+          class:shadow-sm={activeTab === 'sales'}
+          class:text-ink-tertiary={activeTab !== 'sales'}>📈 売上</a
         >
         <a
           href="/tester/"
-          class="rounded px-3 py-1"
-          class:bg-white={activeTab === 'tester'}
-          class:shadow-sm={activeTab === 'tester'}>🧪 Tester</a
+          class="rounded px-3 py-1.5 transition"
+          class:bg-canvas={activeTab === 'tester'}
+          class:text-ink={activeTab === 'tester'}
+          class:shadow-sm={activeTab === 'tester'}
+          class:text-ink-tertiary={activeTab !== 'tester'}>🧪 Tester</a
         >
       </nav>
-      <button
-        class="rounded-md bg-slate-100 px-3 py-1.5 hover:bg-slate-200"
-        onclick={reload}>再読み込み</button
-      >
+      <button class="btn" onclick={reload} title="再読み込み">↻ 再読み込み</button>
       {#if !hasEnvConnection()}
-        <button
-          class="rounded-md bg-slate-100 px-3 py-1.5 hover:bg-slate-200"
-          onclick={() => (settingsOpen = true)}>⚙ 設定</button
-        >
+        <button class="btn" onclick={() => (settingsOpen = true)} title="接続設定">⚙ 設定</button>
       {/if}
     </div>
   </div>
 </header>
 
 {#if showBanner}
-  <div class="mx-auto max-w-6xl px-4 pt-4">
+  <div class="mx-auto max-w-6xl px-6 pt-4">
     <div
-      class="rounded-md border px-4 py-3 text-sm"
-      class:border-amber-300={bannerSeverity === 'warn'}
-      class:bg-amber-50={bannerSeverity === 'warn'}
-      class:text-amber-900={bannerSeverity === 'warn'}
-      class:border-rose-300={bannerSeverity === 'error'}
-      class:bg-rose-50={bannerSeverity === 'error'}
-      class:text-rose-900={bannerSeverity === 'error'}
+      class="rounded-lg border px-4 py-3 text-body-sm shadow-sm"
+      class:border-warning-border={bannerSeverity === 'warn'}
+      class:bg-warning-bg={bannerSeverity === 'warn'}
+      class:text-warning-text={bannerSeverity === 'warn'}
+      class:border-danger-border={bannerSeverity === 'error'}
+      class:bg-danger-bg={bannerSeverity === 'error'}
+      class:text-danger-text={bannerSeverity === 'error'}
     >
-      <div class="font-semibold">
+      <div class="text-body-sm-bold">
         {bannerSeverity === 'error' ? '⚠ 接続エラー' : 'ℹ 未設定'}
       </div>
       <div class="mt-1 whitespace-pre-wrap break-words">{bannerText}</div>
       {#if health.kind === 'missing'}
-        <div class="mt-1 text-xs opacity-80">
+        <div class="mt-1 text-caption opacity-80">
           {hasEnvConnection() ? 'デプロイ環境変数を確認してください。' : '右上の「⚙ 設定」を開いて入力してください。'}
         </div>
       {/if}

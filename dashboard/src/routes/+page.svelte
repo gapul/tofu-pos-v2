@@ -72,32 +72,28 @@
   );
 </script>
 
-<main class="mx-auto max-w-6xl space-y-6 px-4 py-6">
+<main class="mx-auto max-w-6xl space-y-6 px-6 py-8">
   {#if errorMsg}
-    <div class="rounded-md border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+    <div class="rounded-lg border border-danger-border bg-danger-bg px-4 py-3 text-body-sm text-danger-text shadow-sm">
       {errorMsg}
     </div>
   {/if}
 
-  <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+  <section class="card">
     <div class="flex flex-wrap items-end gap-4">
       <div>
-        <label class="mb-1 block text-xs text-slate-500" for="f-shop">店舗ID</label>
+        <label class="label" for="f-shop">店舗ID</label>
         <input
           id="f-shop"
           type="text"
           bind:value={shop}
           placeholder="yakisoba_A"
-          class="w-44 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+          class="input w-48"
         />
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-500" for="f-range">期間</label>
-        <select
-          id="f-range"
-          bind:value={range}
-          class="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-        >
+        <label class="label" for="f-range">期間</label>
+        <select id="f-range" bind:value={range} class="input">
           <option value="today">本日</option>
           <option value="yesterday">前日</option>
           <option value="last7">直近7日</option>
@@ -105,32 +101,19 @@
         </select>
       </div>
       {#if range === 'custom'}
-        <div class="flex items-end gap-2">
+        <div class="flex items-end gap-3">
           <div>
-            <label class="mb-1 block text-xs text-slate-500" for="f-from">開始</label>
-            <input
-              id="f-from"
-              type="date"
-              bind:value={fromStr}
-              class="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-            />
+            <label class="label" for="f-from">開始</label>
+            <input id="f-from" type="date" bind:value={fromStr} class="input" />
           </div>
           <div>
-            <label class="mb-1 block text-xs text-slate-500" for="f-to">終了</label>
-            <input
-              id="f-to"
-              type="date"
-              bind:value={toStr}
-              class="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-            />
+            <label class="label" for="f-to">終了</label>
+            <input id="f-to" type="date" bind:value={toStr} class="input" />
           </div>
         </div>
       {/if}
-      <button
-        class="rounded-md bg-slate-900 px-4 py-1.5 text-sm text-white hover:bg-slate-700"
-        onclick={apply}>適用</button
-      >
-      <span class="ml-auto text-xs text-slate-500">{lastUpdated}</span>
+      <button class="btn-primary" onclick={apply}>適用</button>
+      <span class="ml-auto text-caption text-ink-tertiary tabular">{lastUpdated}</span>
     </div>
   </section>
 
@@ -150,8 +133,8 @@
     />
   </section>
 
-  <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-    <h2 class="mb-3 text-sm font-semibold text-slate-700">時間帯別売上</h2>
+  <section class="card">
+    <h2 class="mb-4 text-body-bold text-ink">時間帯別売上</h2>
     <HourlyChart hourly={agg.hourlyRevenue} />
   </section>
 
@@ -160,7 +143,7 @@
     <AttrBreakdown age={agg.ageCount} gender={agg.genderCount} group={agg.groupCount} />
   </div>
 
-  <footer class="pt-2 pb-8 text-center text-xs text-slate-400">
-    Tofu POS Dashboard · 読み取り専用 · データソース: <code>order_lines</code>
+  <footer class="pt-2 pb-8 text-center text-caption text-ink-tertiary">
+    Tofu POS Dashboard · 読み取り専用 · データソース: <code class="rounded bg-surface px-1.5 py-0.5">order_lines</code>
   </footer>
 </main>

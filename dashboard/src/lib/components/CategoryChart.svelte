@@ -18,8 +18,9 @@
           {
             label: '注文数',
             data: entries.map(([, v]) => v),
-            backgroundColor: 'rgba(56, 189, 248, 0.85)',
+            backgroundColor: '#173a5e',
             borderRadius: 4,
+            barThickness: 14,
           },
         ],
       },
