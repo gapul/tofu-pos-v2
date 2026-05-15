@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/error/app_exceptions.dart';
 import '../../../../core/logging/app_logger.dart';
+import '../../../../core/sync/refresh_from_server.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/alert_banner.dart';
 import '../../../../core/ui/app_header.dart';
@@ -173,14 +174,21 @@ class _KitchenScreenState extends ConsumerState<KitchenScreen>
                 ),
               ),
             Expanded(
-              child: orders.when(
-                data: (all) => _buildBody(context, all),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(
-                  child: StatusIndicator.custom(
-                    label: '注文の取得に失敗: $e',
-                    icon: Icons.error_outline,
-                    tone: StatusIndicatorTone.danger,
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await RefreshFromServer.kitchen(ref);
+                  ref.invalidate(kitchenOrdersProvider);
+                },
+                child: orders.when(
+                  data: (all) => _buildBody(context, all),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(
+                    child: StatusIndicator.custom(
+                      label: '注文の取得に失敗: $e',
+                      icon: Icons.error_outline,
+                      tone: StatusIndicatorTone.danger,
+                    ),
                   ),
                 ),
               ),

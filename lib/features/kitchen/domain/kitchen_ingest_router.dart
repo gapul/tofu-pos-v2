@@ -34,7 +34,7 @@ class KitchenIngestRouter {
   bool get isRunning => _sub != null;
 
   void start() {
-    _sub ??= _transport.events().listen(_onEvent);
+    _sub ??= _transport.events().listen(handleEvent);
     AppLogger.event(
       'kitchen',
       'router_started',
@@ -47,7 +47,9 @@ class KitchenIngestRouter {
     _sub = null;
   }
 
-  Future<void> _onEvent(TransportEvent event) async {
+  /// 1 イベントを取り込む。Backfill (Pull-to-Refresh / 起動時) から
+  /// Transport を経由せず直接呼ぶための public エントリポイント。
+  Future<void> handleEvent(TransportEvent event) async {
     if (event.shopId != _shopId) {
       return; // 他店舗のイベントは無視
     }

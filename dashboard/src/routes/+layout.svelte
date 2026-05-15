@@ -3,7 +3,7 @@
   import { page } from '$app/state';
   import { onMount } from 'svelte';
   import ConnSettings from '$lib/components/ConnSettings.svelte';
-  import { settings, hasConnection } from '$lib/stores/settings';
+  import { settings, hasConnection, hasEnvConnection } from '$lib/stores/settings';
   import { startRealtime } from '$lib/stores/realtime';
   import { invalidateAll } from '$app/navigation';
 
@@ -52,10 +52,12 @@
         class="rounded-md bg-slate-100 px-3 py-1.5 hover:bg-slate-200"
         onclick={reload}>再読み込み</button
       >
-      <button
-        class="rounded-md bg-slate-100 px-3 py-1.5 hover:bg-slate-200"
-        onclick={() => (settingsOpen = true)}>⚙ 設定</button
-      >
+      {#if !hasEnvConnection}
+        <button
+          class="rounded-md bg-slate-100 px-3 py-1.5 hover:bg-slate-200"
+          onclick={() => (settingsOpen = true)}>⚙ 設定</button
+        >
+      {/if}
     </div>
   </div>
 </header>
@@ -65,7 +67,7 @@
     <div
       class="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
     >
-      Supabase の接続情報が未設定です。右上の「⚙ 設定」を開いてください。
+      Supabase の接続情報が未設定です。{hasEnvConnection ? 'デプロイ環境変数を確認してください。' : '右上の「⚙ 設定」を開いてください。'}
     </div>
   </div>
 {/if}

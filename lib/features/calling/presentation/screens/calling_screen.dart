@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/sync/refresh_from_server.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/lordicon.dart';
@@ -109,7 +110,12 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
               ),
             ),
             Expanded(
-              child: orders.when(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await RefreshFromServer.calling(ref);
+                  ref.invalidate(callingOrdersProvider);
+                },
+                child: orders.when(
           data: (all) {
             final List<CallingOrder> pending = all
                 .where((o) => o.status == CallingStatus.pending)
@@ -167,6 +173,7 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
             ),
           ),
         ),
+              ),
             ),
           ],
         ),

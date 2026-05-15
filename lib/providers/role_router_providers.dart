@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/config/env.dart';
+import '../core/sync/device_events_backfill.dart';
 import '../core/transport/transport.dart';
 import '../domain/enums/device_role.dart';
 import '../domain/value_objects/shop_id.dart';
@@ -142,6 +145,30 @@ final FutureProvider<CallingIngestRouter?> callingIngestRouterProvider =
       return router;
     });
 
+// ============== サーバから過去イベントを取り直す Backfill ==============
+
+/// `device_events` から過去 24 時間分を replay する Backfill。
+/// オフライン/Noop の場合は null。
+final FutureProvider<DeviceEventsBackfill?> deviceEventsBackfillProvider =
+    FutureProvider<DeviceEventsBackfill?>((ref) async {
+  if (!Env.hasSupabaseCredentials) {
+    return null;
+  }
+  final ShopId? shopId =
+      await ref.watch(settingsRepositoryProvider).getShopId();
+  if (shopId == null) {
+    return null;
+  }
+  try {
+    return DeviceEventsBackfill(
+      client: Supabase.instance.client,
+      shopId: shopId.value,
+    );
+  } catch (_) {
+    return null;
+  }
+});
+
 // ============== 役割別の起動エントリポイント ==============
 
 /// デバイス役割に応じて、起動時に必要なルーター/サービスをまとめて開始する。
@@ -172,11 +199,24 @@ class RoleStarter {
           kitchenIngestRouterProvider.future,
         );
         r?.start();
+        // 過去イベントを replay（途中参加時のサーバ同期）
+        final DeviceEventsBackfill? b = await ref.read(
+          deviceEventsBackfillProvider.future,
+        );
+        if (r != null && b != null) {
+          await b.run(onEvent: r.handleEvent);
+        }
       case DeviceRole.calling:
         final CallingIngestRouter? r = await ref.read(
           callingIngestRouterProvider.future,
         );
         r?.start();
+        final DeviceEventsBackfill? b = await ref.read(
+          deviceEventsBackfillProvider.future,
+        );
+        if (r != null && b != null) {
+          await b.run(onEvent: r.handleEvent);
+        }
     }
   }
 }

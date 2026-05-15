@@ -10,22 +10,33 @@ export interface Settings {
   shop: string;
 }
 
-const empty: Settings = { url: '', key: '', shop: '' };
+const ENV_URL = (import.meta.env.PUBLIC_SUPABASE_URL ?? '') as string;
+const ENV_KEY = (import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? '') as string;
+
+const defaults: Settings = { url: ENV_URL, key: ENV_KEY, shop: '' };
 
 function load(): Settings {
-  if (!browser) return empty;
+  if (!browser) return { ...defaults };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    const base = raw ? { ...empty, ...JSON.parse(raw) } : { ...empty };
+    const stored = raw ? JSON.parse(raw) : {};
+    // env で URL/key が指定されていれば常にそれを優先 (デプロイ環境の安定化)
+    const base: Settings = {
+      url: ENV_URL || stored.url || '',
+      key: ENV_KEY || stored.key || '',
+      shop: stored.shop ?? '',
+    };
     // ?shop=xxx で上書き可能
     const params = new URLSearchParams(location.search);
     const qShop = params.get('shop');
     if (qShop) base.shop = qShop;
     return base;
   } catch {
-    return { ...empty };
+    return { ...defaults };
   }
 }
+
+export const hasEnvConnection = Boolean(ENV_URL && ENV_KEY);
 
 export const settings = writable<Settings>(load());
 
