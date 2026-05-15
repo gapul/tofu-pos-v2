@@ -6,7 +6,10 @@ import '../../../../domain/repositories/settings_repository.dart';
 import '../../../../domain/value_objects/shop_id.dart';
 import '../../../../providers/database_providers.dart';
 import '../../../../providers/repository_providers.dart';
+import '../../../../providers/role_router_providers.dart';
 import '../../../../providers/sync_providers.dart';
+import '../../../../providers/telemetry_providers.dart';
+import '../../../../providers/usecase_providers.dart';
 
 /// 初期設定の現在状態（仕様書 §3）。
 ///
@@ -52,6 +55,28 @@ class SetupNotifier extends AsyncNotifier<SetupState> {
     return SetupState(shopId: shop, role: role);
   }
 
+  /// 起動後の shop_id / role 変更で各種 provider を再初期化する。
+  /// telemetry / transport / sync / presence / RoleStarter を作り直し、
+  /// 新しい設定値でサーバに接続し直す。
+  Future<void> _reconfigureAfterSetupChange() async {
+    ref.invalidate(telemetryInitProvider);
+    ref.invalidate(transportProvider);
+    ref.invalidate(supabaseRealtimeListenerProvider);
+    ref.invalidate(peerPresenceServiceProvider);
+    try {
+      await ref.read(telemetryInitProvider.future);
+    } catch (_) {/* telemetry 失敗は致命でないので継続 */}
+    try {
+      await ref.read(roleStarterProvider).start();
+    } catch (e, st) {
+      AppLogger.w(
+        'SetupNotifier: roleStarter restart failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
   Future<void> saveShopId(ShopId shopId) async {
     // 別店舗の shopId に切り替わる場合は前店舗のローカルデータをパージ
     // （仕様: 異なる shop_id への上書きは前店舗の注文・キッチン/呼出・会計
@@ -79,14 +104,14 @@ class SetupNotifier extends AsyncNotifier<SetupState> {
 
     final SetupState current = state.value ?? SetupState.empty;
     state = AsyncData<SetupState>(current.copyWith(shopId: shopId));
+    await _reconfigureAfterSetupChange();
   }
 
   Future<void> saveRole(DeviceRole role) async {
     await _repo.setDeviceRole(role);
-    // 役割変更時はバッジ表示の role を更新するため presence を作り直す。
-    ref.invalidate(peerPresenceServiceProvider);
     final SetupState current = state.value ?? SetupState.empty;
     state = AsyncData<SetupState>(current.copyWith(role: role));
+    await _reconfigureAfterSetupChange();
   }
 
   Future<void> clearRole() async {
