@@ -735,9 +735,18 @@ class _FullScreenCallDialogState extends State<_FullScreenCallDialog> {
       onPopInvokedWithResult: (didPop, _) {},
       child: Dialog.fullscreen(
         backgroundColor: TofuTokens.brandPrimary,
-        child: SafeArea(
-          child: Stack(
-            children: <Widget>[
+        // 手動で閉じるための swipe-down: markCalled せず単にダイアログを閉じる。
+        // 自動消去ではないので、誤操作リカバリ用。
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onVerticalDragEnd: (details) {
+            if ((details.primaryVelocity ?? 0) > 200) {
+              Navigator.of(context).pop(false);
+            }
+          },
+          child: SafeArea(
+            child: Stack(
+              children: <Widget>[
               // 上部寄せレイアウト
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -808,6 +817,7 @@ class _FullScreenCallDialogState extends State<_FullScreenCallDialog> {
                 ),
               ),
             ],
+            ),
           ),
         ),
       ),

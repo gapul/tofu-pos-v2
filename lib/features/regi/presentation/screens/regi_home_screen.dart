@@ -9,7 +9,9 @@ import '../../../../core/ui/app_header.dart';
 import '../../../../core/ui/lordicon.dart';
 import '../../../../core/ui/status_indicator.dart';
 import '../../../../core/ui/tofu_button.dart';
+import '../../../../domain/value_objects/feature_flags.dart';
 import '../../../../domain/value_objects/ticket_number.dart';
+import '../../../../providers/settings_providers.dart';
 import '../notifiers/checkout_session.dart';
 import '../notifiers/regi_providers.dart';
 
@@ -24,13 +26,20 @@ class RegiHomeScreen extends ConsumerWidget {
     final AsyncValue<TicketNumber?> upcoming = ref.watch(
       upcomingTicketProvider,
     );
+    final FeatureFlags flags =
+        ref.watch(featureFlagsProvider).value ?? FeatureFlags.allOff;
+    // 呼び出し連携 OFF (= 専用呼び出し端末がない) のときだけ
+    // 整理券タップでプレビュー画面を開けるようにする。
+    final VoidCallback? onTicketTap = flags.callingLink
+        ? null
+        : () => context.push('/regi/calling');
 
     return Scaffold(
       backgroundColor: TofuTokens.bgCanvas,
       appBar: AppHeader(
         title: 'レジ',
         upcomingTicket: upcoming.value,
-        onTicketTap: () => context.push('/regi/calling'),
+        onTicketTap: onTicketTap,
         actions: <Widget>[
           IconButton(
             tooltip: '注文履歴',

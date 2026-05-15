@@ -82,7 +82,9 @@ class _ProductSelectScreenState extends ConsumerState<ProductSelectScreen> {
           appBar: AppHeader(
             title: 'レジ',
             upcomingTicket: ref.watch(upcomingTicketProvider).value,
-            onTicketTap: () => context.push('/regi/calling'),
+            onTicketTap: flags.callingLink
+                ? null
+                : () => context.push('/regi/calling'),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () =>

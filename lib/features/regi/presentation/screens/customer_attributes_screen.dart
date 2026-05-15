@@ -9,6 +9,8 @@ import '../../../../core/ui/page_title.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/customer_attributes.dart';
 import '../../../../domain/entities/order.dart';
+import '../../../../domain/value_objects/feature_flags.dart';
+import '../../../../providers/settings_providers.dart';
 import '../../../../domain/enums/customer_attributes_enums.dart';
 import '../../../../providers/repository_providers.dart';
 import '../notifiers/checkout_session.dart';
@@ -38,6 +40,8 @@ class CustomerAttributesScreen extends ConsumerWidget {
       checkoutSessionProvider.notifier,
     );
     final CustomerAttributes attrs = session.customerAttributes;
+    final FeatureFlags flags =
+        ref.watch(featureFlagsProvider).value ?? FeatureFlags.allOff;
 
     return LayoutBuilder(
       builder: (c, constraints) {
@@ -47,7 +51,9 @@ class CustomerAttributesScreen extends ConsumerWidget {
           appBar: AppHeader(
             title: 'レジ',
             upcomingTicket: ref.watch(upcomingTicketProvider).value,
-            onTicketTap: () => context.push('/regi/calling'),
+            onTicketTap: flags.callingLink
+                ? null
+                : () => context.push('/regi/calling'),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () =>
