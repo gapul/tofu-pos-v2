@@ -41,7 +41,8 @@ void main() {
     await tester.pump();
     while (tester.takeException() != null) {}
 
-    expect(find.text('注文履歴'), findsOneWidget);
+    // AppHeader + PaneTitle の両方に「注文履歴」が出る。
+    expect(find.text('注文履歴'), findsAtLeastNWidgets(1));
     expect(find.text('注文はまだありません'), findsOneWidget);
   });
 
@@ -87,7 +88,8 @@ void main() {
     await tester.pump();
     while (tester.takeException() != null) {}
 
-    expect(find.text('注文履歴'), findsOneWidget);
+    // AppHeader + PaneTitle の両方に「注文履歴」が出る。
+    expect(find.text('注文履歴'), findsAtLeastNWidgets(1));
     // 整理券番号 7 は "07" として描画される。
     expect(find.textContaining('07'), findsAtLeastNWidgets(1));
   });

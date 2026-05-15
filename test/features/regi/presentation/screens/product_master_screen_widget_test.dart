@@ -36,7 +36,8 @@ void main() {
     await tester.pump();
     while (tester.takeException() != null) {}
 
-    expect(find.text('商品マスタ'), findsOneWidget);
+    // AppHeader + PaneTitle の両方に「商品マスタ」が出る。
+    expect(find.text('商品マスタ'), findsAtLeastNWidgets(1));
     expect(find.text('商品が登録されていません'), findsOneWidget);
     expect(find.text('商品を追加'), findsOneWidget);
   });
@@ -72,7 +73,8 @@ void main() {
     await tester.pump();
     while (tester.takeException() != null) {}
 
-    expect(find.text('商品マスタ'), findsOneWidget);
+    // AppHeader + PaneTitle の両方に「商品マスタ」が出る。
+    expect(find.text('商品マスタ'), findsAtLeastNWidgets(1));
     expect(find.text('湯豆腐'), findsOneWidget);
   });
 }

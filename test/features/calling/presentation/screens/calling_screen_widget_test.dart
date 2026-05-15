@@ -41,9 +41,11 @@ void main() {
     await tester.pump();
     while (tester.takeException() != null) {}
 
+    // AppHeader title
     expect(find.text('呼び出し'), findsOneWidget);
+    // 2 ペイン見出し（新 UI では「呼び出し済み」→「呼び出し済」に短縮）
     expect(find.text('呼び出し前'), findsOneWidget);
-    expect(find.text('呼び出し済み'), findsOneWidget);
+    expect(find.text('呼び出し済'), findsOneWidget);
     // 整理券番号 7 は "07" として描画される。
     expect(find.textContaining('07'), findsAtLeastNWidgets(1));
   });

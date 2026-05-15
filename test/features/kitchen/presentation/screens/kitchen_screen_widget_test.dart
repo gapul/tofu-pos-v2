@@ -37,9 +37,12 @@ void main() {
     await tester.pump();
     while (tester.takeException() != null) {}
 
+    // AppHeader title。
     expect(find.text('キッチン'), findsOneWidget);
-    expect(find.text('未調理'), findsOneWidget);
-    expect(find.text('提供完了'), findsOneWidget);
+    // 新 UI では「未調理」「提供済」をペイン見出し + タブ見出しで併用する。
+    // 件数付き Tab ラベル（"未調理 (0)") と PaneTitle "未調理" の両方が描画される。
+    expect(find.text('未調理'), findsAtLeastNWidgets(1));
+    expect(find.text('提供済'), findsAtLeastNWidgets(1));
     expect(find.text('未調理の注文はありません'), findsOneWidget);
   });
 

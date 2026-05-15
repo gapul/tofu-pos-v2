@@ -101,8 +101,11 @@ void main() {
     await tester.pump();
     while (tester.takeException() != null) {}
 
-    expect(find.text('設定'), findsOneWidget);
-    expect(find.text('端末'), findsOneWidget);
+    // AppHeader + _DeviceHeaderSection の両方が「設定」を描画する。
+    expect(find.text('設定'), findsAtLeastNWidgets(1));
+    // 新 UI では PaneTitle のセクション名で各カードを識別する。
+    // 旧「端末」は _DeviceHeaderSection の「店舗ID: ...」サブテキストへ統合された。
+    expect(find.textContaining('店舗ID'), findsOneWidget);
     expect(find.text('機能フラグ'), findsOneWidget);
     expect(find.text('通信モード'), findsOneWidget);
     expect(find.text('データエクスポート'), findsOneWidget);
