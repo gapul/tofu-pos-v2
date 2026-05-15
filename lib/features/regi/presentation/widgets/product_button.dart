@@ -95,7 +95,6 @@ class ProductButton extends StatelessWidget {
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 Text(
                   product.name,
@@ -103,40 +102,42 @@ class ProductButton extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (inCart)
+                const SizedBox(height: TofuTokens.space2),
+                // 価格（in-cart でも常時表示。Figma `state=in-cart` 準拠）
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    Text(
+                      TofuFormat.yen(product.price),
+                      style: TofuTextStyles.numberMd.copyWith(color: fg),
+                    ),
+                    if (stockEnabled && !inCart)
+                      Text(
+                        soldOut
+                            ? '在庫切れ'
+                            : product.stock <= 3
+                                ? '残り ${product.stock}'
+                                : '在庫 ${product.stock}',
+                        style: TofuTextStyles.captionBold.copyWith(
+                          color: soldOut
+                              ? TofuTokens.dangerText
+                              : fg.withValues(alpha: 0.85),
+                        ),
+                      ),
+                  ],
+                ),
+                if (inCart) ...<Widget>[
+                  const SizedBox(height: TofuTokens.space3),
                   _InlineStepper(
-                    price: product.price,
                     quantity: cartCount,
                     fg: fg,
                     canDecrement: onDecrement != null,
                     canIncrement: !reachedMax && onIncrement != null,
                     onIncrement: onIncrement ?? onTap,
                     onDecrement: onDecrement,
-                  )
-                else
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: <Widget>[
-                      Text(
-                        TofuFormat.yen(product.price),
-                        style: TofuTextStyles.numberMd.copyWith(color: fg),
-                      ),
-                      if (stockEnabled)
-                        Text(
-                          soldOut
-                              ? '在庫切れ'
-                              : product.stock <= 3
-                                  ? '残り ${product.stock}'
-                                  : '在庫 ${product.stock}',
-                          style: TofuTextStyles.captionBold.copyWith(
-                            color: soldOut
-                                ? TofuTokens.dangerText
-                                : fg.withValues(alpha: 0.85),
-                          ),
-                        ),
-                    ],
                   ),
+                ],
               ],
             ),
           ),
@@ -150,7 +151,6 @@ class ProductButton extends StatelessWidget {
 /// frame `I47:17;361:10` を踏襲）。
 class _InlineStepper extends StatelessWidget {
   const _InlineStepper({
-    required this.price,
     required this.quantity,
     required this.fg,
     required this.canDecrement,
@@ -159,7 +159,6 @@ class _InlineStepper extends StatelessWidget {
     this.onDecrement,
   });
 
-  final dynamic price; // Money。`format.dart` 経由で表示する。
   final int quantity;
   final Color fg;
   final bool canDecrement;

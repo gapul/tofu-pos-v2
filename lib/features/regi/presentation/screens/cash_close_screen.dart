@@ -446,7 +446,7 @@ class _ReconcileRow extends StatelessWidget {
           SizedBox(
             width: 88,
             child: Text(
-              '¥${denomination.yen}',
+              '${denomination.yen}円',
               style: TofuTextStyles.bodyMdBold,
             ),
           ),

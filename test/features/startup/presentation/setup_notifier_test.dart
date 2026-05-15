@@ -33,6 +33,11 @@ class _FakeSettingsRepository implements SettingsRepository {
     _role = role;
   }
 
+  @override
+  Future<void> clearDeviceRole() async {
+    _role = null;
+  }
+
   // 以下はテストで使わないので未実装でよい。
   @override
   Future<FeatureFlags> getFeatureFlags() => throw UnimplementedError();

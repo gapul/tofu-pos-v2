@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/ui/app_header.dart';
@@ -79,7 +80,20 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
 
     return Scaffold(
       backgroundColor: TofuTokens.bgCanvas,
-      appBar: const AppHeader(title: '呼び出し'),
+      appBar: AppHeader(
+        title: '呼び出し',
+        actions: <Widget>[
+          IconButton(
+            tooltip: '設定',
+            icon: const Lordicon(
+              name: 'settings',
+              fallbackIcon: Icons.settings,
+              semanticLabel: '設定',
+            ),
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
+      ),
       body: SafeArea(
         top: false,
         child: Column(

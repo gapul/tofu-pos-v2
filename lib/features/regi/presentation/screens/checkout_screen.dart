@@ -15,6 +15,7 @@ import '../../../../core/ui/quick_amount_btn.dart';
 import '../../../../core/ui/tofu_button.dart';
 import '../../../../domain/entities/order.dart';
 import '../../../../domain/entities/order_item.dart';
+import '../../../../domain/services/change_suggestion.dart';
 import '../../../../domain/value_objects/denomination.dart';
 import '../../../../domain/value_objects/discount.dart';
 import '../../../../domain/value_objects/feature_flags.dart';
@@ -686,7 +687,7 @@ class _CashManagementSection extends StatelessWidget {
               children: <Widget>[
                 SizedBox(
                   width: 90,
-                  child: Text('¥${d.yen}', style: TofuTextStyles.bodyLgBold),
+                  child: Text('${d.yen}円', style: TofuTextStyles.bodyLgBold),
                 ),
                 Expanded(
                   child: TofuNumStepper(
@@ -755,6 +756,11 @@ class _RightPane extends StatelessWidget {
             insufficient: insufficient,
             change: change,
           ),
+          // 金種管理ON時：お釣りの最少枚数組合せを提案（仕様書 §6.3）
+          if (flags.cashManagement && change.yen > 0) ...<Widget>[
+            const SizedBox(height: TofuTokens.space4),
+            _ChangeSuggestionCard(changeYen: change.yen),
+          ],
           const SizedBox(height: TofuTokens.space5),
           if (!flags.cashManagement) ...<Widget>[
             Text(
@@ -887,7 +893,7 @@ class _QuickAmountGrid extends StatelessWidget {
       for (final int v in <int>[100, 500, 1000, 5000, 10000])
         QuickAmountBtn(
           amount: v,
-          label: '+${TofuFormat.yenInt(v).replaceAll('¥', '')}円',
+          label: '+${TofuFormat.yenInt(v)}',
           onPressed: () =>
               notifier.setReceivedCash(session.receivedCash + Money(v)),
         ),
@@ -940,6 +946,104 @@ class _PerfectButton extends StatelessWidget {
               color: TofuTokens.textPrimary,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// お釣り提案カード（仕様書 §6.3）
+//   金種管理 ON 時に、お釣りを最少枚数で渡せる金種組合せを表示する。
+//   将来的にレジ内在庫を考慮するときは [stock] パラメータを追加で渡す。
+// ===========================================================================
+class _ChangeSuggestionCard extends StatelessWidget {
+  const _ChangeSuggestionCard({required this.changeYen});
+
+  final int changeYen;
+
+  @override
+  Widget build(BuildContext context) {
+    final ChangeSuggestion s = ChangeSuggestion.compute(changeYen: changeYen);
+    if (s.bills.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final List<MapEntry<int, int>> entries = s.bills.entries.toList()
+      ..sort((a, b) => b.key.compareTo(a.key));
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: TofuTokens.space5,
+        vertical: TofuTokens.space4,
+      ),
+      decoration: BoxDecoration(
+        color: TofuTokens.bgMuted,
+        borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Icon(
+                Icons.recommend,
+                size: 16,
+                color: TofuTokens.textSecondary,
+              ),
+              const SizedBox(width: TofuTokens.space2),
+              Text(
+                'お釣りの渡し方（最少 ${s.totalCount} 枚）',
+                style: TofuTextStyles.captionBold.copyWith(
+                  color: TofuTokens.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: TofuTokens.space3),
+          Wrap(
+            spacing: TofuTokens.space3,
+            runSpacing: TofuTokens.space2,
+            children: <Widget>[
+              for (final MapEntry<int, int> e in entries)
+                _DenominationChip(yen: e.key, count: e.value),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DenominationChip extends StatelessWidget {
+  const _DenominationChip({required this.yen, required this.count});
+
+  final int yen;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: TofuTokens.space3,
+        vertical: TofuTokens.space2,
+      ),
+      decoration: BoxDecoration(
+        color: TofuTokens.bgSurface,
+        borderRadius: BorderRadius.circular(TofuTokens.radiusSm),
+        border: Border.all(color: TofuTokens.borderSubtle),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: TofuTextStyles.bodySm.copyWith(color: TofuTokens.textPrimary),
+          children: <TextSpan>[
+            TextSpan(text: '$yen円 '),
+            TextSpan(
+              text: '×$count',
+              style: TofuTextStyles.bodySmBold.copyWith(
+                color: TofuTokens.brandPrimary,
+              ),
+            ),
+          ],
         ),
       ),
     );

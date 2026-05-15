@@ -67,7 +67,9 @@ enum LordiconTrigger {
   /// シンプル実装として、tap 時の親側からは `key` を変えて作り直す。
   tap,
 
-  /// hover/focus 相当。同上、現在は実装簡略化のため `inView` と等価。
+  /// hover/focus 相当。`MouseRegion.onEnter` で再生開始、`onExit` で停止。
+  /// マウス操作環境（Web/desktop）では実際にホバーで動く。タッチ環境では
+  /// 静止状態 (= 初期フレーム) のまま。
   hover,
 }
 
@@ -126,9 +128,11 @@ class _LordiconState extends State<Lordicon>
                 unawaited(_controller.repeat().orCancel.catchError((_) {}));
               case LordiconTrigger.once:
               case LordiconTrigger.inView:
-              case LordiconTrigger.hover:
               case LordiconTrigger.tap:
                 unawaited(_controller.forward(from: 0));
+              case LordiconTrigger.hover:
+                // hover は MouseRegion で発火する。初期は再生せず静止。
+                _controller.value = 0;
             }
           },
           // Web では `useCompression: false` などのワークアラウンドが
@@ -146,14 +150,24 @@ class _LordiconState extends State<Lordicon>
               )
             : animation;
 
+        // hover trigger: MouseRegion で onEnter/onExit を捕捉。
+        final Widget interactive = widget.trigger == LordiconTrigger.hover
+            ? MouseRegion(
+                onEnter: (_) =>
+                    unawaited(_controller.forward(from: 0).orCancel.catchError((_) {})),
+                onExit: (_) => _controller.reset(),
+                child: tinted,
+              )
+            : tinted;
+
         if (widget.semanticLabel != null) {
           return Semantics(
             label: widget.semanticLabel,
             image: true,
-            child: tinted,
+            child: interactive,
           );
         }
-        return tinted;
+        return interactive;
       },
     );
   }

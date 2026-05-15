@@ -23,7 +23,7 @@ class CartRow extends StatelessWidget {
 
   final String productName;
 
-  /// 単価表示 (整形済み)。例: '¥500'.
+  /// 単価表示 (整形済み)。例: '500円'.
   final String unitPriceText;
 
   final int quantity;

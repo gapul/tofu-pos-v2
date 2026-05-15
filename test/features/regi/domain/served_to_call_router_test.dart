@@ -32,6 +32,9 @@ class _FakeSettings implements SettingsRepository {
   Future<DeviceRole?> getDeviceRole() async => null;
   @override
   Future<void> setDeviceRole(DeviceRole role) async {}
+
+  @override
+  Future<void> clearDeviceRole() async {}
   @override
   Stream<FeatureFlags> watchFeatureFlags() =>
       const Stream<FeatureFlags>.empty();
@@ -111,7 +114,7 @@ void main() {
     final _FakeTransport transport = _FakeTransport();
     final ServedToCallRouter router = ServedToCallRouter(
       transport: transport,
-      settingsRepository: _FakeSettings(const FeatureFlags(kitchenLink: true)),
+      settingsRepository: _FakeSettings(FeatureFlags.allOff.copyWith(kitchenLink: true)),
       shopId: 'shop',
     );
     router.start();
@@ -126,7 +129,7 @@ void main() {
     final _FakeTransport transport = _FakeTransport();
     final ServedToCallRouter router = ServedToCallRouter(
       transport: transport,
-      settingsRepository: _FakeSettings(const FeatureFlags(callingLink: true)),
+      settingsRepository: _FakeSettings(FeatureFlags.allOff.copyWith(callingLink: true)),
       shopId: 'shop',
     );
     router.start();

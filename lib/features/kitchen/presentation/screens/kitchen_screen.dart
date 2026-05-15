@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/error/app_exceptions.dart';
 import '../../../../core/logging/app_logger.dart';
@@ -127,7 +128,20 @@ class _KitchenScreenState extends ConsumerState<KitchenScreen>
 
     return Scaffold(
       backgroundColor: TofuTokens.bgCanvas,
-      appBar: const AppHeader(title: 'キッチン'),
+      appBar: AppHeader(
+        title: 'キッチン',
+        actions: <Widget>[
+          IconButton(
+            tooltip: '設定',
+            icon: const Lordicon(
+              name: 'settings',
+              fallbackIcon: Icons.settings,
+              semanticLabel: '設定',
+            ),
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
+      ),
       body: SafeArea(
         top: false,
         child: Column(

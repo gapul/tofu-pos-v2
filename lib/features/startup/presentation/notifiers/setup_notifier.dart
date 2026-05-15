@@ -60,6 +60,12 @@ class SetupNotifier extends AsyncNotifier<SetupState> {
     final SetupState current = state.value ?? SetupState.empty;
     state = AsyncData<SetupState>(current.copyWith(role: role));
   }
+
+  Future<void> clearRole() async {
+    await _repo.clearDeviceRole();
+    final SetupState current = state.value ?? SetupState.empty;
+    state = AsyncData<SetupState>(current.copyWith(clearRole: true));
+  }
 }
 
 final AsyncNotifierProvider<SetupNotifier, SetupState> setupNotifierProvider =

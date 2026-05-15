@@ -274,6 +274,8 @@ class _TofuButtonState extends State<TofuButton>
                   size: iconSize,
                   color: effectiveFg,
                   fallbackIcon: widget.icon ?? Icons.circle_outlined,
+                  // ボタン上ではホバーで再生（マウス環境）。
+                  trigger: LordiconTrigger.hover,
                 ),
                 SizedBox(width: gap),
               ] else if (widget.icon != null) ...<Widget>[

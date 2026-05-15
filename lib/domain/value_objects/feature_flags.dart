@@ -2,15 +2,16 @@ import 'package:meta/meta.dart';
 
 /// 機能フラグ（仕様書 §4）。
 ///
-/// 各フラグは互いに独立。すべてオフでもレジ単独業務は利用可能。
+/// 各フラグは互いに独立。既定はすべてオン（フル機能）。
+/// すべてオフでもレジ単独業務は利用可能。
 @immutable
 class FeatureFlags {
   const FeatureFlags({
-    this.stockManagement = false,
-    this.cashManagement = false,
-    this.customerAttributes = false,
-    this.kitchenLink = false,
-    this.callingLink = false,
+    this.stockManagement = true,
+    this.cashManagement = true,
+    this.customerAttributes = true,
+    this.kitchenLink = true,
+    this.callingLink = true,
   });
 
   /// 在庫管理
@@ -28,7 +29,15 @@ class FeatureFlags {
   /// 呼び出し連携
   final bool callingLink;
 
-  static const FeatureFlags allOff = FeatureFlags();
+  static const FeatureFlags allOff = FeatureFlags(
+    stockManagement: false,
+    cashManagement: false,
+    customerAttributes: false,
+    kitchenLink: false,
+    callingLink: false,
+  );
+
+  static const FeatureFlags allOn = FeatureFlags();
 
   FeatureFlags copyWith({
     bool? stockManagement,

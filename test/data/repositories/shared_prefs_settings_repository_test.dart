@@ -29,8 +29,8 @@ void main() {
     expect(await repo.getDeviceRole(), DeviceRole.kitchen);
   });
 
-  test('feature flags default all off', () async {
-    expect(await repo.getFeatureFlags(), FeatureFlags.allOff);
+  test('feature flags default all on (フル機能既定)', () async {
+    expect(await repo.getFeatureFlags(), FeatureFlags.allOn);
   });
 
   test('feature flags round-trip', () async {

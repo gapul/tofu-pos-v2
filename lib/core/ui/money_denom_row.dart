@@ -45,7 +45,7 @@ class MoneyDenomRow extends StatelessWidget {
       }
       b.write(s[i]);
     }
-    return '¥$b';
+    return '$b円';
   }
 
   @override

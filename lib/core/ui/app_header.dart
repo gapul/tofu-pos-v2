@@ -30,6 +30,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
   const AppHeader({
     required this.title,
     super.key,
+    this.subtitle,
     this.ticket,
     this.upcomingTicket,
     this.actions = const <Widget>[],
@@ -40,6 +41,10 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
   /// ブランド/役割名。固定値 (「レジ」「キッチン」「呼び出し」「設定」「初期設定」)。
   /// 画面固有名はここに入れず、body 上部の `PageTitle` へ移譲する。
   final String title;
+
+  /// サブ情報 (店舗ID + 管理者等)。Figma `HeaderBrand` Molecule のサブ行に相当。
+  /// 未指定なら `settingsProvider` から自動で生成する。
+  final String? subtitle;
 
   /// 確定済み注文の整理券番号 (あれば)。
   final vo.TicketNumber? ticket;
@@ -97,16 +102,10 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
                 const SizedBox(width: TofuTokens.space4),
               ],
               Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      title,
-                      style: TofuTextStyles.h3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                child: _BrandBlock(
+                  title: title,
+                  subtitle: subtitle,
+                  textStyle: TofuTextStyles.h3,
                 ),
               ),
               if (ticket != null)
@@ -165,10 +164,10 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
                 const SizedBox(width: TofuTokens.space3),
               ],
               Expanded(
-                child: Text(
-                  title,
-                  style: TofuTextStyles.h4,
-                  overflow: TextOverflow.ellipsis,
+                child: _BrandBlock(
+                  title: title,
+                  subtitle: subtitle,
+                  textStyle: TofuTextStyles.h4,
                 ),
               ),
               if (ticket != null)
@@ -246,5 +245,40 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
       out.add(items[i]);
     }
     return out;
+  }
+}
+
+/// Figma `Molecules/HeaderBrand` 相当：役割名 + サブ情報（店舗ID等）を縦並びで表示。
+class _BrandBlock extends StatelessWidget {
+  const _BrandBlock({
+    required this.title,
+    required this.subtitle,
+    required this.textStyle,
+  });
+
+  final String title;
+  final String? subtitle;
+  final TextStyle textStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Text(title, style: textStyle, overflow: TextOverflow.ellipsis),
+        if (subtitle != null && subtitle!.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 2),
+          Text(
+            subtitle!,
+            style: TofuTextStyles.caption.copyWith(
+              color: TofuTokens.textSecondary,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
   }
 }

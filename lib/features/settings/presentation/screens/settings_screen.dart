@@ -22,6 +22,7 @@ import '../../../../domain/value_objects/feature_flags.dart';
 import '../../../../providers/repository_providers.dart';
 import '../../../../providers/settings_providers.dart';
 import '../../../regi/presentation/notifiers/regi_providers.dart';
+import '../../../startup/presentation/notifiers/setup_notifier.dart';
 
 /// 設定画面（Figma `10-Register-Settings` / 仕様書 §4 / §6.4 / §7.1 / §8.3）。
 ///
@@ -252,7 +253,13 @@ class _RoleSection extends ConsumerWidget {
                       label: '役割を変更',
                       icon: Icons.swap_horiz,
                       variant: TofuButtonVariant.secondary,
-                      onPressed: () => context.push('/setup/shop'),
+                      onPressed: () async {
+                        await ref
+                            .read(setupNotifierProvider.notifier)
+                            .clearRole();
+                        if (!context.mounted) return;
+                        context.go('/setup/role');
+                      },
                     ),
                   ],
                 ),

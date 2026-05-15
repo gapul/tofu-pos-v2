@@ -538,7 +538,7 @@ class _EditorPaneState extends State<_EditorPane> {
                   max: 1000000,
                   suffix: '円',
                   formatter: (v) =>
-                      TofuFormat.yenInt(v).replaceAll('¥', ''),
+                      TofuFormat.yenInt(v).replaceAll('円', ''),
                 ),
               ),
               if (widget.stockEnabled) ...<Widget>[

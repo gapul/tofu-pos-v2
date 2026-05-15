@@ -61,13 +61,19 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   }
 
   @override
+  Future<void> clearDeviceRole() async {
+    await _prefs.remove(_kDeviceRole);
+  }
+
+  @override
   Future<FeatureFlags> getFeatureFlags() async {
+    // 既定: 全フラグ ON（フル機能でセットアップが即完了する状態）
     return FeatureFlags(
-      stockManagement: _prefs.getBool(_kFlagStock) ?? false,
-      cashManagement: _prefs.getBool(_kFlagCash) ?? false,
-      customerAttributes: _prefs.getBool(_kFlagAttr) ?? false,
-      kitchenLink: _prefs.getBool(_kFlagKitchen) ?? false,
-      callingLink: _prefs.getBool(_kFlagCalling) ?? false,
+      stockManagement: _prefs.getBool(_kFlagStock) ?? true,
+      cashManagement: _prefs.getBool(_kFlagCash) ?? true,
+      customerAttributes: _prefs.getBool(_kFlagAttr) ?? true,
+      kitchenLink: _prefs.getBool(_kFlagKitchen) ?? true,
+      callingLink: _prefs.getBool(_kFlagCalling) ?? true,
     );
   }
 

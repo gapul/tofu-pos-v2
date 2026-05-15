@@ -13,6 +13,7 @@ abstract interface class SettingsRepository {
 
   Future<DeviceRole?> getDeviceRole();
   Future<void> setDeviceRole(DeviceRole role);
+  Future<void> clearDeviceRole();
 
   Future<FeatureFlags> getFeatureFlags();
   Future<void> setFeatureFlags(FeatureFlags flags);

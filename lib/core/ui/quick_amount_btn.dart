@@ -18,7 +18,7 @@ class QuickAmountBtn extends StatelessWidget {
   final int amount;
   final VoidCallback? onPressed;
 
-  /// 表示テキストのオーバーライド。未指定なら `¥1,000` 形式で整形。
+  /// 表示テキストのオーバーライド。未指定なら `1,000円` 形式で整形。
   final String? label;
 
   String _formatYen(int v) {
@@ -30,7 +30,7 @@ class QuickAmountBtn extends StatelessWidget {
       }
       b.write(s[i]);
     }
-    return '¥$b';
+    return '$b円';
   }
 
   @override

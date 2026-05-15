@@ -4,11 +4,11 @@ import '../../domain/value_objects/money.dart';
 class TofuFormat {
   const TofuFormat._();
 
-  /// 円を「¥1,234」形式で表示。
-  static String yen(Money money) => '¥${_thousands(money.yen)}';
+  /// 円を「1,234円」形式で表示（仕様書/Figma準拠：単位は数値の右）。
+  static String yen(Money money) => '${_thousands(money.yen)}円';
 
-  /// 円を「¥1,234」形式で表示（int）。
-  static String yenInt(int value) => '¥${_thousands(value)}';
+  /// 円を「1,234円」形式で表示（int）。
+  static String yenInt(int value) => '${_thousands(value)}円';
 
   /// 数値に3桁区切りカンマを入れる。
   static String _thousands(int value) {
