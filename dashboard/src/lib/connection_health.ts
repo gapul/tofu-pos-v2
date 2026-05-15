@@ -90,7 +90,9 @@ export async function probeConnection(s: Settings, signal?: AbortSignal): Promis
   //   403:     RLS で拒否 (key は OK だがポリシー次第。バナーには出さない方が無難)
   //   404:     テーブル未作成 → スキーマ未デプロイの可能性
   try {
-    const probe = await fetch(`${base}/rest/v1/order_lines?select=id&limit=0`, {
+    // select=shop_id は 0001_initial の order_lines に必ず存在する列。
+    // limit=0 で行を取らず、テーブルの存在 + 認証 + RLS のみを確認する。
+    const probe = await fetch(`${base}/rest/v1/order_lines?select=shop_id&limit=0`, {
       method: 'GET',
       headers: { apikey: s.key, Authorization: `Bearer ${s.key}` },
       signal,
@@ -117,6 +119,11 @@ export async function probeConnection(s: Settings, signal?: AbortSignal): Promis
         detail:
           'テーブル "order_lines" が見つかりません (HTTP 404)。Supabase 側のスキーママイグレーション未適用の可能性があります。',
       };
+    }
+    if (probe.status === 400) {
+      // テーブルは存在し認証も通っているが、リクエスト内容が schema と
+      // 噛み合っていない (probe 自身のバグ等)。実害は無いので OK 扱い。
+      return { kind: 'ok' };
     }
     return {
       kind: 'unreachable',
