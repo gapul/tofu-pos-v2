@@ -233,7 +233,6 @@ class _ListPane extends StatelessWidget {
             trailing: TofuButton(
               label: '新規追加',
               icon: Icons.add,
-              variant: TofuButtonVariant.primary,
               onPressed: onNew,
             ),
           ),

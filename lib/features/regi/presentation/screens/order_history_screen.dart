@@ -396,7 +396,6 @@ class _HistoryRowWide extends StatelessWidget {
                   : TofuButton(
                       label: '取消',
                       variant: TofuButtonVariant.secondary,
-                      size: TofuButtonSize.md,
                       onPressed: () => onCancel(order),
                     ),
             ),
@@ -484,7 +483,6 @@ class _HistoryRowNarrow extends StatelessWidget {
                 TofuButton(
                   label: '取消',
                   variant: TofuButtonVariant.secondary,
-                  size: TofuButtonSize.md,
                   onPressed: () => onCancel(order),
                 ),
               ],
