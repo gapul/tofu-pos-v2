@@ -28,9 +28,15 @@ class TofuChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color bg = selected ? TofuTokens.brandPrimarySubtleStrong : TofuTokens.bgSurface;
-    final Color border = selected ? TofuTokens.brandPrimary : TofuTokens.borderDefault;
-    final Color fg = selected ? TofuTokens.brandPrimary : TofuTokens.textPrimary;
+    final Color bg = selected
+        ? TofuTokens.brandPrimarySubtleStrong
+        : TofuTokens.bgSurface;
+    final Color border = selected
+        ? TofuTokens.brandPrimary
+        : TofuTokens.borderDefault;
+    final Color fg = selected
+        ? TofuTokens.brandPrimary
+        : TofuTokens.textPrimary;
 
     final Widget content = Padding(
       padding: const EdgeInsets.symmetric(

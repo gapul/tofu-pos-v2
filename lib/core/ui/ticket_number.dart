@@ -30,8 +30,13 @@ class TicketNumber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ({TextStyle number, TextStyle? label, EdgeInsets padding, double radius})
-        m = switch (size) {
+    final ({
+      TextStyle number,
+      TextStyle? label,
+      EdgeInsets padding,
+      double radius,
+    })
+    m = switch (size) {
       TicketNumberSize.xs => (
         number: TofuTextStyles.bodyMdBold,
         label: TofuTextStyles.caption,

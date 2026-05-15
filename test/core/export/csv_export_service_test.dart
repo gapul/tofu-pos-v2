@@ -54,8 +54,7 @@ void main() {
       orders: <Order>[makeOrder()],
       shopId: 'yakisoba_A',
     );
-    final List<String> lines = csv.split('\r\n')
-      ..removeWhere((l) => l.isEmpty);
+    final List<String> lines = csv.split('\r\n')..removeWhere((l) => l.isEmpty);
     expect(lines.first, startsWith('order_id,shop_id,'));
     // ヘッダ + 2明細行
     expect(lines.length, 3);

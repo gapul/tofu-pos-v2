@@ -4,7 +4,9 @@ import 'package:tofu_pos/core/ui/tofu_button.dart';
 
 /// `TofuButton` の単体 widget test。variant × size × state を検証。
 void main() {
-  Widget host(Widget child) => MaterialApp(home: Scaffold(body: Center(child: child)));
+  Widget host(Widget child) => MaterialApp(
+    home: Scaffold(body: Center(child: child)),
+  );
 
   testWidgets('label と onPressed が動く（default primary md）', (tester) async {
     int taps = 0;
@@ -28,7 +30,9 @@ void main() {
     expect(w.onPressed, isNull);
   });
 
-  testWidgets('loading=true は CircularProgressIndicator を表示しタップ無効化', (tester) async {
+  testWidgets('loading=true は CircularProgressIndicator を表示しタップ無効化', (
+    tester,
+  ) async {
     int taps = 0;
     await tester.pumpWidget(
       host(TofuButton(label: 'submit', loading: true, onPressed: () => taps++)),
@@ -50,7 +54,9 @@ void main() {
     expect(find.text('保存'), findsOneWidget);
   });
 
-  testWidgets('fullWidth=true で SizedBox(width: infinity) にラップされる', (tester) async {
+  testWidgets('fullWidth=true で SizedBox(width: infinity) にラップされる', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       host(
         SizedBox(
@@ -59,7 +65,9 @@ void main() {
         ),
       ),
     );
-    final RenderBox box = tester.renderObject<RenderBox>(find.byType(TofuButton));
+    final RenderBox box = tester.renderObject<RenderBox>(
+      find.byType(TofuButton),
+    );
     // 親 SizedBox=400 まで広がる。
     expect(box.size.width, greaterThanOrEqualTo(380));
   });
@@ -79,7 +87,9 @@ void main() {
     }
   });
 
-  testWidgets('variant 軸（primary/secondary/danger/ghost）すべて描画できる', (tester) async {
+  testWidgets('variant 軸（primary/secondary/danger/ghost）すべて描画できる', (
+    tester,
+  ) async {
     for (final TofuButtonVariant v in TofuButtonVariant.values) {
       await tester.pumpWidget(
         host(TofuButton(label: v.name, variant: v, onPressed: () {})),

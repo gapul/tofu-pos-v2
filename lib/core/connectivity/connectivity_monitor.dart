@@ -30,8 +30,7 @@ class ConnectivityPlusMonitor implements ConnectivityMonitor {
 
   static ConnectivityStatus _classify(List<ConnectivityResult> results) {
     final bool hasNetwork = results.any(
-      (r) =>
-          r != ConnectivityResult.none && r != ConnectivityResult.bluetooth,
+      (r) => r != ConnectivityResult.none && r != ConnectivityResult.bluetooth,
     );
     return hasNetwork ? ConnectivityStatus.online : ConnectivityStatus.offline;
   }

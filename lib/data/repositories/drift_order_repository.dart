@@ -119,8 +119,7 @@ class DriftOrderRepository implements OrderRepository {
   Future<List<Order>> findUnsynced() async {
     final List<OrderRow> rows =
         await (_db.select(_db.orders)..where(
-              (t) =>
-                  t.syncStatus.equals(SyncStatus.notSynced.name),
+              (t) => t.syncStatus.equals(SyncStatus.notSynced.name),
             ))
             .get();
     return Future.wait(rows.map(_hydrate));
@@ -221,15 +220,17 @@ class DriftOrderRepository implements OrderRepository {
           to: status.name,
         );
       }
-      await (_db.update(_db.orders)..where((t) => t.id.equals(id)))
-          .write(OrdersCompanion(orderStatus: Value<String>(status.name)));
+      await (_db.update(_db.orders)..where((t) => t.id.equals(id))).write(
+        OrdersCompanion(orderStatus: Value<String>(status.name)),
+      );
     });
   }
 
   @override
   Future<void> updateSyncStatus(int id, SyncStatus status) async {
-    await (_db.update(_db.orders)..where((t) => t.id.equals(id)))
-        .write(OrdersCompanion(syncStatus: Value<String>(status.name)));
+    await (_db.update(_db.orders)..where((t) => t.id.equals(id))).write(
+      OrdersCompanion(syncStatus: Value<String>(status.name)),
+    );
   }
 
   @override

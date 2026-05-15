@@ -82,7 +82,9 @@ void main() {
   });
 
   test('rolls back stock when stockManagement was on', () async {
-    final FeatureFlags flags = FeatureFlags.allOff.copyWith(stockManagement: true);
+    final FeatureFlags flags = FeatureFlags.allOff.copyWith(
+      stockManagement: true,
+    );
     final Order placed = await checkout.execute(draft: draft, flags: flags);
     final Product? before = await productRepo.findById('p1');
     expect(before!.stock, 8);
@@ -103,7 +105,9 @@ void main() {
       CashDrawer(<Denomination, int>{const Denomination(100): 5}),
     );
 
-    final FeatureFlags flags = FeatureFlags.allOff.copyWith(cashManagement: true);
+    final FeatureFlags flags = FeatureFlags.allOff.copyWith(
+      cashManagement: true,
+    );
     final Order placed = await checkout.execute(draft: draft, flags: flags);
     expect((await cashRepo.get()).totalAmount, const Money(1300));
 

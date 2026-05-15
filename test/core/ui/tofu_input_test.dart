@@ -3,8 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tofu_pos/core/ui/tofu_input.dart';
 
 void main() {
-  Widget host(Widget child) =>
-      MaterialApp(home: Scaffold(body: Center(child: SizedBox(width: 320, child: child))));
+  Widget host(Widget child) => MaterialApp(
+    home: Scaffold(
+      body: Center(child: SizedBox(width: 320, child: child)),
+    ),
+  );
 
   testWidgets('hintText が描画される（default state）', (tester) async {
     await tester.pumpWidget(host(const TofuInput(hintText: 'バーコードを入力')));

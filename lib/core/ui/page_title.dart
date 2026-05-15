@@ -39,7 +39,8 @@ class PageTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: padding ??
+      padding:
+          padding ??
           const EdgeInsets.symmetric(
             horizontal: TofuTokens.space5,
             vertical: TofuTokens.space4,

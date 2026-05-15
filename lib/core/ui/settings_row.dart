@@ -44,15 +44,16 @@ class SettingsRow extends StatelessWidget {
     final Color titleColor = !enabled
         ? TofuTokens.textDisabled
         : destructive
-            ? TofuTokens.dangerText
-            : TofuTokens.textPrimary;
-    final Color subColor =
-        enabled ? TofuTokens.textTertiary : TofuTokens.textDisabled;
+        ? TofuTokens.dangerText
+        : TofuTokens.textPrimary;
+    final Color subColor = enabled
+        ? TofuTokens.textTertiary
+        : TofuTokens.textDisabled;
     final Color iconColor = !enabled
         ? TofuTokens.textDisabled
         : destructive
-            ? TofuTokens.dangerIcon
-            : TofuTokens.textSecondary;
+        ? TofuTokens.dangerIcon
+        : TofuTokens.textSecondary;
 
     return Material(
       color: Colors.transparent,
@@ -82,8 +83,9 @@ class SettingsRow extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       title,
-                      style:
-                          TofuTextStyles.bodyMdBold.copyWith(color: titleColor),
+                      style: TofuTextStyles.bodyMdBold.copyWith(
+                        color: titleColor,
+                      ),
                     ),
                     if (subtitle != null) ...<Widget>[
                       const SizedBox(height: 2),

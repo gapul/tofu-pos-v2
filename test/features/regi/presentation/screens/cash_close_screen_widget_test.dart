@@ -12,7 +12,9 @@ import '../../../../fakes/fake_repositories.dart';
 ///
 /// 注文ゼロ・金種管理オフでヘッダーと売上サマリだけ出る最小構成を検証。
 void main() {
-  testWidgets('CashCloseScreen renders header and summary card', (tester) async {
+  testWidgets('CashCloseScreen renders header and summary card', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1024, 1400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);

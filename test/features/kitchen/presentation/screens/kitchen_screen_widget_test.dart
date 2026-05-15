@@ -87,47 +87,49 @@ void main() {
     expect(find.textContaining('05'), findsAtLeastNWidgets(1));
   });
 
-  testWidgets('kitchenAlertsProvider が KitchenAlert を emit すると AlertBanner(danger) を描画',
-      (tester) async {
-    tester.view.physicalSize = const Size(1024, 1400);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'kitchenAlertsProvider が KitchenAlert を emit すると AlertBanner(danger) を描画',
+    (tester) async {
+      tester.view.physicalSize = const Size(1024, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    final KitchenAlert alert = KitchenAlert.cancelledMidProcess(
-      orderId: 99,
-      ticketNumber: const TicketNumber(13),
-      previousStatus: KitchenStatus.done,
-    );
+      final KitchenAlert alert = KitchenAlert.cancelledMidProcess(
+        orderId: 99,
+        ticketNumber: const TicketNumber(13),
+        previousStatus: KitchenStatus.done,
+      );
 
-    // 通知が postFrameCallback で listenManual される設計なので、
-    // 値をすぐ流すために単発の Stream.value を渡す。
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          kitchenOrdersProvider.overrideWith(
-            (ref) => Stream<List<KitchenOrder>>.value(<KitchenOrder>[]),
-          ),
-          kitchenAlertsProvider.overrideWith(
-            (ref) => Stream<KitchenAlert>.value(alert),
-          ),
-        ],
-        child: const MaterialApp(home: KitchenScreen()),
-      ),
-    );
-    // initState → postFrameCallback → listenManual → stream emit。
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-    while (tester.takeException() != null) {}
+      // 通知が postFrameCallback で listenManual される設計なので、
+      // 値をすぐ流すために単発の Stream.value を渡す。
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            kitchenOrdersProvider.overrideWith(
+              (ref) => Stream<List<KitchenOrder>>.value(<KitchenOrder>[]),
+            ),
+            kitchenAlertsProvider.overrideWith(
+              (ref) => Stream<KitchenAlert>.value(alert),
+            ),
+          ],
+          child: const MaterialApp(home: KitchenScreen()),
+        ),
+      );
+      // initState → postFrameCallback → listenManual → stream emit。
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      while (tester.takeException() != null) {}
 
-    // AlertBanner（danger）が描画されている。
-    expect(find.byType(AlertBanner), findsOneWidget);
-    expect(find.textContaining('注文取消'), findsOneWidget);
-    expect(find.textContaining('整理券 13'), findsOneWidget);
+      // AlertBanner（danger）が描画されている。
+      expect(find.byType(AlertBanner), findsOneWidget);
+      expect(find.textContaining('注文取消'), findsOneWidget);
+      expect(find.textContaining('整理券 13'), findsOneWidget);
 
-    // 「了解」ボタンを押すと AlertBanner が消える。
-    await tester.tap(find.text('了解'));
-    await tester.pump();
-    expect(find.byType(AlertBanner), findsNothing);
-  });
+      // 「了解」ボタンを押すと AlertBanner が消える。
+      await tester.tap(find.text('了解'));
+      await tester.pump();
+      expect(find.byType(AlertBanner), findsNothing);
+    },
+  );
 }

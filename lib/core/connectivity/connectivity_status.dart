@@ -4,7 +4,8 @@
 /// 実際の通信モード（Online / LAN / BLE）は SettingsRepository.transportMode が保持する。
 enum ConnectivityStatus {
   online,
-  offline;
+  offline
+  ;
 
   bool get isOnline => this == ConnectivityStatus.online;
 }

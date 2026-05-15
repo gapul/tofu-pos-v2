@@ -55,8 +55,8 @@ class CheckoutScreen extends ConsumerWidget {
           unawaited(HapticFeedback.heavyImpact());
           // 顧客属性入力フラグ ON のときは、お釣り受け取り後に顧客属性を
           // 入力させてから完了画面へ。OFF のときは直接完了画面へ。
-          final FeatureFlags flags = ref.read(featureFlagsProvider).value ??
-              FeatureFlags.allOff;
+          final FeatureFlags flags =
+              ref.read(featureFlagsProvider).value ?? FeatureFlags.allOff;
           if (flags.customerAttributes) {
             context.go('/regi/customer', extra: order);
           } else {
@@ -113,9 +113,7 @@ class CheckoutScreen extends ConsumerWidget {
 
     Future<void> onConfirm() async {
       try {
-        await ref
-            .read(checkoutConfirmControllerProvider.notifier)
-            .confirm();
+        await ref.read(checkoutConfirmControllerProvider.notifier).confirm();
       } catch (_) {
         // listen 側で表示済。
       }
@@ -132,7 +130,8 @@ class CheckoutScreen extends ConsumerWidget {
             onTicketTap: () => context.push('/regi/calling'),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.canPop() ? context.pop() : context.go('/'),
+              onPressed: () =>
+                  context.canPop() ? context.pop() : context.go('/'),
               tooltip: '戻る',
             ),
           ),
@@ -492,9 +491,7 @@ class _DiscountSectionState extends State<_DiscountSection> {
         : (_signedValue > 0 ? '+$_signedValue' : '$_signedValue');
     final Color valueColor = _signedValue < 0
         ? TofuTokens.dangerText
-        : (_signedValue > 0
-              ? TofuTokens.successText
-              : TofuTokens.textPrimary);
+        : (_signedValue > 0 ? TofuTokens.successText : TofuTokens.textPrimary);
     final int step = _isPercent ? 1 : 100;
 
     return Container(
@@ -827,9 +824,7 @@ class _CashAndChangeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color changeColor = insufficient
         ? TofuTokens.dangerText
-        : (change.isZero
-              ? TofuTokens.textTertiary
-              : TofuTokens.successText);
+        : (change.isZero ? TofuTokens.textTertiary : TofuTokens.successText);
 
     return Container(
       padding: const EdgeInsets.symmetric(

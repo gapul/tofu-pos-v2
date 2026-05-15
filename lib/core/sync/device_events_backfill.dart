@@ -19,8 +19,8 @@ class DeviceEventsBackfill {
     required SupabaseClient client,
     required String shopId,
     this.window = const Duration(hours: 24),
-  })  : _client = client,
-        _shopId = shopId;
+  }) : _client = client,
+       _shopId = shopId;
 
   final SupabaseClient _client;
   final String _shopId;

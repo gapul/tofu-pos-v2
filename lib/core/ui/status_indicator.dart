@@ -27,9 +27,9 @@ class StatusIndicator extends StatelessWidget {
     super.key,
     this.labelOverride,
     this.dense = false,
-  })  : _customLabel = null,
-        _customIcon = null,
-        _customTone = null;
+  }) : _customLabel = null,
+       _customIcon = null,
+       _customTone = null;
 
   /// 任意ラベル/アイコン/トーンで描画する派生。旧 `StatusChip` の代替。
   /// `type` フィールドは未使用だが、`enum` の非 nullable 制約上ダミー値を入れる。
@@ -39,11 +39,11 @@ class StatusIndicator extends StatelessWidget {
     super.key,
     IconData? icon,
     this.dense = false,
-  })  : type = StatusIndicatorType.online,
-        labelOverride = null,
-        _customLabel = label,
-        _customIcon = icon,
-        _customTone = tone;
+  }) : type = StatusIndicatorType.online,
+       labelOverride = null,
+       _customLabel = label,
+       _customIcon = icon,
+       _customTone = tone;
 
   final StatusIndicatorType type;
 
@@ -58,7 +58,7 @@ class StatusIndicator extends StatelessWidget {
   final StatusIndicatorTone? _customTone;
 
   ({Color bg, Color border, Color fg, IconData? icon, String label})
-      _customSpec() {
+  _customSpec() {
     final StatusIndicatorTone t = _customTone!;
     switch (t) {
       case StatusIndicatorTone.info:
@@ -105,7 +105,7 @@ class StatusIndicator extends StatelessWidget {
   }
 
   ({Color bg, Color border, Color fg, TofuIconName icon, String label})
-      _spec() {
+  _spec() {
     switch (type) {
       case StatusIndicatorType.online:
         return (
@@ -175,7 +175,8 @@ class StatusIndicator extends StatelessWidget {
         Color fg,
         IconData? icon,
         String label,
-      }) c = _customSpec();
+      })
+      c = _customSpec();
       bg = c.bg;
       border = c.border;
       fg = c.fg;
@@ -190,7 +191,8 @@ class StatusIndicator extends StatelessWidget {
         Color fg,
         TofuIconName icon,
         String label,
-      }) s = _spec();
+      })
+      s = _spec();
       bg = s.bg;
       border = s.border;
       fg = s.fg;
@@ -199,8 +201,9 @@ class StatusIndicator extends StatelessWidget {
     }
 
     final TextStyle textStyle =
-        (dense ? TofuTextStyles.caption : TofuTextStyles.bodySmBold)
-            .copyWith(color: fg);
+        (dense ? TofuTextStyles.caption : TofuTextStyles.bodySmBold).copyWith(
+          color: fg,
+        );
 
     return Container(
       padding: EdgeInsets.symmetric(

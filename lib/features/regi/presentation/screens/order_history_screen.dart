@@ -66,8 +66,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       if (!mounted) {
         return;
       }
-      TopSnack.show(context, '店舗IDが未設定です',
-          color: TofuTokens.dangerBgStrong);
+      TopSnack.show(context, '店舗IDが未設定です', color: TofuTokens.dangerBgStrong);
       return;
     }
     try {
@@ -80,14 +79,12 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       if (!mounted) {
         return;
       }
-      TopSnack.show(
-          context, '整理券 ${order.ticketNumber} を取消しました');
+      TopSnack.show(context, '整理券 ${order.ticketNumber} を取消しました');
     } on AppException catch (e) {
       if (!mounted) {
         return;
       }
-      TopSnack.show(context, e.message,
-          color: TofuTokens.dangerBgStrong);
+      TopSnack.show(context, e.message, color: TofuTokens.dangerBgStrong);
     }
   }
 
@@ -112,8 +109,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       if (!mounted) {
         return;
       }
-      TopSnack.show(context, 'エクスポートに失敗: $e',
-          color: TofuTokens.dangerBgStrong);
+      TopSnack.show(context, 'エクスポートに失敗: $e', color: TofuTokens.dangerBgStrong);
     } finally {
       if (mounted) {
         setState(() => _csvBusy = false);
@@ -142,43 +138,44 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
             const PageTitle(title: '注文履歴'),
             Expanded(
               child: LayoutBuilder(
-          builder: (c, constraints) {
-            final bool wide = constraints.maxWidth >= 720;
-            return Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: wide ? TofuTokens.space7 : TofuTokens.space5,
-                vertical: TofuTokens.space5,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  _Header(
-                    count: orders.value?.length,
-                    showCancelled: _showCancelled,
-                    onToggleCancelled: () =>
-                        setState(() => _showCancelled = !_showCancelled),
-                    csvBusy: _csvBusy,
-                    onCsv: _exportCsv,
-                  ),
-                  const SizedBox(height: TofuTokens.space5),
-                  Expanded(
-                    child: orders.when(
-                      data: (all) => _buildList(all, wide: wide),
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(
-                        child: StatusIndicator.custom(
-                          label: '注文の取得に失敗: $e',
-                          icon: Icons.error_outline,
-                          tone: StatusIndicatorTone.danger,
-                        ),
-                      ),
+                builder: (c, constraints) {
+                  final bool wide = constraints.maxWidth >= 720;
+                  return Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: wide ? TofuTokens.space7 : TofuTokens.space5,
+                      vertical: TofuTokens.space5,
                     ),
-                  ),
-                ],
-              ),
-            );
-          },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        _Header(
+                          count: orders.value?.length,
+                          showCancelled: _showCancelled,
+                          onToggleCancelled: () =>
+                              setState(() => _showCancelled = !_showCancelled),
+                          csvBusy: _csvBusy,
+                          onCsv: _exportCsv,
+                        ),
+                        const SizedBox(height: TofuTokens.space5),
+                        Expanded(
+                          child: orders.when(
+                            data: (all) => _buildList(all, wide: wide),
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            error: (e, _) => Center(
+                              child: StatusIndicator.custom(
+                                label: '注文の取得に失敗: $e',
+                                icon: Icons.error_outline,
+                                tone: StatusIndicatorTone.danger,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -306,11 +303,17 @@ class _ColumnHeader extends StatelessWidget {
           SizedBox(width: 80, child: Text('整理券', style: s)),
           SizedBox(width: 88, child: Text('時刻', style: s)),
           Expanded(child: Text('商品', style: s)),
-          SizedBox(width: 120, child: Text('金額', style: s, textAlign: TextAlign.right)),
+          SizedBox(
+            width: 120,
+            child: Text('金額', style: s, textAlign: TextAlign.right),
+          ),
           const SizedBox(width: TofuTokens.space5),
           SizedBox(width: 96, child: Text('状態', style: s)),
           const SizedBox(width: TofuTokens.space5),
-          SizedBox(width: 80, child: Text('操作', style: s, textAlign: TextAlign.right)),
+          SizedBox(
+            width: 80,
+            child: Text('操作', style: s, textAlign: TextAlign.right),
+          ),
         ],
       ),
     );
@@ -371,8 +374,9 @@ class _HistoryRowWide extends StatelessWidget {
             child: Text(
               TofuFormat.yen(order.finalPrice),
               style: TofuTextStyles.bodyMdBold.copyWith(
-                decoration:
-                    cancelled ? TextDecoration.lineThrough : TextDecoration.none,
+                decoration: cancelled
+                    ? TextDecoration.lineThrough
+                    : TextDecoration.none,
                 color: cancelled
                     ? TofuTokens.textTertiary
                     : TofuTokens.textPrimary,

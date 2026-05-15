@@ -315,8 +315,7 @@ class _ProductsSection extends ConsumerWidget {
               return Column(
                 children: list
                     .map(
-                      (p) =>
-                          Text('・${p.name}  ${p.price}  在庫=${p.stock}'),
+                      (p) => Text('・${p.name}  ${p.price}  在庫=${p.stock}'),
                     )
                     .toList(),
               );
@@ -785,15 +784,11 @@ class _AutoTestSectionState extends ConsumerState<_AutoTestSection> {
   @override
   Widget build(BuildContext context) {
     final List<TestScenario> scenarios = ref.watch(scenariosProvider);
-    final int passed = _results.values
-        .where((r) => r.passed)
-        .length;
+    final int passed = _results.values.where((r) => r.passed).length;
     final int failed = _results.values
         .where((r) => !r.passed && !r.skipped)
         .length;
-    final int skipped = _results.values
-        .where((r) => r.skipped)
-        .length;
+    final int skipped = _results.values.where((r) => r.skipped).length;
 
     return _Section(
       title: '12. 自動テスト（実機検証用）',

@@ -47,7 +47,9 @@ class TofuRadio<T> extends StatelessWidget {
                 width: 12,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: _disabled ? TofuTokens.textDisabled : TofuTokens.brandPrimary,
+                  color: _disabled
+                      ? TofuTokens.textDisabled
+                      : TofuTokens.brandPrimary,
                   shape: BoxShape.circle,
                 ),
               ),

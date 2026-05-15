@@ -112,10 +112,12 @@ void runOrderRepositoryContract(
       final Order saved = await repo.create(makeOrder());
       await expectLater(
         repo.updateStatus(saved.id, OrderStatus.served),
-        throwsA(predicate<Object>(
-          (e) => e.runtimeType.toString() ==
-              'InvalidStateTransitionException',
-        )),
+        throwsA(
+          predicate<Object>(
+            (e) =>
+                e.runtimeType.toString() == 'InvalidStateTransitionException',
+          ),
+        ),
       );
       // 状態は元のまま。
       final Order? loaded = await repo.findById(saved.id);
@@ -128,10 +130,12 @@ void runOrderRepositoryContract(
       await repo.updateStatus(saved.id, OrderStatus.cancelled);
       await expectLater(
         repo.updateStatus(saved.id, OrderStatus.sent),
-        throwsA(predicate<Object>(
-          (e) => e.runtimeType.toString() ==
-              'InvalidStateTransitionException',
-        )),
+        throwsA(
+          predicate<Object>(
+            (e) =>
+                e.runtimeType.toString() == 'InvalidStateTransitionException',
+          ),
+        ),
       );
     });
 

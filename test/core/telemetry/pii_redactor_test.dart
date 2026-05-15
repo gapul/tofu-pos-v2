@@ -56,17 +56,41 @@ void main() {
 
     test('age は 10 歳刻みのバケットに丸める', () {
       expect(redactor.redact(<String, Object?>{'age': 7})['age_bucket'], '0s');
-      expect(redactor.redact(<String, Object?>{'age': 13})['age_bucket'], '10s');
-      expect(redactor.redact(<String, Object?>{'age': 25})['age_bucket'], '20s');
-      expect(redactor.redact(<String, Object?>{'age': 39})['age_bucket'], '30s');
-      expect(redactor.redact(<String, Object?>{'age': 60})['age_bucket'], '60s+');
-      expect(redactor.redact(<String, Object?>{'age': 99})['age_bucket'], '60s+');
+      expect(
+        redactor.redact(<String, Object?>{'age': 13})['age_bucket'],
+        '10s',
+      );
+      expect(
+        redactor.redact(<String, Object?>{'age': 25})['age_bucket'],
+        '20s',
+      );
+      expect(
+        redactor.redact(<String, Object?>{'age': 39})['age_bucket'],
+        '30s',
+      );
+      expect(
+        redactor.redact(<String, Object?>{'age': 60})['age_bucket'],
+        '60s+',
+      );
+      expect(
+        redactor.redact(<String, Object?>{'age': 99})['age_bucket'],
+        '60s+',
+      );
     });
 
     test('age が文字列でもパースしてバケット化する', () {
-      expect(redactor.redact(<String, Object?>{'age': '24'})['age_bucket'], '20s');
-      expect(redactor.redact(<String, Object?>{'age': 'unknown'})['age_bucket'], 'unknown');
-      expect(redactor.redact(<String, Object?>{'age': -1})['age_bucket'], 'unknown');
+      expect(
+        redactor.redact(<String, Object?>{'age': '24'})['age_bucket'],
+        '20s',
+      );
+      expect(
+        redactor.redact(<String, Object?>{'age': 'unknown'})['age_bucket'],
+        'unknown',
+      );
+      expect(
+        redactor.redact(<String, Object?>{'age': -1})['age_bucket'],
+        'unknown',
+      );
     });
 
     test('PII でないキーは素通しする', () {

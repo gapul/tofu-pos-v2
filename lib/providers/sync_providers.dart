@@ -60,16 +60,17 @@ supabaseRealtimeListenerProvider = FutureProvider<SupabaseRealtimeListener?>((
 /// フィルタや変換は本 Provider では行わず、別の Provider で合成すること。
 /// 例: 整理券一致だけを取りたいなら、本 Provider を watch する派生 Provider を作る。
 final StreamProvider<RealtimeOrderLineEvent>
-rawRealtimeOrderLineEventsProvider =
-    StreamProvider<RealtimeOrderLineEvent>((ref) async* {
-      final SupabaseRealtimeListener? listener = await ref.watch(
-        supabaseRealtimeListenerProvider.future,
-      );
-      if (listener == null) {
-        return;
-      }
-      yield* listener.events();
-    });
+rawRealtimeOrderLineEventsProvider = StreamProvider<RealtimeOrderLineEvent>((
+  ref,
+) async* {
+  final SupabaseRealtimeListener? listener = await ref.watch(
+    supabaseRealtimeListenerProvider.future,
+  );
+  if (listener == null) {
+    return;
+  }
+  yield* listener.events();
+});
 
 /// 旧 API 互換: `realtimeOrderLineEventsProvider` は生イベント Provider と同義。
 ///

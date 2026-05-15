@@ -37,12 +37,27 @@ class TofuBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ({Color bg, Color fg}) c = switch (variant) {
-      TofuBadgeVariant.neutral => (bg: TofuTokens.bgMuted, fg: TofuTokens.textPrimary),
+      TofuBadgeVariant.neutral => (
+        bg: TofuTokens.bgMuted,
+        fg: TofuTokens.textPrimary,
+      ),
       TofuBadgeVariant.info => (bg: TofuTokens.infoBg, fg: TofuTokens.infoText),
-      TofuBadgeVariant.success => (bg: TofuTokens.successBg, fg: TofuTokens.successText),
-      TofuBadgeVariant.warning => (bg: TofuTokens.warningBg, fg: TofuTokens.warningText),
-      TofuBadgeVariant.danger => (bg: TofuTokens.dangerBg, fg: TofuTokens.dangerText),
-      TofuBadgeVariant.brand => (bg: TofuTokens.brandPrimarySubtle, fg: TofuTokens.brandPrimary),
+      TofuBadgeVariant.success => (
+        bg: TofuTokens.successBg,
+        fg: TofuTokens.successText,
+      ),
+      TofuBadgeVariant.warning => (
+        bg: TofuTokens.warningBg,
+        fg: TofuTokens.warningText,
+      ),
+      TofuBadgeVariant.danger => (
+        bg: TofuTokens.dangerBg,
+        fg: TofuTokens.dangerText,
+      ),
+      TofuBadgeVariant.brand => (
+        bg: TofuTokens.brandPrimarySubtle,
+        fg: TofuTokens.brandPrimary,
+      ),
     };
 
     final ({EdgeInsets padding, TextStyle textStyle}) m = switch (size) {

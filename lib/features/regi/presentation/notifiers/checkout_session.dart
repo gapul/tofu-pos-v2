@@ -133,17 +133,17 @@ class CheckoutSessionNotifier extends Notifier<CheckoutSession> {
   }
 
   /// 直前の追加操作を 1 件分だけ巻き戻す（Figma `03-Register-Products` の
-   /// カートヘッダ「直前取消」リンクから呼ぶ）。
-   ///
-   /// 仕様（純粋な state 操作のみ。`addProduct` の逆向きでロールバック）:
-   /// - カートが空なら no-op。
-   /// - 末尾エントリの `quantity > 1` のときは `quantity -= 1`。
-   /// - 末尾エントリの `quantity == 1` のときは行ごと削除。
-   ///
-   /// 「直前に追加された行」を末尾エントリと同一視するのは、`addProduct`
-   /// が新規行を末尾 push、既存行を in-place 更新する仕様によるもの。
-   /// 厳密な操作履歴は持たないため、`setQuantity` 等を挟んだ場合は
-   /// 末尾行への 1 件分ロールバックとして振る舞う。
+  /// カートヘッダ「直前取消」リンクから呼ぶ）。
+  ///
+  /// 仕様（純粋な state 操作のみ。`addProduct` の逆向きでロールバック）:
+  /// - カートが空なら no-op。
+  /// - 末尾エントリの `quantity > 1` のときは `quantity -= 1`。
+  /// - 末尾エントリの `quantity == 1` のときは行ごと削除。
+  ///
+  /// 「直前に追加された行」を末尾エントリと同一視するのは、`addProduct`
+  /// が新規行を末尾 push、既存行を in-place 更新する仕様によるもの。
+  /// 厳密な操作履歴は持たないため、`setQuantity` 等を挟んだ場合は
+  /// 末尾行への 1 件分ロールバックとして振る舞う。
   void undoLast() {
     if (state.items.isEmpty) {
       return;
@@ -160,9 +160,7 @@ class CheckoutSessionNotifier extends Notifier<CheckoutSession> {
 
   void removeProduct(String productId) {
     state = state.copyWith(
-      items: state.items
-          .where((it) => it.productId != productId)
-          .toList(),
+      items: state.items.where((it) => it.productId != productId).toList(),
     );
   }
 
@@ -244,7 +242,8 @@ class CheckoutConfirmController extends AsyncNotifier<Order?> {
     // 既定 allOff（全 OFF）にフォールバックしてしまい、kitchenLink が
     // 暗黙 OFF として送信スキップされる事故を起こしていた。
     // 確定時はリポジトリから直接読み、現在保存値を必ず取得する。
-    final FeatureFlags flags = ref.read(featureFlagsProvider).value ??
+    final FeatureFlags flags =
+        ref.read(featureFlagsProvider).value ??
         await ref.read(settingsRepositoryProvider).getFeatureFlags();
 
     if (session.changeCash.isNegative) {

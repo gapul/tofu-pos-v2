@@ -25,8 +25,11 @@ void main() {
         jst.microsecond,
       );
       final Duration diff = jstAsUtc.difference(expectedComponents);
-      expect(diff.inMilliseconds.abs() < 500, isTrue,
-          reason: 'now() should match UTC+9 components (got diff=$diff)');
+      expect(
+        diff.inMilliseconds.abs() < 500,
+        isTrue,
+        reason: 'now() should match UTC+9 components (got diff=$diff)',
+      );
     });
 
     test('todayJst() returns midnight JST', () {

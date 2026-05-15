@@ -46,7 +46,7 @@ class OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ({Color bg, Color border, TofuBadgeVariant badge, String badgeLabel})
-        s = switch (status) {
+    s = switch (status) {
       OrderCardStatus.pending => (
         bg: TofuTokens.bgSurface,
         border: TofuTokens.borderSubtle,
@@ -67,10 +67,10 @@ class OrderCard extends StatelessWidget {
       ),
     };
     final bool muted = status == OrderCardStatus.cancelled;
-    final Color textColor =
-        muted ? TofuTokens.textDisabled : TofuTokens.textPrimary;
-    final TextDecoration? deco =
-        muted ? TextDecoration.lineThrough : null;
+    final Color textColor = muted
+        ? TofuTokens.textDisabled
+        : TofuTokens.textPrimary;
+    final TextDecoration? deco = muted ? TextDecoration.lineThrough : null;
 
     final Widget card = Container(
       padding: const EdgeInsets.all(TofuTokens.space5),

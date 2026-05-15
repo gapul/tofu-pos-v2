@@ -152,23 +152,24 @@ final FutureProvider<CallingIngestRouter?> callingIngestRouterProvider =
 /// オフライン/Noop の場合は null。
 final FutureProvider<DeviceEventsBackfill?> deviceEventsBackfillProvider =
     FutureProvider<DeviceEventsBackfill?>((ref) async {
-  if (!Env.hasSupabaseCredentials) {
-    return null;
-  }
-  final ShopId? shopId =
-      await ref.watch(settingsRepositoryProvider).getShopId();
-  if (shopId == null) {
-    return null;
-  }
-  try {
-    return DeviceEventsBackfill(
-      client: Supabase.instance.client,
-      shopId: shopId.value,
-    );
-  } catch (_) {
-    return null;
-  }
-});
+      if (!Env.hasSupabaseCredentials) {
+        return null;
+      }
+      final ShopId? shopId = await ref
+          .watch(settingsRepositoryProvider)
+          .getShopId();
+      if (shopId == null) {
+        return null;
+      }
+      try {
+        return DeviceEventsBackfill(
+          client: Supabase.instance.client,
+          shopId: shopId.value,
+        );
+      } catch (_) {
+        return null;
+      }
+    });
 
 // ============== 役割別の起動エントリポイント ==============
 
@@ -202,8 +203,9 @@ class RoleStarter {
           callingIngestRouterProvider.future,
         );
         c?.start();
-        final DeviceEventsBackfill? bf =
-            await ref.read(deviceEventsBackfillProvider.future);
+        final DeviceEventsBackfill? bf = await ref.read(
+          deviceEventsBackfillProvider.future,
+        );
         if (c != null && bf != null) {
           await bf.run(onEvent: c.handleEvent);
         }

@@ -155,11 +155,9 @@ void main() {
             : AmountDiscount(Money(-(1 + rng.nextInt(500))));
         final List<Money> alloc = d.allocate(lines);
         expect(alloc.length, n);
-        final int subtotal =
-            lines.fold<int>(0, (acc, m) => acc + m.yen);
+        final int subtotal = lines.fold<int>(0, (acc, m) => acc + m.yen);
         final int total = d.asAmount(Money(subtotal)).yen;
-        final int sum =
-            alloc.fold<int>(0, (acc, m) => acc + m.yen);
+        final int sum = alloc.fold<int>(0, (acc, m) => acc + m.yen);
         expect(
           sum,
           total,

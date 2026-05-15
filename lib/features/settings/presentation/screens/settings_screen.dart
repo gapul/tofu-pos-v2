@@ -156,7 +156,9 @@ class _UserNameSectionState extends ConsumerState<_UserNameSection> {
   }
 
   Future<void> _load() async {
-    final String? name = await ref.read(settingsRepositoryProvider).getUserName();
+    final String? name = await ref
+        .read(settingsRepositoryProvider)
+        .getUserName();
     if (!mounted) return;
     setState(() {
       _controller.text = name ?? '';
@@ -166,7 +168,9 @@ class _UserNameSectionState extends ConsumerState<_UserNameSection> {
 
   Future<void> _save() async {
     final String value = _controller.text.trim();
-    await ref.read(settingsRepositoryProvider).setUserName(
+    await ref
+        .read(settingsRepositoryProvider)
+        .setUserName(
           value.isEmpty ? null : value,
         );
     // 反映のため presence を再接続。
@@ -297,8 +301,11 @@ class _TransportSection extends ConsumerWidget {
               icon: Icons.refresh,
               variant: TofuButtonVariant.secondary,
               onPressed: () async {
-                TopSnack.show(context, '未送信データをアップロード中…',
-                    duration: const Duration(seconds: 4));
+                TopSnack.show(
+                  context,
+                  '未送信データをアップロード中…',
+                  duration: const Duration(seconds: 4),
+                );
                 // 1. 先に未同期データをサーバへ push（再接続より優先）
                 try {
                   await ref.read(syncServiceProvider).runOnce();
@@ -409,39 +416,48 @@ class _FeatureFlagsSection extends ConsumerWidget {
     final FeatureFlags flags =
         ref.watch(featureFlagsProvider).value ?? FeatureFlags.allOff;
 
-    final List<({String title, String subtitle, bool value, void Function(bool) on})>
-        rows = <({String title, String subtitle, bool value, void Function(bool) on})>[
-      (
-        title: '在庫管理',
-        subtitle: '商品ごとの在庫数を管理。在庫切れ商品は注文画面で選択不可になります。',
-        value: flags.stockManagement,
-        on: (v) => unawaited(_toggle(ref, (f) => f.copyWith(stockManagement: v))),
-      ),
-      (
-        title: '金種管理',
-        subtitle: 'レジ内の金種別枚数（理論値）を管理し、レジ締め時に実測値と照合できます。',
-        value: flags.cashManagement,
-        on: (v) => unawaited(_toggle(ref, (f) => f.copyWith(cashManagement: v))),
-      ),
-      (
-        title: '顧客属性入力',
-        subtitle: '会計前に顧客の年代・性別・客層を記録します。売上分析に利用されます。',
-        value: flags.customerAttributes,
-        on: (v) => unawaited(_toggle(ref, (f) => f.copyWith(customerAttributes: v))),
-      ),
-      (
-        title: 'キッチン連携',
-        subtitle: '確定した注文をキッチン端末へ自動送信し、提供完了通知を受け取ります。',
-        value: flags.kitchenLink,
-        on: (v) => unawaited(_toggle(ref, (f) => f.copyWith(kitchenLink: v))),
-      ),
-      (
-        title: '呼び出し連携',
-        subtitle: '呼び出し端末を表示用ディスプレイとして連携し、整理券番号を表示します。',
-        value: flags.callingLink,
-        on: (v) => unawaited(_toggle(ref, (f) => f.copyWith(callingLink: v))),
-      ),
-    ];
+    final List<
+      ({String title, String subtitle, bool value, void Function(bool) on})
+    >
+    rows =
+        <({String title, String subtitle, bool value, void Function(bool) on})>[
+          (
+            title: '在庫管理',
+            subtitle: '商品ごとの在庫数を管理。在庫切れ商品は注文画面で選択不可になります。',
+            value: flags.stockManagement,
+            on: (v) =>
+                unawaited(_toggle(ref, (f) => f.copyWith(stockManagement: v))),
+          ),
+          (
+            title: '金種管理',
+            subtitle: 'レジ内の金種別枚数（理論値）を管理し、レジ締め時に実測値と照合できます。',
+            value: flags.cashManagement,
+            on: (v) =>
+                unawaited(_toggle(ref, (f) => f.copyWith(cashManagement: v))),
+          ),
+          (
+            title: '顧客属性入力',
+            subtitle: '会計前に顧客の年代・性別・客層を記録します。売上分析に利用されます。',
+            value: flags.customerAttributes,
+            on: (v) => unawaited(
+              _toggle(ref, (f) => f.copyWith(customerAttributes: v)),
+            ),
+          ),
+          (
+            title: 'キッチン連携',
+            subtitle: '確定した注文をキッチン端末へ自動送信し、提供完了通知を受け取ります。',
+            value: flags.kitchenLink,
+            on: (v) =>
+                unawaited(_toggle(ref, (f) => f.copyWith(kitchenLink: v))),
+          ),
+          (
+            title: '呼び出し連携',
+            subtitle: '呼び出し端末を表示用ディスプレイとして連携し、整理券番号を表示します。',
+            value: flags.callingLink,
+            on: (v) =>
+                unawaited(_toggle(ref, (f) => f.copyWith(callingLink: v))),
+          ),
+        ];
 
     return _Card(
       child: Column(
@@ -499,8 +515,7 @@ class _ExportSectionState extends ConsumerState<_ExportSection> {
       if (!mounted) {
         return;
       }
-      TopSnack.show(context, 'エクスポートに失敗: $e',
-          color: TofuTokens.dangerBgStrong);
+      TopSnack.show(context, 'エクスポートに失敗: $e', color: TofuTokens.dangerBgStrong);
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -558,12 +573,17 @@ class _LogoutSection extends ConsumerWidget {
     // 未送信注文が残っているとログアウト後の同期トリガが無くなるので
     // ログアウト前に push を試みる。失敗は telemetry に既に出ているので無視。
     if (context.mounted) {
-      TopSnack.show(context, '未送信データをアップロード中…',
-          duration: const Duration(seconds: 4));
+      TopSnack.show(
+        context,
+        '未送信データをアップロード中…',
+        duration: const Duration(seconds: 4),
+      );
     }
     try {
       await ref.read(syncServiceProvider).runOnce();
-    } catch (_) {/* 失敗してもログアウトは続行 */}
+    } catch (_) {
+      /* 失敗してもログアウトは続行 */
+    }
     await ref.read(setupNotifierProvider.notifier).clearShop();
     if (!context.mounted) return;
     context.go('/setup/shop');
@@ -760,7 +780,9 @@ class _Card extends StatelessWidget {
         borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
         border: Border.all(
           color: accent ?? TofuTokens.borderSubtle,
-          width: accent != null ? TofuTokens.strokeThick : TofuTokens.strokeHairline,
+          width: accent != null
+              ? TofuTokens.strokeThick
+              : TofuTokens.strokeHairline,
         ),
       ),
       child: child,

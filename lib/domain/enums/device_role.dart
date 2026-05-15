@@ -2,7 +2,8 @@
 enum DeviceRole {
   register,
   kitchen,
-  calling;
+  calling
+  ;
 
   String get label {
     switch (this) {

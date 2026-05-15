@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tofu_pos/core/ui/alert_banner.dart';
 
 void main() {
-  Widget host(Widget child) =>
-      MaterialApp(home: Scaffold(body: SizedBox(width: 600, child: child)));
+  Widget host(Widget child) => MaterialApp(
+    home: Scaffold(body: SizedBox(width: 600, child: child)),
+  );
 
   testWidgets('title と message を描画する', (tester) async {
     await tester.pumpWidget(

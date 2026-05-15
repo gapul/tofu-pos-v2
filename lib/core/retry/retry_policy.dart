@@ -21,9 +21,9 @@ class RetryPolicy {
     this.maxDelay = const Duration(seconds: 5),
     this.multiplier = 2.0,
     this.jitter = 0.2,
-  })  : assert(maxAttempts >= 1, 'maxAttempts must be >= 1'),
-        assert(multiplier >= 1.0, 'multiplier must be >= 1.0'),
-        assert(jitter >= 0 && jitter <= 1.0, 'jitter must be in [0, 1]');
+  }) : assert(maxAttempts >= 1, 'maxAttempts must be >= 1'),
+       assert(multiplier >= 1.0, 'multiplier must be >= 1.0'),
+       assert(jitter >= 0 && jitter <= 1.0, 'jitter must be in [0, 1]');
 
   /// 最大試行回数（初回 + 再試行）。1 なら再試行なし。
   final int maxAttempts;

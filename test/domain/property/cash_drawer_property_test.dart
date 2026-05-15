@@ -117,8 +117,8 @@ void main() {
             d.apply(<Denomination, int>{const Denomination(100): -(count + 1)});
             return false;
             // ドキュメント化された CashDrawer の契約（負になる apply は StateError）を
-      // 検証するために StateError を捕捉する。
-      // ignore: avoid_catching_errors
+            // 検証するために StateError を捕捉する。
+            // ignore: avoid_catching_errors
           } on StateError {
             return d.countOf(const Denomination(100)) == count;
           }

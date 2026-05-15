@@ -26,7 +26,9 @@ class TofuToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color trackColor = value ? TofuTokens.brandPrimary : TofuTokens.bgMuted;
+    final Color trackColor = value
+        ? TofuTokens.brandPrimary
+        : TofuTokens.bgMuted;
     final Widget body = Opacity(
       opacity: _disabled ? 0.5 : 1.0,
       child: AnimatedContainer(

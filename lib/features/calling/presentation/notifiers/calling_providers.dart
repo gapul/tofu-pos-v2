@@ -5,6 +5,5 @@ import '../../../../providers/repository_providers.dart';
 
 final StreamProvider<List<CallingOrder>> callingOrdersProvider =
     StreamProvider<List<CallingOrder>>(
-      (ref) =>
-          ref.watch(callingOrderRepositoryProvider).watchAll(),
+      (ref) => ref.watch(callingOrderRepositoryProvider).watchAll(),
     );

@@ -12,7 +12,9 @@ import 'package:tofu_pos/providers/settings_providers.dart';
 /// 商品選択画面の golden（仕様書 §6.1.2 / §9.2）。
 /// 初回は `flutter test --update-goldens` でシードする。
 void main() {
-  testWidgets('ProductSelectScreen golden', tags: <String>['golden'], (tester) async {
+  testWidgets('ProductSelectScreen golden', tags: <String>['golden'], (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1280, 1000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);

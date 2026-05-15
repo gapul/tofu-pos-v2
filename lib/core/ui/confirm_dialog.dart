@@ -62,10 +62,10 @@ class TofuConfirmDialog extends StatelessWidget {
     final IconData effectiveIcon =
         icon ??
         (destructive ? Icons.warning_amber_rounded : Icons.help_outline);
-    final Color iconColor =
-        destructive ? TofuTokens.dangerIcon : TofuTokens.infoIcon;
-    final Color iconBg =
-        destructive ? TofuTokens.dangerBg : TofuTokens.infoBg;
+    final Color iconColor = destructive
+        ? TofuTokens.dangerIcon
+        : TofuTokens.infoIcon;
+    final Color iconBg = destructive ? TofuTokens.dangerBg : TofuTokens.infoBg;
 
     return Dialog(
       backgroundColor: TofuTokens.bgCanvas,
@@ -95,8 +95,7 @@ class TofuConfirmDialog extends StatelessWidget {
                     padding: const EdgeInsets.all(TofuTokens.space3),
                     decoration: BoxDecoration(
                       color: iconBg,
-                      borderRadius:
-                          BorderRadius.circular(TofuTokens.radiusMd),
+                      borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
                     ),
                     child: Icon(effectiveIcon, color: iconColor, size: 24),
                   ),

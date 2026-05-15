@@ -28,14 +28,12 @@ final Provider<UnitOfWork> unitOfWorkProvider = Provider<UnitOfWork>(
 
 final Provider<ProductRepository> productRepositoryProvider =
     Provider<ProductRepository>(
-      (ref) =>
-          DriftProductRepository(ref.watch(appDatabaseProvider)),
+      (ref) => DriftProductRepository(ref.watch(appDatabaseProvider)),
     );
 
 final Provider<OrderRepository> orderRepositoryProvider =
     Provider<OrderRepository>(
-      (ref) =>
-          DriftOrderRepository(ref.watch(appDatabaseProvider)),
+      (ref) => DriftOrderRepository(ref.watch(appDatabaseProvider)),
     );
 
 final Provider<CashDrawerRepository> cashDrawerRepositoryProvider =
@@ -48,8 +46,9 @@ final Provider<CashDrawerRepository> cashDrawerRepositoryProvider =
 
 final Provider<SettingsRepository> settingsRepositoryProvider =
     Provider<SettingsRepository>((ref) {
-      final SharedPrefsSettingsRepository repo =
-          SharedPrefsSettingsRepository(ref.watch(sharedPreferencesProvider));
+      final SharedPrefsSettingsRepository repo = SharedPrefsSettingsRepository(
+        ref.watch(sharedPreferencesProvider),
+      );
       ref.onDispose(repo.dispose);
       return repo;
     });
@@ -67,8 +66,7 @@ final Provider<TicketNumberPoolRepository> ticketNumberPoolRepositoryProvider =
 
 final Provider<OperationLogRepository> operationLogRepositoryProvider =
     Provider<OperationLogRepository>(
-      (ref) =>
-          DriftOperationLogRepository(ref.watch(appDatabaseProvider)),
+      (ref) => DriftOperationLogRepository(ref.watch(appDatabaseProvider)),
     );
 
 final Provider<DailyResetRepository> dailyResetRepositoryProvider =
@@ -84,12 +82,10 @@ final Provider<DailyResetRepository> dailyResetRepositoryProvider =
 
 final Provider<KitchenOrderRepository> kitchenOrderRepositoryProvider =
     Provider<KitchenOrderRepository>(
-      (ref) =>
-          DriftKitchenOrderRepository(ref.watch(appDatabaseProvider)),
+      (ref) => DriftKitchenOrderRepository(ref.watch(appDatabaseProvider)),
     );
 
 final Provider<CallingOrderRepository> callingOrderRepositoryProvider =
     Provider<CallingOrderRepository>(
-      (ref) =>
-          DriftCallingOrderRepository(ref.watch(appDatabaseProvider)),
+      (ref) => DriftCallingOrderRepository(ref.watch(appDatabaseProvider)),
     );

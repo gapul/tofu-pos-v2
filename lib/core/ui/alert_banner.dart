@@ -36,7 +36,7 @@ class AlertBanner extends StatelessWidget {
   final VoidCallback? onClose;
 
   ({Color bg, Color border, Color text, Color icon, TofuIconName iconName})
-      _palette() {
+  _palette() {
     switch (variant) {
       case AlertBannerVariant.info:
         return (
@@ -81,7 +81,8 @@ class AlertBanner extends StatelessWidget {
       Color text,
       Color icon,
       TofuIconName iconName,
-    }) p = _palette();
+    })
+    p = _palette();
 
     return Container(
       padding: const EdgeInsets.symmetric(

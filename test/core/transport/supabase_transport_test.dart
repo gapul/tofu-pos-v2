@@ -307,18 +307,21 @@ void main() {
       expect(decoded, isNull);
     });
 
-    test('non-Map payload is tolerated and decodes to null (missing fields)', () {
-      final TransportEvent? decoded = SupabaseTransport.decodeRow(
-        <String, dynamic>{
-          'shop_id': 's',
-          'event_id': 'e',
-          'event_type': 'order_served',
-          'occurred_at': t.toIso8601String(),
-          'payload': 'unexpected-string',
-        },
-      );
-      expect(decoded, isNull);
-    });
+    test(
+      'non-Map payload is tolerated and decodes to null (missing fields)',
+      () {
+        final TransportEvent? decoded = SupabaseTransport.decodeRow(
+          <String, dynamic>{
+            'shop_id': 's',
+            'event_id': 'e',
+            'event_type': 'order_served',
+            'occurred_at': t.toIso8601String(),
+            'payload': 'unexpected-string',
+          },
+        );
+        expect(decoded, isNull);
+      },
+    );
   });
 
   group('SupabaseTransport.send with mocked SupabaseClient', () {
@@ -339,8 +342,7 @@ void main() {
       // どちらも内部的に `Future` を implements している。そのため mocktail は
       // 戻り値を Future 扱いし、`thenReturn` を拒否する → `thenAnswer` で返す。
       when(() => client.from(any())).thenAnswer((_) => queryBuilder);
-      when(() => queryBuilder.insert(any()))
-          .thenAnswer((_) => filterBuilder);
+      when(() => queryBuilder.insert(any())).thenAnswer((_) => filterBuilder);
       // PostgrestFilterBuilder は Future<dynamic> を implements している。
       // `await filterBuilder` で `.then(onValue, onError: onError)` が呼ばれるので、
       // それを完了済みの Future にすり替える。
@@ -365,64 +367,71 @@ void main() {
       );
     });
 
-    test('send calls client.from(table).insert(row) with expected shape',
-        () async {
-      final OrderServedEvent ev = OrderServedEvent(
-        shopId: 'shop_a',
-        eventId: 'evt-send-1',
-        occurredAt: DateTime.utc(2026, 5, 11, 10),
-        orderId: 7,
-        ticketNumber: const TicketNumber(3),
-      );
-      await transport.send(ev);
+    test(
+      'send calls client.from(table).insert(row) with expected shape',
+      () async {
+        final OrderServedEvent ev = OrderServedEvent(
+          shopId: 'shop_a',
+          eventId: 'evt-send-1',
+          occurredAt: DateTime.utc(2026, 5, 11, 10),
+          orderId: 7,
+          ticketNumber: const TicketNumber(3),
+        );
+        await transport.send(ev);
 
-      final capturedTable = verify(() => client.from(captureAny())).captured;
-      expect(capturedTable.single, 'device_events');
+        final capturedTable = verify(() => client.from(captureAny())).captured;
+        expect(capturedTable.single, 'device_events');
 
-      final capturedRow =
-          verify(() => queryBuilder.insert(captureAny())).captured;
-      expect(capturedRow, hasLength(1));
-      final Map<String, Object?> row =
-          (capturedRow.single as Map).cast<String, Object?>();
-      expect(row['shop_id'], 'shop_a');
-      expect(row['event_id'], 'evt-send-1');
-      expect(row['event_type'], 'order_served');
-      expect(row['occurred_at'], isA<String>());
-      expect((row['occurred_at']! as String).endsWith('Z'), isTrue);
-      expect(row['payload'], isA<Map<String, Object?>>());
-      final Map<String, Object?> payload =
-          (row['payload']! as Map).cast<String, Object?>();
-      expect(payload['order_id'], 7);
-      expect(payload['ticket_number'], 3);
-    });
+        final capturedRow = verify(
+          () => queryBuilder.insert(captureAny()),
+        ).captured;
+        expect(capturedRow, hasLength(1));
+        final Map<String, Object?> row = (capturedRow.single as Map)
+            .cast<String, Object?>();
+        expect(row['shop_id'], 'shop_a');
+        expect(row['event_id'], 'evt-send-1');
+        expect(row['event_type'], 'order_served');
+        expect(row['occurred_at'], isA<String>());
+        expect((row['occurred_at']! as String).endsWith('Z'), isTrue);
+        expect(row['payload'], isA<Map<String, Object?>>());
+        final Map<String, Object?> payload = (row['payload']! as Map)
+            .cast<String, Object?>();
+        expect(payload['order_id'], 7);
+        expect(payload['ticket_number'], 3);
+      },
+    );
 
-    test('send registers event_id into selfIds for echo-back filtering',
-        () async {
-      final CallNumberEvent ev = CallNumberEvent(
-        shopId: 'shop_a',
-        eventId: 'evt-self-1',
-        occurredAt: DateTime.utc(2026, 5, 11, 10),
-        orderId: 12,
-        ticketNumber: const TicketNumber(8),
-      );
-      await transport.send(ev);
-      expect(transport.debugSelfIds(), contains('evt-self-1'));
-    });
+    test(
+      'send registers event_id into selfIds for echo-back filtering',
+      () async {
+        final CallNumberEvent ev = CallNumberEvent(
+          shopId: 'shop_a',
+          eventId: 'evt-self-1',
+          occurredAt: DateTime.utc(2026, 5, 11, 10),
+          orderId: 12,
+          ticketNumber: const TicketNumber(8),
+        );
+        await transport.send(ev);
+        expect(transport.debugSelfIds(), contains('evt-self-1'));
+      },
+    );
 
-    test('send after disconnect still works (HTTP path is not closed)',
-        () async {
-      // disconnect は Realtime チャネルだけを閉じる。送信は HTTP 経由なので
-      // disconnect 後も呼び出せる（業務継続）。
-      await transport.disconnect();
-      final OrderCancelledEvent ev = OrderCancelledEvent(
-        shopId: 'shop_a',
-        eventId: 'evt-after-disconnect',
-        occurredAt: DateTime.utc(2026, 5, 11, 10),
-        orderId: 1,
-        ticketNumber: const TicketNumber(1),
-      );
-      await transport.send(ev);
-      expect(transport.debugSelfIds(), contains('evt-after-disconnect'));
-    });
+    test(
+      'send after disconnect still works (HTTP path is not closed)',
+      () async {
+        // disconnect は Realtime チャネルだけを閉じる。送信は HTTP 経由なので
+        // disconnect 後も呼び出せる（業務継続）。
+        await transport.disconnect();
+        final OrderCancelledEvent ev = OrderCancelledEvent(
+          shopId: 'shop_a',
+          eventId: 'evt-after-disconnect',
+          occurredAt: DateTime.utc(2026, 5, 11, 10),
+          orderId: 1,
+          ticketNumber: const TicketNumber(1),
+        );
+        await transport.send(ev);
+        expect(transport.debugSelfIds(), contains('evt-after-disconnect'));
+      },
+    );
   });
 }

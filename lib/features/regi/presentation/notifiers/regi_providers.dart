@@ -12,8 +12,7 @@ import '../../../../providers/repository_providers.dart';
 /// 商品マスタは Stream で常時更新されるので、毎回開き直しでも問題ない。
 final StreamProvider<List<Product>> activeProductsProvider =
     StreamProvider.autoDispose<List<Product>>(
-      (ref) =>
-          ref.watch(productRepositoryProvider).watchAll(),
+      (ref) => ref.watch(productRepositoryProvider).watchAll(),
     );
 
 /// 注文履歴（最新順）を Stream で公開。
@@ -22,8 +21,7 @@ final StreamProvider<List<Product>> activeProductsProvider =
 /// 画面を閉じたら DB 購読を解放する。
 final StreamProvider<List<Order>> orderHistoryProvider =
     StreamProvider.autoDispose<List<Order>>(
-      (ref) =>
-          ref.watch(orderRepositoryProvider).watchAll(),
+      (ref) => ref.watch(orderRepositoryProvider).watchAll(),
     );
 
 /// 整理券プールの現在状態。
@@ -34,8 +32,7 @@ final StreamProvider<List<Order>> orderHistoryProvider =
 /// `ref.invalidate(ticketPoolProvider)` で確定後に明示的にリフレッシュする。
 final FutureProvider<TicketNumberPool> ticketPoolProvider =
     FutureProvider<TicketNumberPool>(
-      (ref) =>
-          ref.watch(ticketNumberPoolRepositoryProvider).load(),
+      (ref) => ref.watch(ticketNumberPoolRepositoryProvider).load(),
     );
 
 /// 「次回番号」（仕様書 §9.1）。プールから払い出す予定の番号。
@@ -43,7 +40,5 @@ final FutureProvider<TicketNumberPool> ticketPoolProvider =
 /// `ticketPoolProvider` に追随。プール側を永続化するためこちらも非 autoDispose。
 final Provider<AsyncValue<TicketNumber?>> upcomingTicketProvider =
     Provider<AsyncValue<TicketNumber?>>(
-      (ref) => ref
-          .watch(ticketPoolProvider)
-          .whenData((p) => p.peekNext()),
+      (ref) => ref.watch(ticketPoolProvider).whenData((p) => p.peekNext()),
     );

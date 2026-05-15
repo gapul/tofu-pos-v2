@@ -66,7 +66,9 @@ class SetupNotifier extends AsyncNotifier<SetupState> {
     ref.invalidate(peerPresenceServiceProvider);
     try {
       await ref.read(telemetryInitProvider.future);
-    } catch (_) {/* telemetry 失敗は致命でないので継続 */}
+    } catch (_) {
+      /* telemetry 失敗は致命でないので継続 */
+    }
     try {
       await ref.read(roleStarterProvider).start();
     } catch (e, st) {

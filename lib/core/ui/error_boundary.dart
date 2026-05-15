@@ -127,8 +127,8 @@ class _RetryScope extends InheritedWidget {
   final VoidCallback onRetry;
 
   static VoidCallback? maybeOf(BuildContext context) {
-    final _RetryScope? scope =
-        context.dependOnInheritedWidgetOfExactType<_RetryScope>();
+    final _RetryScope? scope = context
+        .dependOnInheritedWidgetOfExactType<_RetryScope>();
     return scope?.onRetry;
   }
 
@@ -174,10 +174,10 @@ class _ErrorFallback extends StatelessWidget {
                       padding: const EdgeInsets.all(TofuTokens.space4),
                       decoration: BoxDecoration(
                         color: TofuTokens.bgSurface,
-                        borderRadius:
-                            BorderRadius.circular(TofuTokens.radiusMd),
-                        border:
-                            Border.all(color: TofuTokens.borderSubtle),
+                        borderRadius: BorderRadius.circular(
+                          TofuTokens.radiusMd,
+                        ),
+                        border: Border.all(color: TofuTokens.borderSubtle),
                       ),
                       child: Text(
                         detail,

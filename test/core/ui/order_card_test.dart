@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tofu_pos/core/ui/order_card.dart';
 
 void main() {
-  Widget host(Widget child) =>
-      MaterialApp(home: Scaffold(body: SizedBox(width: 400, child: child)));
+  Widget host(Widget child) => MaterialApp(
+    home: Scaffold(body: SizedBox(width: 400, child: child)),
+  );
 
   testWidgets('pending: 注文情報・アクションボタンを描画', (tester) async {
     int delivered = 0;

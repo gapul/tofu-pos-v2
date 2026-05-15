@@ -50,7 +50,8 @@ class CustomerAttributesScreen extends ConsumerWidget {
             onTicketTap: () => context.push('/regi/calling'),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.canPop() ? context.pop() : context.go('/'),
+              onPressed: () =>
+                  context.canPop() ? context.pop() : context.go('/'),
               tooltip: '戻る',
             ),
           ),

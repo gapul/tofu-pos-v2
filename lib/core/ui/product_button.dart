@@ -139,8 +139,9 @@ class ProductButton extends StatelessWidget {
                       color: brand
                           ? TofuTokens.brandOnPrimary
                           : TofuTokens.brandPrimary,
-                      borderRadius:
-                          BorderRadius.circular(TofuTokens.radiusFull),
+                      borderRadius: BorderRadius.circular(
+                        TofuTokens.radiusFull,
+                      ),
                     ),
                     child: Text(
                       cartCount!.toString(),

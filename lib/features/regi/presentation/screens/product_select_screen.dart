@@ -97,46 +97,47 @@ class _ProductSelectScreenState extends ConsumerState<ProductSelectScreen> {
                 const PageTitle(title: '商品選択'),
                 Expanded(
                   child: products.when(
-              data: (data) {
-                void handleAdd(Product p) {
-                  unawaited(HapticFeedback.selectionClick());
-                  notifier.addProduct(
-                    p,
-                    maxStock: flags.stockManagement ? p.stock : null,
-                  );
-                  _flashHighlight(p.id);
-                }
+                    data: (data) {
+                      void handleAdd(Product p) {
+                        unawaited(HapticFeedback.selectionClick());
+                        notifier.addProduct(
+                          p,
+                          maxStock: flags.stockManagement ? p.stock : null,
+                        );
+                        _flashHighlight(p.id);
+                      }
 
-                void handleDecrement(Product p) {
-                  unawaited(HapticFeedback.selectionClick());
-                  notifier.addProduct(p, delta: -1);
-                  _flashHighlight(p.id);
-                }
+                      void handleDecrement(Product p) {
+                        unawaited(HapticFeedback.selectionClick());
+                        notifier.addProduct(p, delta: -1);
+                        _flashHighlight(p.id);
+                      }
 
-                return isWide
-                    ? _LandscapeBody(
-                        products: data,
-                        session: session,
-                        notifier: notifier,
-                        stockEnabled: flags.stockManagement,
-                        recentlyChangedId: _recentlyChangedId,
-                        syncLevel: syncLevel,
-                        onAdd: handleAdd,
-                        onDecrement: handleDecrement,
-                      )
-                    : _PortraitBody(
-                        products: data,
-                        session: session,
-                        notifier: notifier,
-                        stockEnabled: flags.stockManagement,
-                        recentlyChangedId: _recentlyChangedId,
-                        syncLevel: syncLevel,
-                        onAdd: handleAdd,
-                        onDecrement: handleDecrement,
-                      );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => _ErrorState(message: '$e'),
+                      return isWide
+                          ? _LandscapeBody(
+                              products: data,
+                              session: session,
+                              notifier: notifier,
+                              stockEnabled: flags.stockManagement,
+                              recentlyChangedId: _recentlyChangedId,
+                              syncLevel: syncLevel,
+                              onAdd: handleAdd,
+                              onDecrement: handleDecrement,
+                            )
+                          : _PortraitBody(
+                              products: data,
+                              session: session,
+                              notifier: notifier,
+                              stockEnabled: flags.stockManagement,
+                              recentlyChangedId: _recentlyChangedId,
+                              syncLevel: syncLevel,
+                              onAdd: handleAdd,
+                              onDecrement: handleDecrement,
+                            );
+                    },
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => _ErrorState(message: '$e'),
                   ),
                 ),
               ],
@@ -228,42 +229,43 @@ class _PortraitBody extends StatelessWidget {
   final ValueChanged<Product> onDecrement;
 
   void _showCartSheet(BuildContext context) {
-    unawaited(showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (c) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (c2, _) => Container(
-          decoration: const BoxDecoration(
-            color: TofuTokens.bgCanvas,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(TofuTokens.radiusXl),
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (c) => DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (c2, _) => Container(
+            decoration: const BoxDecoration(
+              color: TofuTokens.bgCanvas,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(TofuTokens.radiusXl),
+              ),
             ),
-          ),
-          child: CartPanel(
-            session: session,
-            notifier: notifier,
-            products: products,
-            stockEnabled: stockEnabled,
-            recentlyChangedId: recentlyChangedId,
-            onCheckout: () {
-              Navigator.of(c2).pop();
-              unawaited(context.push('/regi/checkout'));
-            },
+            child: CartPanel(
+              session: session,
+              notifier: notifier,
+              products: products,
+              stockEnabled: stockEnabled,
+              recentlyChangedId: recentlyChangedId,
+              onCheckout: () {
+                Navigator.of(c2).pop();
+                unawaited(context.push('/regi/checkout'));
+              },
+            ),
           ),
         ),
       ),
-    ));
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final int totalQty =
-        session.items.fold<int>(0, (s, it) => s + it.quantity);
+    final int totalQty = session.items.fold<int>(0, (s, it) => s + it.quantity);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -402,9 +404,7 @@ class _ProductAreaState extends State<_ProductArea> {
         Padding(
           padding: EdgeInsets.fromLTRB(
             pad.left,
-            widget.syncLevel == SyncWarningLevel.prolongedFailure
-                ? 0
-                : pad.top,
+            widget.syncLevel == SyncWarningLevel.prolongedFailure ? 0 : pad.top,
             pad.right,
             TofuTokens.space3,
           ),

@@ -57,40 +57,42 @@ void main() {
     expect(drawer.countOf(const Denomination(1000)), 3);
   });
 
-  test('replace is atomic — concurrent get never sees empty drawer mid-op',
-      () async {
-    // 旧実装は delete → insert を別ステートメントで実行していたため、
-    // 中間に SELECT すると drawer 空の瞬間が見える race があった。
-    // 修正後は単一トランザクション + batch で束ねている。
-    await repo.apply(<Denomination, int>{const Denomination(500): 4});
-    expect((await repo.get()).totalAmount, const Money(2000));
+  test(
+    'replace is atomic — concurrent get never sees empty drawer mid-op',
+    () async {
+      // 旧実装は delete → insert を別ステートメントで実行していたため、
+      // 中間に SELECT すると drawer 空の瞬間が見える race があった。
+      // 修正後は単一トランザクション + batch で束ねている。
+      await repo.apply(<Denomination, int>{const Denomination(500): 4});
+      expect((await repo.get()).totalAmount, const Money(2000));
 
-    // replace と並行で 1000 回 get を走らせ、いずれの観測でも空に見えない
-    // ことを確認する。
-    final CashDrawer next = CashDrawer(<Denomination, int>{
-      const Denomination(1000): 2,
-    });
-    final List<Future<CashDrawer>> reads = <Future<CashDrawer>>[
-      for (int i = 0; i < 1000; i++) repo.get(),
-    ];
-    final Future<void> write = repo.replace(next);
-    final List<CashDrawer> snapshots = await Future.wait(reads);
-    await write;
+      // replace と並行で 1000 回 get を走らせ、いずれの観測でも空に見えない
+      // ことを確認する。
+      final CashDrawer next = CashDrawer(<Denomination, int>{
+        const Denomination(1000): 2,
+      });
+      final List<Future<CashDrawer>> reads = <Future<CashDrawer>>[
+        for (int i = 0; i < 1000; i++) repo.get(),
+      ];
+      final Future<void> write = repo.replace(next);
+      final List<CashDrawer> snapshots = await Future.wait(reads);
+      await write;
 
-    // 全 snapshot は 旧状態（2000円）または 新状態（2000円）でなければならない。
-    // どちらも 2000 円なので、合計が 0 になっていないことを確認する。
-    for (final CashDrawer s in snapshots) {
-      expect(
-        s.totalAmount.yen,
-        anyOf(2000, 2000), // 旧 = 4 × 500 = 2000, 新 = 2 × 1000 = 2000
-        reason: 'replace の中間状態が露呈した: $s',
-      );
-    }
-    // 最終状態は新しい drawer。
-    final CashDrawer finalDrawer = await repo.get();
-    expect(finalDrawer.countOf(const Denomination(500)), 0);
-    expect(finalDrawer.countOf(const Denomination(1000)), 2);
-  });
+      // 全 snapshot は 旧状態（2000円）または 新状態（2000円）でなければならない。
+      // どちらも 2000 円なので、合計が 0 になっていないことを確認する。
+      for (final CashDrawer s in snapshots) {
+        expect(
+          s.totalAmount.yen,
+          anyOf(2000, 2000), // 旧 = 4 × 500 = 2000, 新 = 2 × 1000 = 2000
+          reason: 'replace の中間状態が露呈した: $s',
+        );
+      }
+      // 最終状態は新しい drawer。
+      final CashDrawer finalDrawer = await repo.get();
+      expect(finalDrawer.countOf(const Denomination(500)), 0);
+      expect(finalDrawer.countOf(const Denomination(1000)), 2);
+    },
+  );
 
   test('replace records cash_drawer_replace operation log', () async {
     final DriftOperationLogRepository logRepo = DriftOperationLogRepository(db);
@@ -99,9 +101,11 @@ void main() {
       operationLogRepository: logRepo,
       now: () => DateTime(2026, 5, 7, 21),
     );
-    await instrumented.replace(CashDrawer(<Denomination, int>{
-      const Denomination(1000): 3,
-    }));
+    await instrumented.replace(
+      CashDrawer(<Denomination, int>{
+        const Denomination(1000): 3,
+      }),
+    );
     final List<OperationLog> logs = await logRepo.findRecent();
     expect(logs, hasLength(1));
     expect(logs.single.kind, OperationKind.cashDrawerReplace);

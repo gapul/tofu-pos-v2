@@ -61,7 +61,8 @@ class TofuFormField extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool hasError = errorText != null && errorText!.isNotEmpty;
 
-    final Widget input = child ??
+    final Widget input =
+        child ??
         TofuInput(
           controller: controller,
           size: inputSize,
@@ -76,8 +77,9 @@ class TofuFormField extends StatelessWidget {
         );
 
     final String? bottom = hasError ? errorText : helperText;
-    final Color bottomColor =
-        hasError ? TofuTokens.dangerText : TofuTokens.textTertiary;
+    final Color bottomColor = hasError
+        ? TofuTokens.dangerText
+        : TofuTokens.textTertiary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -86,17 +88,16 @@ class TofuFormField extends StatelessWidget {
         _Label(label: label, required: required, enabled: enabled),
         const SizedBox(height: TofuTokens.space3),
         // child を指定された場合は外側 FormField がエラー表示を担う。
-        if (child != null && hasError)
-          input
-        else
-          input,
+        if (child != null && hasError) input else input,
         if (bottom != null && bottom.isNotEmpty && child != null) ...<Widget>[
           const SizedBox(height: TofuTokens.space2),
           Text(
             bottom,
             style: TofuTextStyles.caption.copyWith(color: bottomColor),
           ),
-        ] else if (bottom != null && bottom.isNotEmpty && !hasError) ...<Widget>[
+        ] else if (bottom != null &&
+            bottom.isNotEmpty &&
+            !hasError) ...<Widget>[
           const SizedBox(height: TofuTokens.space2),
           Text(
             bottom,
@@ -121,8 +122,9 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color color =
-        enabled ? TofuTokens.textSecondary : TofuTokens.textDisabled;
+    final Color color = enabled
+        ? TofuTokens.textSecondary
+        : TofuTokens.textDisabled;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -134,8 +136,9 @@ class _Label extends StatelessWidget {
           const SizedBox(width: TofuTokens.space1),
           Text(
             '*',
-            style: TofuTextStyles.bodySmBold
-                .copyWith(color: TofuTokens.dangerText),
+            style: TofuTextStyles.bodySmBold.copyWith(
+              color: TofuTokens.dangerText,
+            ),
           ),
         ],
       ],

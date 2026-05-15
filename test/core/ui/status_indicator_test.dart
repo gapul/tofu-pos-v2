@@ -3,18 +3,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tofu_pos/core/ui/status_indicator.dart';
 
 void main() {
-  Widget host(Widget child) => MaterialApp(home: Scaffold(body: Center(child: child)));
+  Widget host(Widget child) => MaterialApp(
+    home: Scaffold(body: Center(child: child)),
+  );
 
   testWidgets('6 つの type すべて既定ラベルを描画', (tester) async {
     final Map<StatusIndicatorType, String> expected =
         <StatusIndicatorType, String>{
-      StatusIndicatorType.online: 'オンライン',
-      StatusIndicatorType.offline: 'オフライン',
-      StatusIndicatorType.bluetooth: 'Bluetooth',
-      StatusIndicatorType.syncing: '同期中',
-      StatusIndicatorType.synced: '同期済',
-      StatusIndicatorType.syncError: '同期エラー',
-    };
+          StatusIndicatorType.online: 'オンライン',
+          StatusIndicatorType.offline: 'オフライン',
+          StatusIndicatorType.bluetooth: 'Bluetooth',
+          StatusIndicatorType.syncing: '同期中',
+          StatusIndicatorType.synced: '同期済',
+          StatusIndicatorType.syncError: '同期エラー',
+        };
     for (final MapEntry<StatusIndicatorType, String> e in expected.entries) {
       await tester.pumpWidget(host(StatusIndicator(type: e.key)));
       expect(find.text(e.value), findsOneWidget);

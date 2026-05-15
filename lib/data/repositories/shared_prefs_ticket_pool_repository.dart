@@ -68,8 +68,7 @@ class SharedPrefsTicketPoolRepository implements TicketNumberPoolRepository {
       );
     }
     try {
-      final Map<String, dynamic> json =
-          jsonDecode(raw) as Map<String, dynamic>;
+      final Map<String, dynamic> json = jsonDecode(raw) as Map<String, dynamic>;
       final Map<int, int> lastUsedAt = <int, int>{};
       final dynamic rawLast = json['lastUsedAt'];
       if (rawLast is Map) {

@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tofu_pos/core/ui/tofu_toggle.dart';
 
 void main() {
-  Widget host(Widget child) => MaterialApp(home: Scaffold(body: Center(child: child)));
+  Widget host(Widget child) => MaterialApp(
+    home: Scaffold(body: Center(child: child)),
+  );
 
   testWidgets('value=false でタップ → onChanged(true)', (tester) async {
     bool? received;
@@ -26,7 +28,9 @@ void main() {
   });
 
   testWidgets('onChanged=null（disabled）はタップで何も起こらない', (tester) async {
-    await tester.pumpWidget(host(const TofuToggle(value: true, onChanged: null)));
+    await tester.pumpWidget(
+      host(const TofuToggle(value: true, onChanged: null)),
+    );
     // GestureDetector が無い（disabled パス）= タップしても発火しない。
     expect(find.byType(GestureDetector), findsNothing);
   });

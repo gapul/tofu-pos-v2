@@ -89,7 +89,9 @@ class Env {
       reasons.add('SUPABASE_URL is not a valid https://*.supabase.co URL');
     }
     if (!_looksLikeAnonKey(supabaseAnonKey)) {
-      reasons.add('SUPABASE_ANON_KEY does not look like a JWT or publishable key');
+      reasons.add(
+        'SUPABASE_ANON_KEY does not look like a JWT or publishable key',
+      );
     }
     return reasons.isEmpty ? const EnvValid() : EnvInvalid(reasons);
   }
@@ -108,7 +110,9 @@ class Env {
       reasons.add('SUPABASE_URL is not a valid https://*.supabase.co URL');
     }
     if (!_looksLikeAnonKey(anonKey)) {
-      reasons.add('SUPABASE_ANON_KEY does not look like a JWT or publishable key');
+      reasons.add(
+        'SUPABASE_ANON_KEY does not look like a JWT or publishable key',
+      );
     }
     return reasons.isEmpty ? const EnvValid() : EnvInvalid(reasons);
   }
@@ -134,7 +138,8 @@ class Env {
       }
     }
     // 新形式の Publishable Key（参考: sb_publishable_xxx）。
-    if (value.startsWith('sb_publishable_') && value.length > 'sb_publishable_'.length) {
+    if (value.startsWith('sb_publishable_') &&
+        value.length > 'sb_publishable_'.length) {
       return true;
     }
     return false;

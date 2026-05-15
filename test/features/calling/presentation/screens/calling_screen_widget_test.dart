@@ -39,8 +39,7 @@ void main() {
       ProviderScope(
         overrides: [
           callingOrdersProvider.overrideWith(
-            (ref) =>
-                Stream<List<CallingOrder>>.value(<CallingOrder>[pending]),
+            (ref) => Stream<List<CallingOrder>>.value(<CallingOrder>[pending]),
           ),
         ],
         child: const MaterialApp(
@@ -62,54 +61,56 @@ void main() {
     expect(find.textContaining('07'), findsAtLeastNWidgets(1));
   });
 
-  testWidgets('pending カードを tap → fullscreen dialog 表示 → 閉じると updateStatus(called)',
-      (tester) async {
-    tester.view.physicalSize = const Size(1024, 1400);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'pending カードを tap → fullscreen dialog 表示 → 閉じると updateStatus(called)',
+    (tester) async {
+      tester.view.physicalSize = const Size(1024, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    final _MockCallingOrderRepository repo = _MockCallingOrderRepository();
-    when(() => repo.updateStatus(any(), any())).thenAnswer((_) async {});
+      final _MockCallingOrderRepository repo = _MockCallingOrderRepository();
+      when(() => repo.updateStatus(any(), any())).thenAnswer((_) async {});
 
-    final CallingOrder pending = CallingOrder(
-      orderId: 42,
-      ticketNumber: const TicketNumber(7),
-      status: CallingStatus.pending,
-      receivedAt: DateTime(2026, 5, 11, 12),
-    );
+      final CallingOrder pending = CallingOrder(
+        orderId: 42,
+        ticketNumber: const TicketNumber(7),
+        status: CallingStatus.pending,
+        receivedAt: DateTime(2026, 5, 11, 12),
+      );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          callingOrdersProvider.overrideWith(
-            (ref) =>
-                Stream<List<CallingOrder>>.value(<CallingOrder>[pending]),
-          ),
-          callingOrderRepositoryProvider.overrideWithValue(repo),
-        ],
-        child: const MaterialApp(home: CallingScreen()),
-      ),
-    );
-    await tester.pump();
-    await tester.pumpAndSettle();
-    while (tester.takeException() != null) {}
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            callingOrdersProvider.overrideWith(
+              (ref) =>
+                  Stream<List<CallingOrder>>.value(<CallingOrder>[pending]),
+            ),
+            callingOrderRepositoryProvider.overrideWithValue(repo),
+          ],
+          child: const MaterialApp(home: CallingScreen()),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+      while (tester.takeException() != null) {}
 
-    // 「呼び出し前」ペインの大型カードをタップ。
-    await tester.tap(find.text('07').first);
-    await tester.pumpAndSettle();
+      // 「呼び出し前」ペインの大型カードをタップ。
+      await tester.tap(find.text('07').first);
+      await tester.pumpAndSettle();
 
-    // フルスクリーンダイアログの「お呼び出し」が出る。
-    expect(find.text('お呼び出し'), findsOneWidget);
-    expect(find.text('お受け取りください'), findsOneWidget);
+      // フルスクリーンダイアログの「お呼び出し」が出る。
+      expect(find.text('お呼び出し'), findsOneWidget);
+      expect(find.text('お受け取りください'), findsOneWidget);
 
-    // 右下「呼び出し済み」ボタン押下で markCalled される。
-    await tester.tap(find.text('呼び出し済み'));
-    await tester.pumpAndSettle();
+      // 右下「呼び出し済み」ボタン押下で markCalled される。
+      await tester.tap(find.text('呼び出し済み'));
+      await tester.pumpAndSettle();
 
-    // ダイアログが閉じている。
-    expect(find.text('お呼び出し'), findsNothing);
-    // updateStatus(orderId=42, called) が呼ばれている。
-    verify(() => repo.updateStatus(42, CallingStatus.called)).called(1);
-  });
+      // ダイアログが閉じている。
+      expect(find.text('お呼び出し'), findsNothing);
+      // updateStatus(orderId=42, called) が呼ばれている。
+      verify(() => repo.updateStatus(42, CallingStatus.called)).called(1);
+    },
+  );
 }

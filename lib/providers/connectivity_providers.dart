@@ -13,6 +13,5 @@ final Provider<ConnectivityMonitor> connectivityMonitorProvider =
 /// 現在のネット接続状態を Stream で公開。
 final StreamProvider<ConnectivityStatus> connectivityStatusProvider =
     StreamProvider<ConnectivityStatus>(
-      (ref) =>
-          ref.watch(connectivityMonitorProvider).watch(),
+      (ref) => ref.watch(connectivityMonitorProvider).watch(),
     );

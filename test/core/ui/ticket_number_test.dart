@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tofu_pos/core/ui/ticket_number.dart';
 
 void main() {
-  Widget host(Widget child) => MaterialApp(home: Scaffold(body: Center(child: child)));
+  Widget host(Widget child) => MaterialApp(
+    home: Scaffold(body: Center(child: child)),
+  );
 
   testWidgets('number を描画する（default md）', (tester) async {
     await tester.pumpWidget(host(const TicketNumber(number: '042')));

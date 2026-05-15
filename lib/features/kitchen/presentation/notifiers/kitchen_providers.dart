@@ -12,8 +12,7 @@ import '../../domain/mark_served_usecase.dart';
 /// キッチン端末ローカルの注文一覧（仕様書 §5.5 / §6.2）。
 final StreamProvider<List<KitchenOrder>> kitchenOrdersProvider =
     StreamProvider<List<KitchenOrder>>(
-      (ref) =>
-          ref.watch(kitchenOrderRepositoryProvider).watchAll(),
+      (ref) => ref.watch(kitchenOrderRepositoryProvider).watchAll(),
     );
 
 /// 提供完了 UseCase（送信失敗時はリポジトリ側で pending に戻る）。

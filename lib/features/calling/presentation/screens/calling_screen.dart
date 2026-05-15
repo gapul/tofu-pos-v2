@@ -60,10 +60,10 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
         .updateStatus(order.orderId, CallingStatus.pickedUp);
     // レジ端末で整理券プールを return できるよう OrderPickedUpEvent をブロードキャスト。
     try {
-      final Transport transport =
-          await ref.read(transportProvider.future);
-      final ShopId? shopId =
-          await ref.read(settingsRepositoryProvider).getShopId();
+      final Transport transport = await ref.read(transportProvider.future);
+      final ShopId? shopId = await ref
+          .read(settingsRepositoryProvider)
+          .getShopId();
       if (shopId == null) return;
       await transport.send(
         OrderPickedUpEvent(
@@ -124,10 +124,10 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
 
   Future<void> _broadcastCallCompleted(CallingOrder order) async {
     try {
-      final Transport transport =
-          await ref.read(transportProvider.future);
-      final ShopId? shopId =
-          await ref.read(settingsRepositoryProvider).getShopId();
+      final Transport transport = await ref.read(transportProvider.future);
+      final ShopId? shopId = await ref
+          .read(settingsRepositoryProvider)
+          .getShopId();
       if (shopId == null) return;
       await transport.send(
         CallCompletedEvent(
@@ -172,9 +172,11 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
     if (_autoQueue.isNotEmpty) {
       final CallingOrder next = _autoQueue.removeAt(0);
       // この frame では別の listen からも再帰する可能性があるので microtask に投げる。
-      unawaited(Future<void>.microtask(() {
-        if (mounted) _showFullScreen(next);
-      }));
+      unawaited(
+        Future<void>.microtask(() {
+          if (mounted) _showFullScreen(next);
+        }),
+      );
     }
   }
 
@@ -207,7 +209,10 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
   Widget build(BuildContext context) {
     // 新規 pending が現れた瞬間に _FullScreenCallDialog を自動表示する。
     // 二重表示防止 / 待ち行列 / 取消し→復帰の再表示は _handleOrdersChange 側で管理。
-    ref.listen<AsyncValue<List<CallingOrder>>>(callingOrdersProvider, (prev, next) {
+    ref.listen<AsyncValue<List<CallingOrder>>>(callingOrdersProvider, (
+      prev,
+      next,
+    ) {
       final List<CallingOrder>? prevList = prev?.value;
       final List<CallingOrder>? nextList = next.value;
       if (nextList == null) return;
@@ -266,71 +271,72 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
                   ref.invalidate(callingOrdersProvider);
                 },
                 child: orders.when(
-          data: (all) {
-            final List<CallingOrder> pending = all
-                .where((o) => o.status == CallingStatus.pending)
-                .toList();
-            final List<CallingOrder> called = all
-                .where(
-                  (o) =>
-                      o.status == CallingStatus.called ||
-                      o.status == CallingStatus.cancelled,
-                )
-                .toList();
-            return LayoutBuilder(
-              builder: (c, constraints) {
-                final bool wide = constraints.maxWidth >= 720;
-                if (wide) {
-                  // Figma landscape (436:506): 横 2 ペイン構成。
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Expanded(
-                        flex: 604,
-                        child: _PendingPane(
-                          orders: pending,
-                          onTap: _showFullScreen,
-                        ),
-                      ),
-                      Expanded(
-                        flex: 420,
-                        child: _CalledPane(
-                          orders: called,
-                          onTap: _markPickedUp,
-                        ),
-                      ),
-                    ],
-                  );
-                }
-                // Figma portrait (436:507): 縦 2 セクション。
-                return Column(
-                  children: <Widget>[
-                    Expanded(
-                      child: _PendingPane(
-                        orders: pending,
-                        onTap: _showFullScreen,
-                      ),
+                  data: (all) {
+                    final List<CallingOrder> pending = all
+                        .where((o) => o.status == CallingStatus.pending)
+                        .toList();
+                    final List<CallingOrder> called = all
+                        .where(
+                          (o) =>
+                              o.status == CallingStatus.called ||
+                              o.status == CallingStatus.cancelled,
+                        )
+                        .toList();
+                    return LayoutBuilder(
+                      builder: (c, constraints) {
+                        final bool wide = constraints.maxWidth >= 720;
+                        if (wide) {
+                          // Figma landscape (436:506): 横 2 ペイン構成。
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              Expanded(
+                                flex: 604,
+                                child: _PendingPane(
+                                  orders: pending,
+                                  onTap: _showFullScreen,
+                                ),
+                              ),
+                              Expanded(
+                                flex: 420,
+                                child: _CalledPane(
+                                  orders: called,
+                                  onTap: _markPickedUp,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                        // Figma portrait (436:507): 縦 2 セクション。
+                        return Column(
+                          children: <Widget>[
+                            Expanded(
+                              child: _PendingPane(
+                                orders: pending,
+                                onTap: _showFullScreen,
+                              ),
+                            ),
+                            Expanded(
+                              child: _CalledPane(
+                                orders: called,
+                                onTap: _markPickedUp,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(
+                    child: StatusIndicator.custom(
+                      label: '注文の取得に失敗: $e',
+                      icon: Icons.error_outline,
+                      tone: StatusIndicatorTone.danger,
                     ),
-                    Expanded(
-                      child: _CalledPane(
-                        orders: called,
-                        onTap: _markPickedUp,
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(
-            child: StatusIndicator.custom(
-              label: '注文の取得に失敗: $e',
-              icon: Icons.error_outline,
-              tone: StatusIndicatorTone.danger,
-            ),
-          ),
-        ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -375,24 +381,28 @@ class _PendingPane extends StatelessWidget {
                     itemCount: orders.length,
                     gridDelegate:
                         const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 200,
-                      mainAxisSpacing: TofuTokens.space5,
-                      crossAxisSpacing: TofuTokens.space5,
-                    ),
-                    itemBuilder: (c, i) => _LargeTicketCard(
-                      key: ValueKey<String>(
-                        'large-ticket-${orders[i].orderId}',
-                      ),
-                      order: orders[i],
-                      onTap: () => onTap(orders[i]),
-                    ).animate().fadeIn(
-                      duration: TofuTokens.motionShort,
-                    ).slideY(
-                      begin: 0.08,
-                      end: 0,
-                      duration: TofuTokens.motionMedium,
-                      curve: Curves.easeOutCubic,
-                    ),
+                          maxCrossAxisExtent: 200,
+                          mainAxisSpacing: TofuTokens.space5,
+                          crossAxisSpacing: TofuTokens.space5,
+                        ),
+                    itemBuilder: (c, i) =>
+                        _LargeTicketCard(
+                              key: ValueKey<String>(
+                                'large-ticket-${orders[i].orderId}',
+                              ),
+                              order: orders[i],
+                              onTap: () => onTap(orders[i]),
+                            )
+                            .animate()
+                            .fadeIn(
+                              duration: TofuTokens.motionShort,
+                            )
+                            .slideY(
+                              begin: 0.08,
+                              end: 0,
+                              duration: TofuTokens.motionMedium,
+                              curve: Curves.easeOutCubic,
+                            ),
                   ),
           ),
         ],
@@ -434,26 +444,30 @@ class _CalledPane extends StatelessWidget {
                     itemCount: orders.length,
                     gridDelegate:
                         const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 140,
-                      mainAxisSpacing: TofuTokens.space4,
-                      crossAxisSpacing: TofuTokens.space4,
-                    ),
-                    itemBuilder: (c, i) => _SmallTicketCard(
-                      key: ValueKey<String>(
-                        'small-ticket-${orders[i].orderId}',
-                      ),
-                      order: orders[i],
-                      onTap: orders[i].status == CallingStatus.called
-                          ? () => onTap(orders[i])
-                          : null,
-                    ).animate().fadeIn(
-                      duration: TofuTokens.motionShort,
-                    ).slideX(
-                      begin: 0.06,
-                      end: 0,
-                      duration: TofuTokens.motionMedium,
-                      curve: Curves.easeOutCubic,
-                    ),
+                          maxCrossAxisExtent: 140,
+                          mainAxisSpacing: TofuTokens.space4,
+                          crossAxisSpacing: TofuTokens.space4,
+                        ),
+                    itemBuilder: (c, i) =>
+                        _SmallTicketCard(
+                              key: ValueKey<String>(
+                                'small-ticket-${orders[i].orderId}',
+                              ),
+                              order: orders[i],
+                              onTap: orders[i].status == CallingStatus.called
+                                  ? () => onTap(orders[i])
+                                  : null,
+                            )
+                            .animate()
+                            .fadeIn(
+                              duration: TofuTokens.motionShort,
+                            )
+                            .slideX(
+                              begin: 0.06,
+                              end: 0,
+                              duration: TofuTokens.motionMedium,
+                              curve: Curves.easeOutCubic,
+                            ),
                   ),
           ),
         ],
@@ -573,17 +587,18 @@ class _LargeTicketCard extends StatelessWidget {
                   child: FittedBox(
                     child: Text(
                       order.ticketNumber.toString(),
-                      style: const TextStyle(
-                        fontFamily: TofuTokens.fontFamily,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 72,
-                        height: 80 / 72,
-                        letterSpacing: -1.44,
-                      ).copyWith(
-                        color: isCancelled
-                            ? TofuTokens.dangerText
-                            : TofuTokens.brandPrimary,
-                      ),
+                      style:
+                          const TextStyle(
+                            fontFamily: TofuTokens.fontFamily,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 72,
+                            height: 80 / 72,
+                            letterSpacing: -1.44,
+                          ).copyWith(
+                            color: isCancelled
+                                ? TofuTokens.dangerText
+                                : TofuTokens.brandPrimary,
+                          ),
                     ),
                   ),
                 ),
@@ -608,8 +623,7 @@ class _SmallTicketCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isCancelled = order.status == CallingStatus.cancelled;
     // Figma 76:105 — bgMuted / radiusLg / 48px textTertiary
-    final BorderRadius radius =
-        BorderRadius.circular(TofuTokens.radiusLg);
+    final BorderRadius radius = BorderRadius.circular(TofuTokens.radiusLg);
     return Material(
       color: isCancelled ? TofuTokens.dangerBg : TofuTokens.bgMuted,
       borderRadius: radius,
@@ -617,45 +631,45 @@ class _SmallTicketCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: radius,
         child: Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: TofuTokens.space7,
-        vertical: TofuTokens.space6,
-      ),
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: isCancelled
-              ? TofuTokens.dangerBorder
-              : TofuTokens.borderSubtle,
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Expanded(
-            child: Center(
-              child: FittedBox(
-                child: Text(
-                  order.ticketNumber.toString(),
-                  style: TofuTextStyles.displayS.copyWith(
-                    color: isCancelled
-                        ? TofuTokens.dangerText
-                        : TofuTokens.textTertiary,
-                    height: 56 / 48,
+          padding: const EdgeInsets.symmetric(
+            horizontal: TofuTokens.space7,
+            vertical: TofuTokens.space6,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: isCancelled
+                  ? TofuTokens.dangerBorder
+                  : TofuTokens.borderSubtle,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Expanded(
+                child: Center(
+                  child: FittedBox(
+                    child: Text(
+                      order.ticketNumber.toString(),
+                      style: TofuTextStyles.displayS.copyWith(
+                        color: isCancelled
+                            ? TofuTokens.dangerText
+                            : TofuTokens.textTertiary,
+                        height: 56 / 48,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+              if (isCancelled)
+                Text(
+                  '取消',
+                  style: TofuTextStyles.captionBold.copyWith(
+                    color: TofuTokens.dangerText,
+                  ),
+                ),
+            ],
           ),
-          if (isCancelled)
-            Text(
-              '取消',
-              style: TofuTextStyles.captionBold.copyWith(
-                color: TofuTokens.dangerText,
-              ),
-            ),
-        ],
-      ),
         ),
       ),
     );
@@ -684,83 +698,85 @@ class _FullScreenCallDialogState extends State<_FullScreenCallDialog> {
       canPop: true,
       onPopInvokedWithResult: (didPop, _) {},
       child: Dialog.fullscreen(
-      backgroundColor: TofuTokens.brandPrimary,
-      child: SafeArea(
-        child: Stack(
-          children: <Widget>[
-            // 上部寄せレイアウト
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                TofuTokens.space7,
-                TofuTokens.space11,
-                TofuTokens.space7,
-                TofuTokens.space7,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  Text(
-                    'お呼び出し',
-                    style: TofuTextStyles.h2.copyWith(
-                      color: TofuTokens.brandOnPrimary,
+        backgroundColor: TofuTokens.brandPrimary,
+        child: SafeArea(
+          child: Stack(
+            children: <Widget>[
+              // 上部寄せレイアウト
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  TofuTokens.space7,
+                  TofuTokens.space11,
+                  TofuTokens.space7,
+                  TofuTokens.space7,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    Text(
+                      'お呼び出し',
+                      style: TofuTextStyles.h2.copyWith(
+                        color: TofuTokens.brandOnPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: TofuTokens.space5),
-                  Text(
-                    '整理券',
-                    style: TofuTextStyles.h3.copyWith(
-                      color: TofuTokens.brandOnPrimary.withValues(alpha: 0.85),
+                    const SizedBox(height: TofuTokens.space5),
+                    Text(
+                      '整理券',
+                      style: TofuTextStyles.h3.copyWith(
+                        color: TofuTokens.brandOnPrimary.withValues(
+                          alpha: 0.85,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: TofuTokens.space4),
-                  // 整理券番号: 画面いっぱいの大型表示
-                  Text(
-                    widget.order.ticketNumber.toString(),
-                    style: const TextStyle(
-                      fontFamily: TofuTokens.fontFamily,
-                      fontSize: 320,
-                      height: 1,
-                      fontWeight: FontWeight.w700,
-                      color: TofuTokens.brandOnPrimary,
-                      letterSpacing: -8,
+                    const SizedBox(height: TofuTokens.space4),
+                    // 整理券番号: 画面いっぱいの大型表示
+                    Text(
+                      widget.order.ticketNumber.toString(),
+                      style: const TextStyle(
+                        fontFamily: TofuTokens.fontFamily,
+                        fontSize: 320,
+                        height: 1,
+                        fontWeight: FontWeight.w700,
+                        color: TofuTokens.brandOnPrimary,
+                        letterSpacing: -8,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: TofuTokens.space5),
-                  Text(
-                    'お受け取りください',
-                    style: TofuTextStyles.h3.copyWith(
-                      color: TofuTokens.brandOnPrimary,
+                    const SizedBox(height: TofuTokens.space5),
+                    Text(
+                      'お受け取りください',
+                      style: TofuTextStyles.h3.copyWith(
+                        color: TofuTokens.brandOnPrimary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            // 「呼び出し済み」ボタン: 押下時のみ markCalled する。
-            Positioned(
-              right: TofuTokens.space7,
-              bottom: TofuTokens.space7,
-              child: TofuButton(
-                label: '呼び出し済み',
-                icon: Icons.check_circle,
-                variant: TofuButtonVariant.primary,
-                onPressed: () => Navigator.of(context).pop(true),
+              // 「呼び出し済み」ボタン: 押下時のみ markCalled する。
+              Positioned(
+                right: TofuTokens.space7,
+                bottom: TofuTokens.space7,
+                child: TofuButton(
+                  label: '呼び出し済み',
+                  icon: Icons.check_circle,
+                  variant: TofuButtonVariant.primary,
+                  onPressed: () => Navigator.of(context).pop(true),
+                ),
               ),
-            ),
-            // 単に閉じるだけのサブボタン（誤操作のリカバリ用）。
-            Positioned(
-              left: TofuTokens.space7,
-              bottom: TofuTokens.space7,
-              child: TofuButton(
-                label: '閉じる',
-                icon: Icons.close,
-                variant: TofuButtonVariant.ghost,
-                onPressed: () => Navigator.of(context).pop(false),
+              // 単に閉じるだけのサブボタン（誤操作のリカバリ用）。
+              Positioned(
+                left: TofuTokens.space7,
+                bottom: TofuTokens.space7,
+                child: TofuButton(
+                  label: '閉じる',
+                  icon: Icons.close,
+                  variant: TofuButtonVariant.ghost,
+                  onPressed: () => Navigator.of(context).pop(false),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 }

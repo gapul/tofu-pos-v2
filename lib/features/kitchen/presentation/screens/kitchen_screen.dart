@@ -323,27 +323,30 @@ class _PendingPane extends StatelessWidget {
                       return GridView.builder(
                         padding: EdgeInsets.zero,
                         itemCount: orders.length,
-                        gridDelegate:
-                            SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: cols,
                           mainAxisSpacing: TofuTokens.space4,
                           crossAxisSpacing: TofuTokens.space4,
                           childAspectRatio: 280 / 220,
                         ),
-                        itemBuilder: (c, i) => _PendingCard(
-                          key: ValueKey<String>(
-                            'pending-card-${orders[i].orderId}',
-                          ),
-                          order: orders[i],
-                          onAction: () => onAction(orders[i].orderId),
-                        ).animate().fadeIn(
-                          duration: TofuTokens.motionShort,
-                        ).slideY(
-                          begin: 0.08,
-                          end: 0,
-                          duration: TofuTokens.motionMedium,
-                          curve: Curves.easeOutCubic,
-                        ),
+                        itemBuilder: (c, i) =>
+                            _PendingCard(
+                                  key: ValueKey<String>(
+                                    'pending-card-${orders[i].orderId}',
+                                  ),
+                                  order: orders[i],
+                                  onAction: () => onAction(orders[i].orderId),
+                                )
+                                .animate()
+                                .fadeIn(
+                                  duration: TofuTokens.motionShort,
+                                )
+                                .slideY(
+                                  begin: 0.08,
+                                  end: 0,
+                                  duration: TofuTokens.motionMedium,
+                                  curve: Curves.easeOutCubic,
+                                ),
                       );
                     },
                   ),
@@ -392,19 +395,23 @@ class _ServedPane extends StatelessWidget {
                     itemCount: orders.length,
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: TofuTokens.space3),
-                    itemBuilder: (c, i) => _ServedCard(
-                      key: ValueKey<String>(
-                        'served-card-${orders[i].orderId}',
-                      ),
-                      order: orders[i],
-                    ).animate().fadeIn(
-                      duration: TofuTokens.motionShort,
-                    ).slideX(
-                      begin: 0.06,
-                      end: 0,
-                      duration: TofuTokens.motionMedium,
-                      curve: Curves.easeOutCubic,
-                    ),
+                    itemBuilder: (c, i) =>
+                        _ServedCard(
+                              key: ValueKey<String>(
+                                'served-card-${orders[i].orderId}',
+                              ),
+                              order: orders[i],
+                            )
+                            .animate()
+                            .fadeIn(
+                              duration: TofuTokens.motionShort,
+                            )
+                            .slideX(
+                              begin: 0.06,
+                              end: 0,
+                              duration: TofuTokens.motionMedium,
+                              curve: Curves.easeOutCubic,
+                            ),
                   ),
           ),
         ],

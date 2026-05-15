@@ -40,10 +40,10 @@ class CartRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color fg =
-        enabled ? TofuTokens.textPrimary : TofuTokens.textDisabled;
-    final Color sub =
-        enabled ? TofuTokens.textTertiary : TofuTokens.textDisabled;
+    final Color fg = enabled ? TofuTokens.textPrimary : TofuTokens.textDisabled;
+    final Color sub = enabled
+        ? TofuTokens.textTertiary
+        : TofuTokens.textDisabled;
 
     return Padding(
       padding: const EdgeInsets.symmetric(

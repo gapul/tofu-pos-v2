@@ -37,7 +37,11 @@ class StartupPipeline {
       try {
         await step.run();
       } catch (e, st) {
-        AppLogger.w('Startup step "${step.name}" failed', error: e, stackTrace: st);
+        AppLogger.w(
+          'Startup step "${step.name}" failed',
+          error: e,
+          stackTrace: st,
+        );
         Telemetry.instance.error(
           'startup.step.failed',
           message: step.name,

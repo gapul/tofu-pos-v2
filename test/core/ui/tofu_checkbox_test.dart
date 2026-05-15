@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tofu_pos/core/ui/tofu_checkbox.dart';
 
 void main() {
-  Widget host(Widget child) => MaterialApp(home: Scaffold(body: Center(child: child)));
+  Widget host(Widget child) => MaterialApp(
+    home: Scaffold(body: Center(child: child)),
+  );
 
   testWidgets('value=false でタップ → true、value=true でチェック表示', (tester) async {
     bool? received;
@@ -22,7 +24,9 @@ void main() {
     expect(find.byIcon(Icons.check_rounded), findsOneWidget);
   });
 
-  testWidgets('disabled (onChanged=null) は GestureDetector を持たない', (tester) async {
+  testWidgets('disabled (onChanged=null) は GestureDetector を持たない', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       host(const TofuCheckbox(value: true, onChanged: null)),
     );

@@ -59,8 +59,11 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _saving = false);
-      TopSnack.show(context, '保存に失敗しました。もう一度お試しください。',
-          color: TofuTokens.dangerBgStrong);
+      TopSnack.show(
+        context,
+        '保存に失敗しました。もう一度お試しください。',
+        color: TofuTokens.dangerBgStrong,
+      );
       return;
     }
     if (!mounted) {
@@ -128,23 +131,27 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: <Widget>[
-                          for (int i = 0; i < _options.length; i++) ...<Widget>[
-                            if (i > 0)
-                              const SizedBox(width: TofuTokens.space7), // 24
-                            Expanded(
-                              child: _RoleCard(
-                                role: _options[i].role,
-                                icon: _options[i].icon,
-                                description: _options[i].description,
-                                selected: _selected == _options[i].role,
-                                onTap: _saving
-                                    ? null
-                                    : () => setState(
-                                        () => _selected = _options[i].role,
-                                      ),
+                            for (
+                              int i = 0;
+                              i < _options.length;
+                              i++
+                            ) ...<Widget>[
+                              if (i > 0)
+                                const SizedBox(width: TofuTokens.space7), // 24
+                              Expanded(
+                                child: _RoleCard(
+                                  role: _options[i].role,
+                                  icon: _options[i].icon,
+                                  description: _options[i].description,
+                                  selected: _selected == _options[i].role,
+                                  onTap: _saving
+                                      ? null
+                                      : () => setState(
+                                          () => _selected = _options[i].role,
+                                        ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
                           ],
                         ),
                       )

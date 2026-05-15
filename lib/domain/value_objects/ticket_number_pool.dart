@@ -56,7 +56,8 @@ class TicketNumberPool {
   Set<int> get inUseNumbers => Set<int>.unmodifiable(_inUse);
   List<int> get recentlyReleasedNumbers =>
       List<int>.unmodifiable(_recentlyReleased);
-  Map<int, int> get lastUsedAtSnapshot => Map<int, int>.unmodifiable(_lastUsedAt);
+  Map<int, int> get lastUsedAtSnapshot =>
+      Map<int, int>.unmodifiable(_lastUsedAt);
 
   /// 空き番号があるか。
   bool get hasAvailable => peekNext() != null;
@@ -85,7 +86,10 @@ class TicketNumberPool {
     }
     final int nowMs = (now ?? DateTime.now()).millisecondsSinceEpoch;
     final Set<int> newInUse = <int>{..._inUse, next.value};
-    final Map<int, int> newLastUsed = <int, int>{..._lastUsedAt, next.value: nowMs};
+    final Map<int, int> newLastUsed = <int, int>{
+      ..._lastUsedAt,
+      next.value: nowMs,
+    };
     return (
       pool: TicketNumberPool(
         maxNumber: maxNumber,

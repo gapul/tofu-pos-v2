@@ -14,7 +14,9 @@ import 'package:tofu_pos/providers/settings_providers.dart';
 /// 4 画面分（仕様書 §6.1 / §9.x）を計画していたが、フォントフォールバックや
 /// CI 環境差での flakiness リスクを避けるため RegiHome 1 枚から開始する。
 void main() {
-  testWidgets('RegiHomeScreen golden', tags: <String>['golden'], (tester) async {
+  testWidgets('RegiHomeScreen golden', tags: <String>['golden'], (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1024, 1400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);

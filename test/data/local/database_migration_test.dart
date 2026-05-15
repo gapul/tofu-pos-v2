@@ -22,8 +22,7 @@ void main() {
   test('新規 DB は onCreate で全テーブルを作成し、beforeOpen で foreign_keys が ON', () async {
     final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
     // クエリが通れば onCreate と beforeOpen が動いている。
-    final List<dynamic> products =
-        await db.select(db.products).get();
+    final List<dynamic> products = await db.select(db.products).get();
     expect(products, isEmpty);
 
     // foreign_keys が有効化されているか PRAGMA で確認。
@@ -54,7 +53,9 @@ void main() {
       addTearDown(db.close);
       await db.customStatement('PRAGMA foreign_keys = ON');
 
-      await db.into(db.kitchenOrders).insert(
+      await db
+          .into(db.kitchenOrders)
+          .insert(
             KitchenOrdersCompanion.insert(
               orderId: const Value(999),
               ticketNumber: 1,
@@ -71,7 +72,9 @@ void main() {
       addTearDown(db.close);
       await db.customStatement('PRAGMA foreign_keys = ON');
 
-      await db.into(db.callingOrders).insert(
+      await db
+          .into(db.callingOrders)
+          .insert(
             CallingOrdersCompanion.insert(
               orderId: const Value(999),
               ticketNumber: 1,

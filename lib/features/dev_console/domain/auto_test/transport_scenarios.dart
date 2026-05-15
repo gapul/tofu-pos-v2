@@ -280,26 +280,26 @@ Future<ScenarioResult> _runPeerKitchenEcho30s(ScenarioContext ctx) async {
   int echoed = 0;
   Object? sendError;
 
-  final StreamSubscription<TransportEvent> sub = ctx.transport!
-      .events()
-      .listen((ev) async {
-        if (ev is! OrderSubmittedEvent) return;
-        if (ev.shopId != ctx.shopId) return;
-        try {
-          await ctx.transport!.send(
-            OrderServedEvent(
-              shopId: ev.shopId,
-              eventId: _uuid.v4(),
-              occurredAt: DateTime.now().toUtc(),
-              orderId: ev.orderId,
-              ticketNumber: ev.ticketNumber,
-            ),
-          );
-          echoed++;
-        } catch (e) {
-          sendError = e;
-        }
-      });
+  final StreamSubscription<TransportEvent> sub = ctx.transport!.events().listen(
+    (ev) async {
+      if (ev is! OrderSubmittedEvent) return;
+      if (ev.shopId != ctx.shopId) return;
+      try {
+        await ctx.transport!.send(
+          OrderServedEvent(
+            shopId: ev.shopId,
+            eventId: _uuid.v4(),
+            occurredAt: DateTime.now().toUtc(),
+            orderId: ev.orderId,
+            ticketNumber: ev.ticketNumber,
+          ),
+        );
+        echoed++;
+      } catch (e) {
+        sendError = e;
+      }
+    },
+  );
 
   await Future<void>.delayed(window);
   await sub.cancel();
@@ -337,9 +337,7 @@ Future<ScenarioResult> _runPeerRegisterRoundtrip(ScenarioContext ctx) async {
   // 受信側を先に張る。
   final Map<int, Completer<void>> waiters = <int, Completer<void>>{};
   Object? streamError;
-  final StreamSubscription<TransportEvent> sub = ctx.transport!
-      .events()
-      .listen(
+  final StreamSubscription<TransportEvent> sub = ctx.transport!.events().listen(
     (ev) {
       if (ev is OrderServedEvent && ev.shopId == ctx.shopId) {
         final Completer<void>? c = waiters[ev.orderId];
@@ -358,7 +356,8 @@ Future<ScenarioResult> _runPeerRegisterRoundtrip(ScenarioContext ctx) async {
   try {
     for (int i = 0; i < count; i++) {
       // orderId は端末固有・かつ pos/neg 識別できればよいので大きめの負値を採用。
-      final int orderId = -1000 - DateTime.now().microsecondsSinceEpoch % 100000 - i;
+      final int orderId =
+          -1000 - DateTime.now().microsecondsSinceEpoch % 100000 - i;
       orderIds.add(orderId);
       waiters[orderId] = Completer<void>();
       try {

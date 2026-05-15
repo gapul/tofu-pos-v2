@@ -100,7 +100,7 @@ class _TofuNumStepperState extends State<TofuNumStepper> {
   }
 
   ({double height, TextStyle valueStyle, double iconSize, double minTextWidth})
-      _metrics() {
+  _metrics() {
     switch (widget.size) {
       case TofuNumStepperSize.sm:
         return (
@@ -133,11 +133,13 @@ class _TofuNumStepperState extends State<TofuNumStepper> {
       TextStyle valueStyle,
       double iconSize,
       double minTextWidth,
-    }) m = _metrics();
+    })
+    m = _metrics();
     final String shown =
         widget.formatter?.call(widget.value) ?? widget.value.toString();
-    final String text =
-        widget.suffix == null ? shown : '$shown${widget.suffix}';
+    final String text = widget.suffix == null
+        ? shown
+        : '$shown${widget.suffix}';
     final bool canDec = widget.enabled && widget.value > widget.min;
     final bool canInc = widget.enabled && widget.value < widget.max;
 
@@ -243,10 +245,12 @@ class _StepBtn extends StatelessWidget {
             topRight: Radius.circular(TofuTokens.radiusMd),
             bottomRight: Radius.circular(TofuTokens.radiusMd),
           );
-    final Color bg =
-        enabled ? TofuTokens.brandPrimarySubtle : TofuTokens.bgMuted;
-    final Color fg =
-        enabled ? TofuTokens.brandPrimary : TofuTokens.textDisabled;
+    final Color bg = enabled
+        ? TofuTokens.brandPrimarySubtle
+        : TofuTokens.bgMuted;
+    final Color fg = enabled
+        ? TofuTokens.brandPrimary
+        : TofuTokens.textDisabled;
     return Material(
       color: bg,
       borderRadius: radius,

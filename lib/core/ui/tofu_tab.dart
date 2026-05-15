@@ -28,14 +28,16 @@ class TofuTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color fg =
-        active ? TofuTokens.brandPrimary : TofuTokens.textSecondary;
-    final Color underline =
-        active ? TofuTokens.brandPrimary : Colors.transparent;
-    final TextStyle textStyle = (active
-            ? TofuTextStyles.bodyMdBold
-            : TofuTextStyles.bodyMd)
-        .copyWith(color: fg);
+    final Color fg = active
+        ? TofuTokens.brandPrimary
+        : TofuTokens.textSecondary;
+    final Color underline = active
+        ? TofuTokens.brandPrimary
+        : Colors.transparent;
+    final TextStyle textStyle =
+        (active ? TofuTextStyles.bodyMdBold : TofuTextStyles.bodyMd).copyWith(
+          color: fg,
+        );
     final bool hasBadge = badgeCount != null && badgeCount! > 0;
 
     return Material(
@@ -73,8 +75,7 @@ class TofuTab extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: TofuTokens.brandPrimary,
-                    borderRadius:
-                        BorderRadius.circular(TofuTokens.radiusFull),
+                    borderRadius: BorderRadius.circular(TofuTokens.radiusFull),
                   ),
                   constraints: const BoxConstraints(minWidth: 20),
                   child: Text(

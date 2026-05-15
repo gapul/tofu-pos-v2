@@ -23,10 +23,9 @@ class DriftKitchenOrderRepository implements KitchenOrderRepository {
 
   @override
   Future<KitchenOrder?> findByOrderId(int orderId) async {
-    final KitchenOrderRow? row =
-        await (_db.select(_db.kitchenOrders)
-              ..where((t) => t.orderId.equals(orderId)))
-            .getSingleOrNull();
+    final KitchenOrderRow? row = await (_db.select(
+      _db.kitchenOrders,
+    )..where((t) => t.orderId.equals(orderId))).getSingleOrNull();
     return row == null ? null : _toEntity(row);
   }
 

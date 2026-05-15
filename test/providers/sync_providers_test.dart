@@ -21,18 +21,20 @@ class _FrozenClock extends Clock {
 
 void main() {
   group('sync_providers separation', () {
-    test('realtimeOrderLineEventsProvider == rawRealtimeOrderLineEventsProvider',
-        () {
-      // 旧 API は新 raw Provider と同一インスタンスのエイリアス。
-      // 既存の参照を壊さない（B 監査の互換性確認）。
-      expect(
-        identical(
-          realtimeOrderLineEventsProvider,
-          rawRealtimeOrderLineEventsProvider,
-        ),
-        isTrue,
-      );
-    });
+    test(
+      'realtimeOrderLineEventsProvider == rawRealtimeOrderLineEventsProvider',
+      () {
+        // 旧 API は新 raw Provider と同一インスタンスのエイリアス。
+        // 既存の参照を壊さない（B 監査の互換性確認）。
+        expect(
+          identical(
+            realtimeOrderLineEventsProvider,
+            rawRealtimeOrderLineEventsProvider,
+          ),
+          isTrue,
+        );
+      },
+    );
   });
 
   group('evaluateSyncWarningNow', () {

@@ -278,15 +278,19 @@ void main() {
       await ctx.db.close();
     });
 
-    test('peer_register.roundtrip_3 fails when no peer responds', () async {
-      final FakeTransport t = FakeTransport();
-      final ctx = await _buildCtx(transport: t, shopId: 'shop_a');
-      final r = await _byId('transport.peer_register.roundtrip_3').run(ctx);
-      expect(r.passed, isFalse);
-      expect(r.skipped, isFalse);
-      expect(r.message, contains('missing'));
-      await ctx.db.close();
-    }, timeout: const Timeout(Duration(seconds: 30)));
+    test(
+      'peer_register.roundtrip_3 fails when no peer responds',
+      () async {
+        final FakeTransport t = FakeTransport();
+        final ctx = await _buildCtx(transport: t, shopId: 'shop_a');
+        final r = await _byId('transport.peer_register.roundtrip_3').run(ctx);
+        expect(r.passed, isFalse);
+        expect(r.skipped, isFalse);
+        expect(r.message, contains('missing'));
+        await ctx.db.close();
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+    );
   });
 }
 

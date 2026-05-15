@@ -50,7 +50,8 @@ class MoneyDenomRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String? subtotal = subtotalText ??
+    final String? subtotal =
+        subtotalText ??
         (unitValue == null ? null : _formatYen(unitValue! * count));
 
     return Container(

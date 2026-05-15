@@ -107,8 +107,10 @@ class _TofuButtonState extends State<TofuButton>
       vsync: this,
       duration: const Duration(milliseconds: 100),
     );
-    _scale = Tween<double>(begin: 1, end: 0.97)
-        .animate(CurvedAnimation(parent: _pressCtrl, curve: Curves.easeOut));
+    _scale = Tween<double>(
+      begin: 1,
+      end: 0.97,
+    ).animate(CurvedAnimation(parent: _pressCtrl, curve: Curves.easeOut));
   }
 
   @override
@@ -209,8 +211,7 @@ class _TofuButtonState extends State<TofuButton>
     final bool isDisabled = handler == null;
     final Color effectiveBg = isDisabled ? disabledBg : bg;
     final Color effectiveFg = isDisabled ? disabledFg : fg;
-    final TextStyle effectiveTextStyle =
-        textStyle.copyWith(color: effectiveFg);
+    final TextStyle effectiveTextStyle = textStyle.copyWith(color: effectiveFg);
 
     final ButtonStyle style = ButtonStyle(
       minimumSize: WidgetStatePropertyAll<Size>(Size(0, minHeight)),
@@ -233,9 +234,7 @@ class _TofuButtonState extends State<TofuButton>
       shape: WidgetStatePropertyAll<OutlinedBorder>(
         RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radius),
-          side: border != null
-              ? BorderSide(color: border)
-              : BorderSide.none,
+          side: border != null ? BorderSide(color: border) : BorderSide.none,
         ),
       ),
       elevation: const WidgetStatePropertyAll<double>(0),

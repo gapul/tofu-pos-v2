@@ -41,12 +41,15 @@ class CallerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool called = state == CallerCardState.called;
-    final Color bg =
-        called ? TofuTokens.brandPrimarySubtleStrong : TofuTokens.bgSurface;
-    final Color border =
-        called ? TofuTokens.brandPrimary : TofuTokens.borderSubtle;
-    final double borderWidth =
-        called ? TofuTokens.strokeThick : TofuTokens.strokeHairline;
+    final Color bg = called
+        ? TofuTokens.brandPrimarySubtleStrong
+        : TofuTokens.bgSurface;
+    final Color border = called
+        ? TofuTokens.brandPrimary
+        : TofuTokens.borderSubtle;
+    final double borderWidth = called
+        ? TofuTokens.strokeThick
+        : TofuTokens.strokeHairline;
 
     return Container(
       padding: const EdgeInsets.all(TofuTokens.space5),
@@ -93,8 +96,9 @@ class CallerCard extends StatelessWidget {
               style: TofuTextStyles.bodyMd,
             ),
           ],
-          if (onCall != null || onComplete != null || onCancel != null) ...<
-              Widget>[
+          if (onCall != null ||
+              onComplete != null ||
+              onCancel != null) ...<Widget>[
             const SizedBox(height: TofuTokens.space4),
             Row(
               children: <Widget>[

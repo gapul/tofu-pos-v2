@@ -66,17 +66,20 @@ class CartPanel extends StatelessWidget {
                     itemBuilder: (c, i) {
                       final OrderItem it = session.items[i];
                       return _CartRow(
-                        key: ValueKey<String>('cart-row-${it.productId}'),
-                        item: it,
-                        highlighted: recentlyChangedId == it.productId,
-                      ).animate().fadeIn(
-                        duration: TofuTokens.motionShort,
-                      ).slideX(
-                        begin: 0.08,
-                        end: 0,
-                        duration: TofuTokens.motionMedium,
-                        curve: Curves.easeOutCubic,
-                      );
+                            key: ValueKey<String>('cart-row-${it.productId}'),
+                            item: it,
+                            highlighted: recentlyChangedId == it.productId,
+                          )
+                          .animate()
+                          .fadeIn(
+                            duration: TofuTokens.motionShort,
+                          )
+                          .slideX(
+                            begin: 0.08,
+                            end: 0,
+                            duration: TofuTokens.motionMedium,
+                            curve: Curves.easeOutCubic,
+                          );
                     },
                   )
                 : const _EmptyCart(),

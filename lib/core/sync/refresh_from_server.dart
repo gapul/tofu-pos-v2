@@ -13,10 +13,12 @@ import 'device_events_backfill.dart';
 /// IngestRouter に流す。取り込みは upsert で冪等。
 class RefreshFromServer {
   static Future<int> kitchen(WidgetRef ref) async {
-    final DeviceEventsBackfill? b =
-        await ref.read(deviceEventsBackfillProvider.future);
-    final KitchenIngestRouter? r =
-        await ref.read(kitchenIngestRouterProvider.future);
+    final DeviceEventsBackfill? b = await ref.read(
+      deviceEventsBackfillProvider.future,
+    );
+    final KitchenIngestRouter? r = await ref.read(
+      kitchenIngestRouterProvider.future,
+    );
     if (b == null || r == null) {
       AppLogger.i('RefreshFromServer.kitchen: skipped (offline or not ready)');
       return 0;
@@ -25,10 +27,12 @@ class RefreshFromServer {
   }
 
   static Future<int> calling(WidgetRef ref) async {
-    final DeviceEventsBackfill? b =
-        await ref.read(deviceEventsBackfillProvider.future);
-    final CallingIngestRouter? r =
-        await ref.read(callingIngestRouterProvider.future);
+    final DeviceEventsBackfill? b = await ref.read(
+      deviceEventsBackfillProvider.future,
+    );
+    final CallingIngestRouter? r = await ref.read(
+      callingIngestRouterProvider.future,
+    );
     if (b == null || r == null) {
       AppLogger.i('RefreshFromServer.calling: skipped (offline or not ready)');
       return 0;

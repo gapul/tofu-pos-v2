@@ -101,7 +101,8 @@ class _ShopIdScreenState extends ConsumerState<ShopIdScreen> {
 
             // Figma: portrait itemSpacing=24, landscape itemSpacing=32
             final double sectionGap = isWide
-                ? TofuTokens.space8 // 32
+                ? TofuTokens
+                      .space8 // 32
                 : TofuTokens.space7; // 24
 
             return SingleChildScrollView(

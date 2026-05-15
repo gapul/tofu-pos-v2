@@ -26,7 +26,10 @@ void main() {
         ),
       ],
       child: MaterialApp(
-        home: Scaffold(appBar: header as PreferredSizeWidget, body: const SizedBox()),
+        home: Scaffold(
+          appBar: header as PreferredSizeWidget,
+          body: const SizedBox(),
+        ),
       ),
     );
   }

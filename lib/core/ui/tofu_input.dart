@@ -64,8 +64,13 @@ class TofuInput extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool hasError = errorText != null && errorText!.isNotEmpty;
 
-    final ({EdgeInsets padding, double radius, TextStyle textStyle, double minHeight}) m =
-        switch (size) {
+    final ({
+      EdgeInsets padding,
+      double radius,
+      TextStyle textStyle,
+      double minHeight,
+    })
+    m = switch (size) {
       TofuInputSize.md => (
         padding: const EdgeInsets.symmetric(
           horizontal: TofuTokens.space5,
@@ -86,10 +91,11 @@ class TofuInput extends StatelessWidget {
       ),
     };
 
-    OutlineInputBorder buildBorder(Color color, double width) => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(m.radius),
-      borderSide: BorderSide(color: color, width: width),
-    );
+    OutlineInputBorder buildBorder(Color color, double width) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(m.radius),
+          borderSide: BorderSide(color: color, width: width),
+        );
 
     final InputDecoration decoration = InputDecoration(
       isDense: true,
@@ -101,7 +107,9 @@ class TofuInput extends StatelessWidget {
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       errorText: hasError ? errorText : null,
-      errorStyle: TofuTextStyles.captionBold.copyWith(color: TofuTokens.dangerText),
+      errorStyle: TofuTextStyles.captionBold.copyWith(
+        color: TofuTokens.dangerText,
+      ),
       enabledBorder: buildBorder(
         hasError ? TofuTokens.dangerBorder : TofuTokens.borderDefault,
         hasError ? TofuTokens.strokeThick : TofuTokens.strokeHairline,
@@ -110,9 +118,15 @@ class TofuInput extends StatelessWidget {
         hasError ? TofuTokens.dangerBorder : TofuTokens.borderFocus,
         TofuTokens.strokeThick,
       ),
-      disabledBorder: buildBorder(TofuTokens.borderSubtle, TofuTokens.strokeHairline),
+      disabledBorder: buildBorder(
+        TofuTokens.borderSubtle,
+        TofuTokens.strokeHairline,
+      ),
       errorBorder: buildBorder(TofuTokens.dangerBorder, TofuTokens.strokeThick),
-      focusedErrorBorder: buildBorder(TofuTokens.dangerBorder, TofuTokens.strokeThick),
+      focusedErrorBorder: buildBorder(
+        TofuTokens.dangerBorder,
+        TofuTokens.strokeThick,
+      ),
     );
 
     return ConstrainedBox(

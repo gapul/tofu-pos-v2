@@ -72,9 +72,9 @@ class DriftProductRepository implements ProductRepository {
 
   @override
   Future<void> markDeleted(String id) async {
-    await (_db.update(_db.products)
-          ..where((t) => t.id.equals(id)))
-        .write(const ProductsCompanion(isDeleted: Value<bool>(true)));
+    await (_db.update(_db.products)..where((t) => t.id.equals(id))).write(
+      const ProductsCompanion(isDeleted: Value<bool>(true)),
+    );
   }
 
   @override
@@ -90,8 +90,7 @@ class DriftProductRepository implements ProductRepository {
       if (next < 0) {
         throw StateError('Stock would go negative: $productId ($next)');
       }
-      await (_db.update(_db.products)
-            ..where((t) => t.id.equals(productId)))
+      await (_db.update(_db.products)..where((t) => t.id.equals(productId)))
           .write(ProductsCompanion(stock: Value<int>(next)));
     });
   }
@@ -107,8 +106,7 @@ class DriftProductRepository implements ProductRepository {
       final List<ProductRow> existing = await _db.select(_db.products).get();
       for (final ProductRow row in existing) {
         if (!incomingIds.contains(row.id) && !row.isDeleted) {
-          await (_db.update(_db.products)
-                ..where((t) => t.id.equals(row.id)))
+          await (_db.update(_db.products)..where((t) => t.id.equals(row.id)))
               .write(const ProductsCompanion(isDeleted: Value<bool>(true)));
         }
       }

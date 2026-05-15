@@ -26,15 +26,16 @@ void main() {
         final SharedPrefsTicketPoolRepository poolRepo =
             SharedPrefsTicketPoolRepository(prefs, defaultMaxNumber: 200);
 
-        final InMemoryProductRepository productRepo =
-            InMemoryProductRepository(<Product>[
-          const Product(
-            id: 'p1',
-            name: 'Yakisoba',
-            price: Money(400),
-            stock: 1000,
-          ),
-        ]);
+        final InMemoryProductRepository productRepo = InMemoryProductRepository(
+          <Product>[
+            const Product(
+              id: 'p1',
+              name: 'Yakisoba',
+              price: Money(400),
+              stock: 1000,
+            ),
+          ],
+        );
         final InMemoryOrderRepository orderRepo = InMemoryOrderRepository();
         final InMemoryCashDrawerRepository cashRepo =
             InMemoryCashDrawerRepository();
@@ -66,12 +67,14 @@ void main() {
         final List<Order> orders = await Future.wait(futures);
 
         expect(orders.length, 50);
-        final Set<int> tickets =
-            orders.map((o) => o.ticketNumber.value).toSet();
+        final Set<int> tickets = orders
+            .map((o) => o.ticketNumber.value)
+            .toSet();
         expect(
           tickets.length,
           50,
-          reason: '並行 checkout で整理券番号が重複している: '
+          reason:
+              '並行 checkout で整理券番号が重複している: '
               '${orders.map((o) => o.ticketNumber.value).toList()}',
         );
       },

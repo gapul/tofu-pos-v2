@@ -86,8 +86,7 @@ class _CashCloseScreenState extends ConsumerState<CashCloseScreen> {
       if (!mounted) {
         return;
       }
-      TopSnack.show(context, 'エクスポートに失敗: $e',
-          color: TofuTokens.dangerBgStrong);
+      TopSnack.show(context, 'エクスポートに失敗: $e', color: TofuTokens.dangerBgStrong);
     } finally {
       if (mounted) {
         setState(() => _csvBusy = false);
@@ -124,62 +123,65 @@ class _CashCloseScreenState extends ConsumerState<CashCloseScreen> {
             const PageTitle(title: 'レジ締め'),
             Expanded(
               child: FutureBuilder<DailySummary>(
-          future: _summaryFuture,
-          builder: (c, snap) {
-            if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final DailySummary s = snap.data!;
-            return LayoutBuilder(
-              builder: (c, constraints) {
-                final bool wide = constraints.maxWidth >= 720;
-                final Widget left = _SummaryPane(
-                  summary: s,
-                  csvBusy: _csvBusy,
-                  onCsv: _exportCsv,
-                );
-                final Widget? right = flags.cashManagement
-                    ? _CashReconcilePane(
-                        theoretical: s.theoreticalDrawer ?? CashDrawer.empty(),
-                        actualCounts: _actualCounts,
-                        onChanged: (yen, count) {
-                          setState(() {
-                            _actualCounts = Map<int, int>.from(_actualCounts)
-                              ..[yen] = count;
-                          });
-                        },
-                        difference: ref
-                            .read(cashCloseUseCaseProvider)
-                            .computeDifference(
+                future: _summaryFuture,
+                builder: (c, snap) {
+                  if (!snap.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final DailySummary s = snap.data!;
+                  return LayoutBuilder(
+                    builder: (c, constraints) {
+                      final bool wide = constraints.maxWidth >= 720;
+                      final Widget left = _SummaryPane(
+                        summary: s,
+                        csvBusy: _csvBusy,
+                        onCsv: _exportCsv,
+                      );
+                      final Widget? right = flags.cashManagement
+                          ? _CashReconcilePane(
                               theoretical:
                                   s.theoreticalDrawer ?? CashDrawer.empty(),
-                              actual: _actualDrawer(),
-                            ),
-                      )
-                    : null;
+                              actualCounts: _actualCounts,
+                              onChanged: (yen, count) {
+                                setState(() {
+                                  _actualCounts = Map<int, int>.from(
+                                    _actualCounts,
+                                  )..[yen] = count;
+                                });
+                              },
+                              difference: ref
+                                  .read(cashCloseUseCaseProvider)
+                                  .computeDifference(
+                                    theoretical:
+                                        s.theoreticalDrawer ??
+                                        CashDrawer.empty(),
+                                    actual: _actualDrawer(),
+                                  ),
+                            )
+                          : null;
 
-                if (wide && right != null) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Expanded(flex: 5, child: left),
-                      Expanded(flex: 6, child: right),
-                    ],
+                      if (wide && right != null) {
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            Expanded(flex: 5, child: left),
+                            Expanded(flex: 6, child: right),
+                          ],
+                        );
+                      }
+                      return ListView(
+                        padding: const EdgeInsets.all(TofuTokens.space5),
+                        children: <Widget>[
+                          left,
+                          if (right != null) ...<Widget>[
+                            const SizedBox(height: TofuTokens.space7),
+                            right,
+                          ],
+                        ],
+                      );
+                    },
                   );
-                }
-                return ListView(
-                  padding: const EdgeInsets.all(TofuTokens.space5),
-                  children: <Widget>[
-                    left,
-                    if (right != null) ...<Widget>[
-                      const SizedBox(height: TofuTokens.space7),
-                      right,
-                    ],
-                  ],
-                );
-              },
-            );
-          },
+                },
               ),
             ),
           ],
@@ -396,10 +398,16 @@ class _ReconcileHeader extends StatelessWidget {
       child: Row(
         children: <Widget>[
           SizedBox(width: 88, child: Text('金種', style: s)),
-          SizedBox(width: 72, child: Text('理論値', style: s, textAlign: TextAlign.right)),
+          SizedBox(
+            width: 72,
+            child: Text('理論値', style: s, textAlign: TextAlign.right),
+          ),
           const SizedBox(width: TofuTokens.space4),
           Expanded(child: Text('実測値', style: s)),
-          SizedBox(width: 64, child: Text('差', style: s, textAlign: TextAlign.right)),
+          SizedBox(
+            width: 64,
+            child: Text('差', style: s, textAlign: TextAlign.right),
+          ),
         ],
       ),
     );
@@ -424,10 +432,9 @@ class _ReconcileRow extends StatelessWidget {
     final Color diffColor = diff == 0
         ? TofuTokens.textTertiary
         : diff < 0
-            ? TofuTokens.dangerText
-            : TofuTokens.warningText;
-    final String diffText =
-        diff == 0 ? '—' : (diff > 0 ? '+$diff' : '$diff');
+        ? TofuTokens.dangerText
+        : TofuTokens.warningText;
+    final String diffText = diff == 0 ? '—' : (diff > 0 ? '+$diff' : '$diff');
 
     return Container(
       padding: const EdgeInsets.symmetric(

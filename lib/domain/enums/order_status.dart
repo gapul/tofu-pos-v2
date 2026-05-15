@@ -19,7 +19,8 @@ enum OrderStatus {
   served,
 
   /// 取消済
-  cancelled;
+  cancelled
+  ;
 
   bool get isTerminal =>
       this == OrderStatus.served || this == OrderStatus.cancelled;

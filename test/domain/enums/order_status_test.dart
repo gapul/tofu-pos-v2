@@ -30,13 +30,22 @@ void main() {
     test('終端 served はどこへも行けない', () {
       expect(OrderStatus.served.canTransitionTo(OrderStatus.unsent), isFalse);
       expect(OrderStatus.served.canTransitionTo(OrderStatus.sent), isFalse);
-      expect(OrderStatus.served.canTransitionTo(OrderStatus.cancelled), isFalse);
+      expect(
+        OrderStatus.served.canTransitionTo(OrderStatus.cancelled),
+        isFalse,
+      );
     });
 
     test('終端 cancelled はどこへも行けない', () {
-      expect(OrderStatus.cancelled.canTransitionTo(OrderStatus.unsent), isFalse);
+      expect(
+        OrderStatus.cancelled.canTransitionTo(OrderStatus.unsent),
+        isFalse,
+      );
       expect(OrderStatus.cancelled.canTransitionTo(OrderStatus.sent), isFalse);
-      expect(OrderStatus.cancelled.canTransitionTo(OrderStatus.served), isFalse);
+      expect(
+        OrderStatus.cancelled.canTransitionTo(OrderStatus.served),
+        isFalse,
+      );
     });
 
     test('同一状態への遷移は no-op として許可', () {

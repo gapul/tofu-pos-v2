@@ -173,10 +173,10 @@ class SyncService {
     // 検出後は legacy を削除する。
     String? legacyConsumedKey;
     if (started == null && completed == null) {
-      final String? legacyStarted =
-          prefs.getString(_kLegacyLastStartedToken);
-      final String? legacyCompleted =
-          prefs.getString(_kLegacyLastCompletedToken);
+      final String? legacyStarted = prefs.getString(_kLegacyLastStartedToken);
+      final String? legacyCompleted = prefs.getString(
+        _kLegacyLastCompletedToken,
+      );
       if (legacyStarted != null || legacyCompleted != null) {
         started = legacyStarted;
         completed = legacyCompleted;
@@ -235,7 +235,8 @@ class SyncService {
     final Object myToken = Object();
     _runToken = myToken;
     // 開始トークンを永続化（成功で同じ値が completed に書かれる）。
-    final String tokenId = '${_clock.now().microsecondsSinceEpoch}'
+    final String tokenId =
+        '${_clock.now().microsecondsSinceEpoch}'
         '_${identityHashCode(myToken)}';
     final String startedKey = await _lastStartedTokenKey();
     unawaited(_writeToken(startedKey, tokenId));
@@ -258,7 +259,9 @@ class SyncService {
           AppLogger.event(
             'sync',
             'orphan_break',
-            fields: <String, Object?>{'pending': unsynced.length - success - failure},
+            fields: <String, Object?>{
+              'pending': unsynced.length - success - failure,
+            },
             level: AppLogLevel.debug,
           );
           break;

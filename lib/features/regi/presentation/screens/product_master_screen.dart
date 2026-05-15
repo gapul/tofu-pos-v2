@@ -44,19 +44,19 @@ class _ProductMasterScreenState extends ConsumerState<ProductMasterScreen> {
   bool _newDraft = false;
 
   void _startEdit(Product p) => setState(() {
-        _editing = p;
-        _newDraft = false;
-      });
+    _editing = p;
+    _newDraft = false;
+  });
 
   void _startNew() => setState(() {
-        _editing = null;
-        _newDraft = true;
-      });
+    _editing = null;
+    _newDraft = true;
+  });
 
   void _cancelEdit() => setState(() {
-        _editing = null;
-        _newDraft = false;
-      });
+    _editing = null;
+    _newDraft = false;
+  });
 
   Future<void> _save(Product saved) async {
     await ref.read(productRepositoryProvider).upsert(saved);
@@ -107,63 +107,63 @@ class _ProductMasterScreenState extends ConsumerState<ProductMasterScreen> {
             const PageTitle(title: '商品マスタ'),
             Expanded(
               child: products.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(
-            child: StatusIndicator.custom(
-              label: '$e',
-              icon: Icons.error_outline,
-              tone: StatusIndicatorTone.danger,
-            ),
-          ),
-          data: (list) {
-            return LayoutBuilder(
-              builder: (c, constraints) {
-                final bool wide = constraints.maxWidth >= 720;
-                final Widget listPane = _ListPane(
-                  products: list,
-                  selectedId: _editing?.id,
-                  stockEnabled: flags.stockManagement,
-                  onEdit: _startEdit,
-                  onDelete: _delete,
-                  onNew: _startNew,
-                );
-
-                if (!wide || !editorOpen) {
-                  // narrow: full-width list. 編集はモーダルで対応。
-                  return _SingleColumn(
-                    list: listPane,
-                    editor: editorOpen
-                        ? _EditorPane(
-                            key: ValueKey(_editing?.id ?? '__new__'),
-                            existing: _editing,
-                            stockEnabled: flags.stockManagement,
-                            onSave: _save,
-                            onCancel: _cancelEdit,
-                          )
-                        : null,
-                  );
-                }
-
-                // landscape + editor 開: 左右 2 ペイン。
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Expanded(flex: 6, child: listPane),
-                    Expanded(
-                      flex: 5,
-                      child: _EditorPane(
-                        key: ValueKey(_editing?.id ?? '__new__'),
-                        existing: _editing,
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(
+                  child: StatusIndicator.custom(
+                    label: '$e',
+                    icon: Icons.error_outline,
+                    tone: StatusIndicatorTone.danger,
+                  ),
+                ),
+                data: (list) {
+                  return LayoutBuilder(
+                    builder: (c, constraints) {
+                      final bool wide = constraints.maxWidth >= 720;
+                      final Widget listPane = _ListPane(
+                        products: list,
+                        selectedId: _editing?.id,
                         stockEnabled: flags.stockManagement,
-                        onSave: _save,
-                        onCancel: _cancelEdit,
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
+                        onEdit: _startEdit,
+                        onDelete: _delete,
+                        onNew: _startNew,
+                      );
+
+                      if (!wide || !editorOpen) {
+                        // narrow: full-width list. 編集はモーダルで対応。
+                        return _SingleColumn(
+                          list: listPane,
+                          editor: editorOpen
+                              ? _EditorPane(
+                                  key: ValueKey(_editing?.id ?? '__new__'),
+                                  existing: _editing,
+                                  stockEnabled: flags.stockManagement,
+                                  onSave: _save,
+                                  onCancel: _cancelEdit,
+                                )
+                              : null,
+                        );
+                      }
+
+                      // landscape + editor 開: 左右 2 ペイン。
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          Expanded(flex: 6, child: listPane),
+                          Expanded(
+                            flex: 5,
+                            child: _EditorPane(
+                              key: ValueKey(_editing?.id ?? '__new__'),
+                              existing: _editing,
+                              stockEnabled: flags.stockManagement,
+                              onSave: _save,
+                              onCancel: _cancelEdit,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ],
@@ -322,11 +322,20 @@ class _ColumnHeader extends StatelessWidget {
           SizedBox(width: 40, child: Text('色', style: s)),
           const SizedBox(width: TofuTokens.space3),
           Expanded(child: Text('商品名', style: s)),
-          SizedBox(width: 80, child: Text('価格', style: s, textAlign: TextAlign.right)),
+          SizedBox(
+            width: 80,
+            child: Text('価格', style: s, textAlign: TextAlign.right),
+          ),
           if (stockEnabled)
-            SizedBox(width: 64, child: Text('在庫', style: s, textAlign: TextAlign.right)),
+            SizedBox(
+              width: 64,
+              child: Text('在庫', style: s, textAlign: TextAlign.right),
+            ),
           const SizedBox(width: TofuTokens.space5),
-          SizedBox(width: 144, child: Text('操作', style: s, textAlign: TextAlign.right)),
+          SizedBox(
+            width: 144,
+            child: Text('操作', style: s, textAlign: TextAlign.right),
+          ),
         ],
       ),
     );
@@ -537,8 +546,7 @@ class _EditorPaneState extends State<_EditorPane> {
                   step: 10,
                   max: 1000000,
                   suffix: '円',
-                  formatter: (v) =>
-                      TofuFormat.yenInt(v).replaceAll('円', ''),
+                  formatter: (v) => TofuFormat.yenInt(v).replaceAll('円', ''),
                 ),
               ),
               if (widget.stockEnabled) ...<Widget>[

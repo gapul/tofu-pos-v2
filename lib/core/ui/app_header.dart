@@ -154,7 +154,10 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
                 ),
               if (rightSide.isNotEmpty) ...<Widget>[
                 const SizedBox(width: TofuTokens.space5),
-                ..._interleave(rightSide, const SizedBox(width: TofuTokens.space3)),
+                ..._interleave(
+                  rightSide,
+                  const SizedBox(width: TofuTokens.space3),
+                ),
               ],
             ],
           ),
@@ -222,7 +225,10 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
                 ),
               if (rightSide.isNotEmpty) ...<Widget>[
                 const SizedBox(width: TofuTokens.space3),
-                ..._interleave(rightSide, const SizedBox(width: TofuTokens.space2)),
+                ..._interleave(
+                  rightSide,
+                  const SizedBox(width: TofuTokens.space2),
+                ),
               ],
             ],
           ),
@@ -247,10 +253,12 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
       chips.add(_modeIndicator(m, dense: dense));
     }
     if (warn.value == SyncWarningLevel.prolongedFailure) {
-      chips.add(StatusIndicator(
-        type: StatusIndicatorType.syncError,
-        dense: dense,
-      ));
+      chips.add(
+        StatusIndicator(
+          type: StatusIndicatorType.syncError,
+          dense: dense,
+        ),
+      );
     }
     return chips;
   }
@@ -258,19 +266,19 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
   StatusIndicator _modeIndicator(TransportMode m, {required bool dense}) {
     return switch (m) {
       TransportMode.online => StatusIndicator(
-          type: StatusIndicatorType.online,
-          dense: dense,
-        ),
+        type: StatusIndicatorType.online,
+        dense: dense,
+      ),
       TransportMode.localLan => StatusIndicator.custom(
-          label: 'LAN',
-          tone: StatusIndicatorTone.info,
-          icon: Icons.lan,
-          dense: dense,
-        ),
+        label: 'LAN',
+        tone: StatusIndicatorTone.info,
+        icon: Icons.lan,
+        dense: dense,
+      ),
       TransportMode.bluetooth => StatusIndicator(
-          type: StatusIndicatorType.bluetooth,
-          dense: dense,
-        ),
+        type: StatusIndicatorType.bluetooth,
+        dense: dense,
+      ),
     };
   }
 
@@ -302,8 +310,7 @@ class _RefreshButton extends ConsumerWidget {
   }
 
   Future<void> _refresh(BuildContext context, WidgetRef ref) async {
-    TopSnack.show(context, '再読み込み中…',
-        duration: const Duration(seconds: 2));
+    TopSnack.show(context, '再読み込み中…', duration: const Duration(seconds: 2));
     // 1. 未送信データを先に push
     try {
       await ref.read(syncServiceProvider).runOnce();
@@ -315,8 +322,9 @@ class _RefreshButton extends ConsumerWidget {
     ref.invalidate(supabaseRealtimeListenerProvider);
     await ref.read(roleStarterProvider).start();
     // 3. 役割別の表示 provider を invalidate
-    final DeviceRole? role =
-        await ref.read(settingsRepositoryProvider).getDeviceRole();
+    final DeviceRole? role = await ref
+        .read(settingsRepositoryProvider)
+        .getDeviceRole();
     switch (role) {
       case DeviceRole.kitchen:
         await RefreshFromServer.kitchen(ref);
@@ -342,48 +350,51 @@ class _PeerPresenceBadge extends ConsumerWidget {
     final List<PeerInfo> list = peers.value ?? const <PeerInfo>[];
     final Set<DeviceRole> active = list.map((p) => p.role).toSet();
 
-    int countOf(DeviceRole r) =>
-        list.where((p) => p.role == r).length;
+    int countOf(DeviceRole r) => list.where((p) => p.role == r).length;
 
-    final List<({DeviceRole role, IconData icon})> roles = <({DeviceRole role, IconData icon})>[
-      (role: DeviceRole.register, icon: Icons.point_of_sale),
-      (role: DeviceRole.kitchen, icon: Icons.restaurant),
-      (role: DeviceRole.calling, icon: Icons.campaign),
-    ];
+    final List<({DeviceRole role, IconData icon})> roles =
+        <({DeviceRole role, IconData icon})>[
+          (role: DeviceRole.register, icon: Icons.point_of_sale),
+          (role: DeviceRole.kitchen, icon: Icons.restaurant),
+          (role: DeviceRole.calling, icon: Icons.campaign),
+        ];
 
     return Tooltip(
       message: list.isEmpty
           ? '接続中の端末はありません'
           : list
-              .map((p) => '${p.role.label}: ${p.userName ?? p.deviceId.substring(0, p.deviceId.length.clamp(0, 6))}')
-              .join('\n'),
+                .map(
+                  (p) =>
+                      '${p.role.label}: ${p.userName ?? p.deviceId.substring(0, p.deviceId.length.clamp(0, 6))}',
+                )
+                .join('\n'),
       child: InkWell(
         onTap: () => _showPeerSheet(context, list),
         borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
         child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: TofuTokens.space3,
-          vertical: TofuTokens.space2,
-        ),
-        decoration: BoxDecoration(
-          color: TofuTokens.bgSurface,
-          borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
-          border: Border.all(color: TofuTokens.borderSubtle),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            for (int i = 0; i < roles.length; i++) ...<Widget>[
-              if (i > 0) const SizedBox(width: TofuTokens.space2),
-              _RoleDot(
-                icon: roles[i].icon,
-                count: countOf(roles[i].role),
-                online: active.contains(roles[i].role),
-              ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: TofuTokens.space3,
+            vertical: TofuTokens.space2,
+          ),
+          decoration: BoxDecoration(
+            color: TofuTokens.bgSurface,
+            borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
+            border: Border.all(color: TofuTokens.borderSubtle),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              for (int i = 0; i < roles.length; i++) ...<Widget>[
+                if (i > 0) const SizedBox(width: TofuTokens.space2),
+                _RoleDot(
+                  icon: roles[i].icon,
+                  count: countOf(roles[i].role),
+                  online: active.contains(roles[i].role),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -425,11 +436,15 @@ class _PeerPresenceBadge extends ConsumerWidget {
                       ),
                       child: Row(
                         children: <Widget>[
-                          Icon(switch (p.role) {
-                            DeviceRole.register => Icons.point_of_sale,
-                            DeviceRole.kitchen => Icons.restaurant,
-                            DeviceRole.calling => Icons.campaign,
-                          }, size: 18, color: TofuTokens.brandPrimary),
+                          Icon(
+                            switch (p.role) {
+                              DeviceRole.register => Icons.point_of_sale,
+                              DeviceRole.kitchen => Icons.restaurant,
+                              DeviceRole.calling => Icons.campaign,
+                            },
+                            size: 18,
+                            color: TofuTokens.brandPrimary,
+                          ),
                           const SizedBox(width: TofuTokens.space3),
                           Expanded(
                             child: Column(
@@ -477,7 +492,9 @@ class _RoleDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color color = online ? TofuTokens.brandPrimary : TofuTokens.textDisabled;
+    final Color color = online
+        ? TofuTokens.brandPrimary
+        : TofuTokens.textDisabled;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[

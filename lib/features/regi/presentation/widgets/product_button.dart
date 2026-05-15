@@ -55,8 +55,8 @@ class ProductButton extends StatelessWidget {
     final Color cardColor = soldOut
         ? TofuTokens.gray100
         : inCart
-            ? TofuTokens.brandPrimarySubtleStrong
-            : baseColor;
+        ? TofuTokens.brandPrimarySubtleStrong
+        : baseColor;
     final bool dark = cardColor.computeLuminance() < 0.5;
     final Color fg = soldOut
         ? TofuTokens.textDisabled
@@ -64,8 +64,8 @@ class ProductButton extends StatelessWidget {
     final Color borderColor = inCart && !soldOut
         ? TofuTokens.brandPrimary
         : disabled
-            ? TofuTokens.borderSubtle
-            : Colors.black.withValues(alpha: 0.06);
+        ? TofuTokens.borderSubtle
+        : Colors.black.withValues(alpha: 0.06);
 
     return Semantics(
       button: true,
@@ -117,8 +117,8 @@ class ProductButton extends StatelessWidget {
                         soldOut
                             ? '在庫切れ'
                             : product.stock <= 3
-                                ? '残り ${product.stock}'
-                                : '在庫 ${product.stock}',
+                            ? '残り ${product.stock}'
+                            : '在庫 ${product.stock}',
                         style: TofuTextStyles.captionBold.copyWith(
                           color: soldOut
                               ? TofuTokens.dangerText

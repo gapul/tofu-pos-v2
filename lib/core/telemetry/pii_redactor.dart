@@ -155,8 +155,10 @@ class PiiRedactor {
 
 /// 既存 [TelemetrySink] を [PiiRedactor] でラップして送信前に redact する。
 class RedactingTelemetrySink implements TelemetrySink {
-  const RedactingTelemetrySink(this._inner, {PiiRedactor redactor = const PiiRedactor()})
-      : _redactor = redactor;
+  const RedactingTelemetrySink(
+    this._inner, {
+    PiiRedactor redactor = const PiiRedactor(),
+  }) : _redactor = redactor;
 
   final TelemetrySink _inner;
   final PiiRedactor _redactor;

@@ -228,8 +228,14 @@ void main() {
 
       expect(logRepo.records, hasLength(1));
       expect(logRepo.records.single.kind, 'cash_close');
-      expect(logRepo.records.single.detailJson, contains('"total_sales_yen":12345'));
-      expect(logRepo.records.single.detailJson, contains('"difference_yen":-1000'));
+      expect(
+        logRepo.records.single.detailJson,
+        contains('"total_sales_yen":12345'),
+      );
+      expect(
+        logRepo.records.single.detailJson,
+        contains('"difference_yen":-1000'),
+      );
     });
 
     test('no-op when operation log repo is not injected', () async {

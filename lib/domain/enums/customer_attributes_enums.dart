@@ -10,7 +10,8 @@ enum CustomerAge {
   thirties,
   forties,
   fifties,
-  sixtiesPlus;
+  sixtiesPlus
+  ;
 
   String get label {
     switch (this) {
@@ -35,7 +36,8 @@ enum CustomerAge {
 enum CustomerGender {
   male,
   female,
-  other;
+  other
+  ;
 
   String get label {
     switch (this) {
@@ -53,7 +55,8 @@ enum CustomerGroup {
   solo,
   couple,
   family,
-  group;
+  group
+  ;
 
   String get label {
     switch (this) {

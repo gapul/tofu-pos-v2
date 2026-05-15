@@ -286,8 +286,7 @@ void main() {
           'sync.lastStartedToken': 'tokenA',
           'sync.lastCompletedToken': 'tokenB', // 不一致
         });
-        final SharedPreferences prefs =
-            await SharedPreferences.getInstance();
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
         final _RecordingSink sink = _RecordingSink();
         Telemetry.instance.configure(
           sink: sink,

@@ -42,21 +42,25 @@ void runTicketPoolRepositoryContract(
     test('50 concurrent allocate calls return unique numbers', () async {
       // default maxNumber=99 / bufferSize=10 を前提に枯渇しない範囲（50）で
       // 並行性の一意性を検証する。
-      final List<TicketNumber> numbers = await Future.wait(<Future<TicketNumber>>[
-        for (int i = 0; i < 50; i++) repo.allocate(),
-      ]);
+      final List<TicketNumber> numbers = await Future.wait(
+        <Future<TicketNumber>>[
+          for (int i = 0; i < 50; i++) repo.allocate(),
+        ],
+      );
       expect(numbers.map((n) => n.value).toSet().length, 50);
     });
 
-    test('release after allocate frees the number (eventually reusable)',
-        () async {
-      final TicketNumber n = await repo.allocate();
-      await repo.release(n);
-      // release 直後はバッファに残るため、すぐ同じ番号が出るとは限らない（仕様）。
-      // ただしプールがリセット可能な状態であること = save できる、を確認する。
-      final TicketNumberPool pool = await repo.load();
-      expect(pool.inUseNumbers.contains(n.value), isFalse);
-    });
+    test(
+      'release after allocate frees the number (eventually reusable)',
+      () async {
+        final TicketNumber n = await repo.allocate();
+        await repo.release(n);
+        // release 直後はバッファに残るため、すぐ同じ番号が出るとは限らない（仕様）。
+        // ただしプールがリセット可能な状態であること = save できる、を確認する。
+        final TicketNumberPool pool = await repo.load();
+        expect(pool.inUseNumbers.contains(n.value), isFalse);
+      },
+    );
 
     test('release of unknown number is no-op', () async {
       // 未払い出しの番号を release してもエラーにならない。

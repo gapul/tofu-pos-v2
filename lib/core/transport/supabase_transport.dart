@@ -347,8 +347,9 @@ class SupabaseTransport implements Transport {
           'order_id': orderId,
           'ticket_number': ticketNumber.value,
         },
-      ProductMasterUpdateEvent(:final String productsJson) =>
-        <String, Object?>{'products_json': productsJson},
+      ProductMasterUpdateEvent(:final String productsJson) => <String, Object?>{
+        'products_json': productsJson,
+      },
     };
   }
 

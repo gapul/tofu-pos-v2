@@ -54,15 +54,15 @@ class ChangeSuggestion {
     int remaining = changeYen;
     final Map<int, int> out = <int, int>{};
     // 大きい金種から greedy に消費
-    final List<int> denoms = Denomination.all
-        .map((d) => d.yen)
-        .toList()
+    final List<int> denoms = Denomination.all.map((d) => d.yen).toList()
       ..sort((a, b) => b.compareTo(a)); // 降順
     for (final int yen in denoms) {
       if (remaining < yen) continue;
       final int? avail = stock?[yen];
       final int wantCount = remaining ~/ yen;
-      final int useCount = avail == null ? wantCount : (avail < wantCount ? avail : wantCount);
+      final int useCount = avail == null
+          ? wantCount
+          : (avail < wantCount ? avail : wantCount);
       if (useCount > 0) {
         out[yen] = useCount;
         remaining -= useCount * yen;

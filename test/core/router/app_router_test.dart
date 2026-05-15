@@ -8,7 +8,9 @@ import 'package:tofu_pos/features/startup/presentation/notifiers/setup_notifier.
 void main() {
   group('computeRedirect', () {
     const AsyncValue<SetupState> loading = AsyncLoading<SetupState>();
-    const AsyncValue<SetupState> empty = AsyncData<SetupState>(SetupState.empty);
+    const AsyncValue<SetupState> empty = AsyncData<SetupState>(
+      SetupState.empty,
+    );
     final AsyncValue<SetupState> shopOnly = AsyncData<SetupState>(
       SetupState(shopId: ShopId('yakisoba_A'), role: null),
     );

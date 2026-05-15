@@ -153,8 +153,9 @@ class _LordiconState extends State<Lordicon>
         // hover trigger: MouseRegion で onEnter/onExit を捕捉。
         final Widget interactive = widget.trigger == LordiconTrigger.hover
             ? MouseRegion(
-                onEnter: (_) =>
-                    unawaited(_controller.forward(from: 0).orCancel.catchError((_) {})),
+                onEnter: (_) => unawaited(
+                  _controller.forward(from: 0).orCancel.catchError((_) {}),
+                ),
                 onExit: (_) => _controller.reset(),
                 child: tinted,
               )

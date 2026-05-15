@@ -120,7 +120,9 @@ void main() {
     final _FakeTransport transport = _FakeTransport();
     final ServedToCallRouter router = ServedToCallRouter(
       transport: transport,
-      settingsRepository: _FakeSettings(FeatureFlags.allOff.copyWith(kitchenLink: true)),
+      settingsRepository: _FakeSettings(
+        FeatureFlags.allOff.copyWith(kitchenLink: true),
+      ),
       shopId: 'shop',
     );
     router.start();
@@ -135,7 +137,9 @@ void main() {
     final _FakeTransport transport = _FakeTransport();
     final ServedToCallRouter router = ServedToCallRouter(
       transport: transport,
-      settingsRepository: _FakeSettings(FeatureFlags.allOff.copyWith(callingLink: true)),
+      settingsRepository: _FakeSettings(
+        FeatureFlags.allOff.copyWith(callingLink: true),
+      ),
       shopId: 'shop',
     );
     router.start();

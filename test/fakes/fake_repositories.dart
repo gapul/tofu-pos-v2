@@ -335,8 +335,7 @@ class InMemoryKitchenOrderRepository implements KitchenOrderRepository {
   Future<List<KitchenOrder>> findAll() async {
     final List<KitchenOrder> all = _orders.values.toList()
       ..sort(
-        (a, b) =>
-            a.receivedAt.compareTo(b.receivedAt),
+        (a, b) => a.receivedAt.compareTo(b.receivedAt),
       );
     return all;
   }
@@ -372,8 +371,7 @@ class InMemoryCallingOrderRepository implements CallingOrderRepository {
   Future<List<CallingOrder>> findAll() async {
     final List<CallingOrder> all = _orders.values.toList()
       ..sort(
-        (a, b) =>
-            a.receivedAt.compareTo(b.receivedAt),
+        (a, b) => a.receivedAt.compareTo(b.receivedAt),
       );
     return all;
   }
@@ -423,8 +421,7 @@ class InMemoryOperationLogRepository implements OperationLogRepository {
   Future<List<OperationLog>> findRecent({int limit = 100}) async {
     final List<OperationLog> sorted = <OperationLog>[...records]
       ..sort(
-        (a, b) =>
-            b.occurredAt.compareTo(a.occurredAt),
+        (a, b) => b.occurredAt.compareTo(a.occurredAt),
       );
     return sorted.take(limit).toList();
   }
