@@ -8,11 +8,15 @@
 
   function render(data: number[]) {
     if (!canvas) return;
-    chart?.destroy();
-    // Chart.js は受け取った array を defineProperty で内部書換するため、
-    // Svelte 5 の $state proxy をそのまま渡すと state_descriptors_fixed で
-    // クラッシュする。プレーン配列にコピーしてから渡す。
-    const plain = [...data];
+    // 既存 chart を確実に破棄してから canvas を再利用する。
+    if (chart) {
+      chart.destroy();
+      chart = null;
+    }
+    // Chart.js は data 配列を defineProperty で内部書換するため、
+    // Svelte 5 の $state proxy を渡すと state_descriptors_fixed でクラッシュ。
+    // $state.snapshot で deep に proxy を外し、Array.from で plain Array を作る。
+    const plain: number[] = Array.from($state.snapshot(data) as number[], (v) => Number(v));
     chart = new Chart(canvas, {
       type: 'bar',
       data: {
@@ -43,7 +47,10 @@
 
   onMount(() => render(hourly));
   $effect(() => render(hourly));
-  onDestroy(() => chart?.destroy());
+  onDestroy(() => {
+    chart?.destroy();
+    chart = null;
+  });
 </script>
 
 <div class="h-64"><canvas bind:this={canvas}></canvas></div>

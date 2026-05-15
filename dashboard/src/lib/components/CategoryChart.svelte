@@ -8,12 +8,19 @@
 
   function render(map: Map<string, number>) {
     if (!canvas) return;
-    chart?.destroy();
-    // entries.map() で生成した配列はプレーンな array なので問題ないが、
-    // 念のため明示的にコピーして Svelte $state proxy が紛れ込まないようにする。
-    const entries = [...map.entries()].sort((a, b) => b[1] - a[1]);
-    const labels = entries.map(([k]) => String(k));
-    const values = entries.map(([, v]) => Number(v));
+    if (chart) {
+      chart.destroy();
+      chart = null;
+    }
+    // Map 自体が $state proxy 経由で渡って来る可能性があるため、
+    // snapshot で proxy を外してから走査する。
+    const snap = $state.snapshot(map) as Map<string, number> | Record<string, number>;
+    const pairs: Array<[string, number]> = snap instanceof Map
+      ? [...snap.entries()]
+      : Object.entries(snap).map(([k, v]) => [k, Number(v)]);
+    pairs.sort((a, b) => b[1] - a[1]);
+    const labels: string[] = Array.from(pairs, (p) => String(p[0]));
+    const values: number[] = Array.from(pairs, (p) => Number(p[1]));
     chart = new Chart(canvas, {
       type: 'bar',
       data: {
@@ -40,7 +47,10 @@
 
   onMount(() => render(data));
   $effect(() => render(data));
-  onDestroy(() => chart?.destroy());
+  onDestroy(() => {
+    chart?.destroy();
+    chart = null;
+  });
 </script>
 
 <div class="h-40"><canvas bind:this={canvas}></canvas></div>
