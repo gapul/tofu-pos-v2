@@ -7,6 +7,7 @@ import '../core/config/env.dart';
 import '../core/logging/app_logger.dart';
 import '../core/telemetry/telemetry.dart';
 import '../core/transport/ble_transport.dart';
+import '../core/transport/composite_transport.dart';
 import '../core/transport/lan_transport.dart';
 import '../core/transport/noop_transport.dart';
 import '../core/transport/supabase_transport.dart';
@@ -78,6 +79,16 @@ final Provider<DailyResetUseCase> dailyResetUseCaseProvider =
       ),
     );
 
+/// online モードのときに、副経路として BLE を並走させるかどうか。
+///
+/// デフォルト false（実機 BLE 検証がない環境では Noop と同じ挙動）。
+/// 設定 UI から ON にする実装は TODO。実機検証では override してテストする。
+/// 並走時の挙動:
+///  - 通常時: Supabase へ送信、BLE には流さない。
+///  - Supabase 送信失敗時: BLE に fallback（ProductMasterUpdate は除外）。
+///  - 受信: 両 transport の events を merge、eventId で dedup。
+final Provider<bool> bleFallbackEnabledProvider = Provider<bool>((_) => false);
+
 /// 端末間連携の Transport を、現在の TransportMode と DeviceRole から自動選択する。
 ///
 /// - online: Supabase Realtime + `device_events` テーブル（認証情報なしは Noop に degrade）
@@ -113,6 +124,7 @@ final FutureProvider<Transport> transportProvider = FutureProvider<Transport>((
 
   final Duration lanTimeout = await settings.getLanSendTimeout();
   final Duration bleTimeout = await settings.getBleSendTimeout();
+  final bool bleFallback = ref.watch(bleFallbackEnabledProvider);
 
   final Transport t = await _buildTransport(
     mode: mode,
@@ -120,6 +132,7 @@ final FutureProvider<Transport> transportProvider = FutureProvider<Transport>((
     role: role,
     lanTimeout: lanTimeout,
     bleTimeout: bleTimeout,
+    bleFallbackEnabled: bleFallback,
   );
   ref.onDispose(() {
     unawaited(t.disconnect());
@@ -133,6 +146,7 @@ Future<Transport> _buildTransport({
   required DeviceRole role,
   required Duration lanTimeout,
   required Duration bleTimeout,
+  bool bleFallbackEnabled = false,
 }) async {
   switch (mode) {
     case TransportMode.online:
@@ -144,12 +158,38 @@ Future<Transport> _buildTransport({
         return t;
       }
       try {
-        final SupabaseTransport t = SupabaseTransport(
+        final SupabaseTransport primary = SupabaseTransport(
           client: Supabase.instance.client,
           shopId: shopId,
         );
-        await t.connect();
-        return t;
+        if (!bleFallbackEnabled) {
+          await primary.connect();
+          return primary;
+        }
+        // online 主 + BLE 副経路を並走させる。
+        // 同 shop_id の他端末（キッチン/呼び出し）が BLE Peripheral として
+        // advertise しているとき、Central はそれに接続して書き込み/Notify を購読する。
+        // 一方この端末がキッチン/呼び出し役なら Peripheral として広告する。
+        final Transport secondary;
+        if (role == DeviceRole.register) {
+          final BleCentralService central = BleCentralService(shopId: shopId);
+          final BleTransport bleInner = BleTransport.central(central);
+          secondary = TimeoutTransport(inner: bleInner, timeout: bleTimeout);
+        } else {
+          final BlePeripheralService peripheral = BlePeripheralService(
+            shopId: shopId,
+            role: role.name,
+          );
+          final BleTransport bleInner = BleTransport.peripheral(peripheral);
+          secondary = TimeoutTransport(inner: bleInner, timeout: bleTimeout);
+        }
+        final CompositeOnlineBleTransport composite =
+            CompositeOnlineBleTransport(
+              primary: primary,
+              secondary: secondary,
+            );
+        await composite.connect();
+        return composite;
         // Supabase 未初期化や Realtime チャンネル張り損ねなど、
         // 業務継続を優先して Noop に degrade（テレメトリで可視化）。
       } catch (e, st) {
