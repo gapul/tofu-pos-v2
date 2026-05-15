@@ -175,6 +175,13 @@ class AppDatabase extends _$AppDatabase {
       // 外部キー制約を有効化（SQLite はデフォルト無効）。
       // OrderItems → Orders の cascade delete 等が機能するように。
       await customStatement('PRAGMA foreign_keys = ON');
+      // WAL モード: 並行 read/write の安定性向上。
+      // 複数の Backfill / SyncService / UI クエリが同時走するときに
+      // sqlite3 の prepared statement reuse race を避けるための保険。
+      // 学園祭規模では性能ペナルティはほぼゼロ。
+      await customStatement('PRAGMA journal_mode = WAL');
+      // synchronous=NORMAL は WAL とセットで使うのが推奨設定。
+      await customStatement('PRAGMA synchronous = NORMAL');
     },
   );
 
@@ -303,6 +310,14 @@ LazyDatabase _openConnection() {
     final String cachebase = (await getTemporaryDirectory()).path;
     sqlite3.tempDirectory = cachebase;
 
-    return NativeDatabase.createInBackground(file);
+    // cachePreparedStatements: false
+    // 既定 true だが、macOS Release ビルドで sqlite3 prepared statement の
+    // 再利用パス内 (vdbeUnbind → sqlite3_bind_null) で SIGSEGV が再現した。
+    // 学園祭規模ではクエリ数が高々数十件/秒で、statement cache を無効化しても
+    // 体感性能に影響しない一方、reuse race の根を断てる。
+    return NativeDatabase.createInBackground(
+      file,
+      cachePreparedStatements: false,
+    );
   });
 }

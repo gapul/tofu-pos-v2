@@ -21,7 +21,6 @@ import '../../../../domain/entities/calling_order.dart';
 import '../../../../domain/enums/calling_status.dart';
 import '../../../../domain/value_objects/shop_id.dart';
 import '../../../../providers/repository_providers.dart';
-import '../../../../providers/settings_providers.dart';
 import '../../../../providers/usecase_providers.dart';
 import '../notifiers/calling_providers.dart';
 
@@ -44,6 +43,15 @@ class CallingScreen extends ConsumerStatefulWidget {
 }
 
 class _CallingScreenState extends ConsumerState<CallingScreen> {
+  /// 既に自動全画面を出した orderId（同一注文の二重起動を防ぐ）。
+  final Set<int> _autoOpened = <int>{};
+
+  /// 現在 _FullScreenCallDialog が開いているか。
+  bool _dialogOpen = false;
+
+  /// 自動表示の待ち行列。ダイアログ閉じ後に先頭から順に開く。
+  final List<CallingOrder> _autoQueue = <CallingOrder>[];
+
   Future<void> _markCalled(CallingOrder order) async {
     unawaited(HapticFeedback.mediumImpact());
     await ref
@@ -51,25 +59,34 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
         .updateStatus(order.orderId, CallingStatus.called);
 
     // サーバ側監査と他端末状態同期のため CallCompletedEvent を送信。
-    unawaited(_broadcastCallCompleted(order));
+    // 失敗時は SnackBar で通知（fire-and-forget しない）。
+    bool broadcastOk = true;
+    try {
+      await _broadcastCallCompleted(order);
+    } catch (e) {
+      broadcastOk = false;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('他端末への呼び出し通知に失敗: $e'),
+            backgroundColor: TofuTokens.dangerBgStrong,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
 
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('整理券 ${order.ticketNumber} を呼び出し済みにしました'),
-        action: SnackBarAction(
-          label: '取り消し',
-          onPressed: () async {
-            await ref
-                .read(callingOrderRepositoryProvider)
-                .updateStatus(order.orderId, CallingStatus.pending);
-          },
+    if (broadcastOk) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('整理券 ${order.ticketNumber} を呼び出しました'),
+          duration: const Duration(seconds: 2),
         ),
-        duration: const Duration(seconds: 6),
-      ),
-    );
+      );
+    }
   }
 
   Future<void> _broadcastCallCompleted(CallingOrder order) async {
@@ -94,22 +111,76 @@ class _CallingScreenState extends ConsumerState<CallingScreen> {
         error: e,
         stackTrace: st,
       );
+      rethrow;
     }
   }
 
   Future<void> _showFullScreen(CallingOrder order) async {
+    if (_dialogOpen) {
+      // 既にダイアログが開いている場合は待ち行列に積む。
+      if (!_autoQueue.any((o) => o.orderId == order.orderId)) {
+        _autoQueue.add(order);
+      }
+      return;
+    }
+    _dialogOpen = true;
+    _autoOpened.add(order.orderId);
     final bool? markCalled = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (c) => _FullScreenCallDialog(order: order),
     );
+    _dialogOpen = false;
     if (markCalled ?? false) {
       await _markCalled(order);
     }
+    // 待ち行列に積まれた次の注文を順に表示。
+    if (!mounted) return;
+    if (_autoQueue.isNotEmpty) {
+      final CallingOrder next = _autoQueue.removeAt(0);
+      // この frame では別の listen からも再帰する可能性があるので microtask に投げる。
+      unawaited(Future<void>.microtask(() {
+        if (mounted) _showFullScreen(next);
+      }));
+    }
+  }
+
+  /// pending リストの変化を見て、新規 pending を自動全画面表示する。
+  void _handleOrdersChange(
+    List<CallingOrder>? previous,
+    List<CallingOrder> next,
+  ) {
+    final List<CallingOrder> pending = next
+        .where((o) => o.status == CallingStatus.pending)
+        .toList();
+    // 起動時の初期 pending も含めて、未表示のものを順に開く。
+    for (final CallingOrder o in pending) {
+      if (_autoOpened.contains(o.orderId)) continue;
+      // 表示済みでないものを発見した場合: ダイアログを開く（あるいは queue へ）。
+      unawaited(_showFullScreen(o));
+    }
+    // pending から消えた orderId は _autoOpened から落として、
+    // 同じ番号が再度 pending に戻った（取消し→復帰）ときに再度開けるようにする。
+    final Set<int> stillPending = pending.map((o) => o.orderId).toSet();
+    _autoOpened.removeWhere(
+      (id) =>
+          !stillPending.contains(id) &&
+          !_autoQueue.any((o) => o.orderId == id) &&
+          !_dialogOpen,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // 新規 pending が現れた瞬間に _FullScreenCallDialog を自動表示する。
+    // 二重表示防止 / 待ち行列 / 取消し→復帰の再表示は _handleOrdersChange 側で管理。
+    ref.listen<AsyncValue<List<CallingOrder>>>(callingOrdersProvider, (prev, next) {
+      final List<CallingOrder>? prevList = prev?.value;
+      final List<CallingOrder>? nextList = next.value;
+      if (nextList == null) return;
+      _handleOrdersChange(prevList, nextList);
+    });
+
     final AsyncValue<List<CallingOrder>> orders = ref.watch(
       callingOrdersProvider,
     );
@@ -538,10 +609,34 @@ class _SmallTicketCard extends StatelessWidget {
 
 // ---------------------------------------------------------------------------
 // 全画面呼び出しダイアログ: 整理券番号を顧客向けに巨大表示。
+// 上部寄せ + 3 秒で自動的に閉じる（閉じた時点で markCalled 扱い）。
 // ---------------------------------------------------------------------------
-class _FullScreenCallDialog extends StatelessWidget {
+class _FullScreenCallDialog extends StatefulWidget {
   const _FullScreenCallDialog({required this.order});
   final CallingOrder order;
+
+  @override
+  State<_FullScreenCallDialog> createState() => _FullScreenCallDialogState();
+}
+
+class _FullScreenCallDialogState extends State<_FullScreenCallDialog> {
+  static const Duration _autoClose = Duration(seconds: 3);
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(_autoClose, () {
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -550,9 +645,16 @@ class _FullScreenCallDialog extends StatelessWidget {
       child: SafeArea(
         child: Stack(
           children: <Widget>[
-            Center(
+            // 上部寄せレイアウト
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                TofuTokens.space7,
+                TofuTokens.space11,
+                TofuTokens.space7,
+                TofuTokens.space7,
+              ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
                   Text(
                     'お呼び出し',
@@ -560,17 +662,17 @@ class _FullScreenCallDialog extends StatelessWidget {
                       color: TofuTokens.brandOnPrimary,
                     ),
                   ),
-                  const SizedBox(height: TofuTokens.space7),
+                  const SizedBox(height: TofuTokens.space5),
                   Text(
                     '整理券',
                     style: TofuTextStyles.h3.copyWith(
                       color: TofuTokens.brandOnPrimary.withValues(alpha: 0.85),
                     ),
                   ),
-                  const SizedBox(height: TofuTokens.space5),
+                  const SizedBox(height: TofuTokens.space4),
                   // 整理券番号: 画面いっぱいの大型表示
                   Text(
-                    order.ticketNumber.toString(),
+                    widget.order.ticketNumber.toString(),
                     style: const TextStyle(
                       fontFamily: TofuTokens.fontFamily,
                       fontSize: 320,
@@ -580,7 +682,7 @@ class _FullScreenCallDialog extends StatelessWidget {
                       letterSpacing: -8,
                     ),
                   ),
-                  const SizedBox(height: TofuTokens.space7),
+                  const SizedBox(height: TofuTokens.space5),
                   Text(
                     'お受け取りください',
                     style: TofuTextStyles.h3.copyWith(
@@ -590,13 +692,14 @@ class _FullScreenCallDialog extends StatelessWidget {
                 ],
               ),
             ),
+            // 手動で閉じる用の小型ボタン (タイマー切れる前に閉じたい時)
             Positioned(
               right: TofuTokens.space7,
               bottom: TofuTokens.space7,
               child: TofuButton(
-                label: '閉じる（呼び出し済みへ）',
+                label: '今すぐ閉じる',
                 icon: Icons.close,
-                size: TofuButtonSize.lg,
+                variant: TofuButtonVariant.ghost,
                 onPressed: () => Navigator.of(context).pop(true),
               ),
             ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -59,21 +60,24 @@ class SettingsScreen extends ConsumerWidget {
                 horizontal: wide ? TofuTokens.space8 : TofuTokens.space5,
                 vertical: TofuTokens.space7,
               ),
-              children: const <Widget>[
-                _DeviceHeaderSection(),
-                SizedBox(height: TofuTokens.space7),
-                _TransportSection(),
-                SizedBox(height: TofuTokens.space7),
-                _RoleSection(),
-                SizedBox(height: TofuTokens.space7),
-                _FeatureFlagsSection(),
-                SizedBox(height: TofuTokens.space7),
-                _ExportSection(),
-                SizedBox(height: TofuTokens.space7),
-                _DangerSection(),
-                SizedBox(height: TofuTokens.space7),
-                _DevToolsSection(),
-                SizedBox(height: TofuTokens.space11),
+              children: <Widget>[
+                const _DeviceHeaderSection(),
+                const SizedBox(height: TofuTokens.space7),
+                const _TransportSection(),
+                const SizedBox(height: TofuTokens.space7),
+                const _RoleSection(),
+                const SizedBox(height: TofuTokens.space7),
+                const _FeatureFlagsSection(),
+                const SizedBox(height: TofuTokens.space7),
+                const _ExportSection(),
+                const SizedBox(height: TofuTokens.space7),
+                const _LogoutSection(),
+                // 開発者設定は debug ビルドでのみ表示。
+                if (!kReleaseMode) ...<Widget>[
+                  const SizedBox(height: TofuTokens.space7),
+                  const _DeveloperSection(),
+                ],
+                const SizedBox(height: TofuTokens.space11),
               ],
             );
             return Center(
@@ -449,6 +453,102 @@ class _ExportSectionState extends ConsumerState<_ExportSection> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ログアウト: 店舗ID をクリアして /setup/shop へ戻る。
+// ローカル DB (注文履歴 / 金種 / 整理券プール / 設定) は保持。
+// ---------------------------------------------------------------------------
+class _LogoutSection extends ConsumerWidget {
+  const _LogoutSection();
+
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    final bool ok = await TofuConfirmDialog.show(
+      context,
+      title: 'ログアウトしますか?',
+      message:
+          'ログアウトすると初期設定画面に戻ります。'
+          'ローカルのデータ（注文履歴・金種・設定）は保持されます。',
+      confirmLabel: 'ログアウト',
+      icon: Icons.logout,
+    );
+    if (!ok) {
+      return;
+    }
+    await ref.read(setupNotifierProvider.notifier).clearShop();
+    if (!context.mounted) return;
+    context.go('/setup/shop');
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const PaneTitle(
+            title: 'ログアウト',
+            subtitle: '店舗ID をリセットし初期設定画面に戻ります',
+          ),
+          const SizedBox(height: TofuTokens.space4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TofuButton(
+              label: 'ログアウト（店舗 ID をリセット）',
+              icon: Icons.logout,
+              variant: TofuButtonVariant.secondary,
+              onPressed: () => _logout(context, ref),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 開発者設定 (debug only): 整理券プール初期化 + DevConsole を ExpansionTile に
+// まとめ、リリースビルドでは丸ごと非表示（呼び出し側で kReleaseMode で抑制）。
+// ---------------------------------------------------------------------------
+class _DeveloperSection extends StatelessWidget {
+  const _DeveloperSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: TofuTokens.bgCanvas,
+        borderRadius: BorderRadius.circular(TofuTokens.radiusLg),
+        border: Border.all(color: TofuTokens.borderSubtle),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        // ExpansionTile のデフォルト分割線を消す。
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(
+            horizontal: TofuTokens.space6,
+            vertical: TofuTokens.space2,
+          ),
+          childrenPadding: const EdgeInsets.fromLTRB(
+            TofuTokens.space5,
+            0,
+            TofuTokens.space5,
+            TofuTokens.space5,
+          ),
+          title: const PaneTitle(
+            title: '開発者設定',
+            subtitle: '実機検証・不可逆な管理操作 / 本番運用では使用しません',
+          ),
+          children: const <Widget>[
+            _DangerSection(),
+            SizedBox(height: TofuTokens.space5),
+            _DevToolsSection(),
+          ],
+        ),
       ),
     );
   }

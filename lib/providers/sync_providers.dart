@@ -3,9 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/config/env.dart';
 import '../core/sync/cloud_sync_client.dart';
+import '../core/sync/peer_presence.dart';
 import '../core/sync/supabase_cloud_sync_client.dart';
 import '../core/sync/supabase_realtime_listener.dart';
 import '../core/sync/sync_service.dart';
+import '../domain/enums/device_role.dart';
 import '../core/time/clock.dart';
 import '../domain/value_objects/shop_id.dart';
 import 'connectivity_providers.dart';
@@ -75,6 +77,50 @@ rawRealtimeOrderLineEventsProvider =
 /// 新規コードからは [rawRealtimeOrderLineEventsProvider] を直接参照してよい。
 final StreamProvider<RealtimeOrderLineEvent> realtimeOrderLineEventsProvider =
     rawRealtimeOrderLineEventsProvider;
+
+/// PeerPresenceService: 同一店舗内の他端末状況を取得する（仕様 §9.1 ヘッダーバッジ）。
+///
+/// 店舗ID / 役割 / Supabase 接続情報が揃っていれば接続、欠けていれば null。
+/// 起動時に track し、container 破棄時に untrack + removeChannel する。
+final FutureProvider<PeerPresenceService?> peerPresenceServiceProvider =
+    FutureProvider<PeerPresenceService?>((ref) async {
+      if (!Env.hasSupabaseCredentials) {
+        return null;
+      }
+      final settings = ref.watch(settingsRepositoryProvider);
+      final ShopId? shopId = await settings.getShopId();
+      final DeviceRole? role = await settings.getDeviceRole();
+      if (shopId == null || role == null) {
+        return null;
+      }
+      final String deviceId = await settings.getOrCreateDeviceId();
+      final service = PeerPresenceService(
+        client: Supabase.instance.client,
+        shopId: shopId.value,
+        role: role,
+        deviceId: deviceId,
+      );
+      try {
+        await service.connect();
+      } catch (_) {
+        // 接続失敗時はそのまま service を返す（空 peers を流す）。
+      }
+      ref.onDispose(service.dispose);
+      return service;
+    });
+
+/// 同一店舗の接続中ピア一覧 Stream（自分自身を含む）。
+final StreamProvider<List<PeerInfo>> peersProvider =
+    StreamProvider<List<PeerInfo>>((ref) async* {
+      final PeerPresenceService? svc = await ref.watch(
+        peerPresenceServiceProvider.future,
+      );
+      if (svc == null) {
+        yield const <PeerInfo>[];
+        return;
+      }
+      yield* svc.peers;
+    });
 
 /// SyncService: ライフサイクル付き Provider。
 /// `ref.read(syncServiceProvider).start()` を起動時に1回呼ぶ。

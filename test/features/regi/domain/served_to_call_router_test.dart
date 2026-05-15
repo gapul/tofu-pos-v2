@@ -29,6 +29,8 @@ class _FakeSettings implements SettingsRepository {
   @override
   Future<void> setShopId(ShopId shopId) async {}
   @override
+  Future<void> clearShopId() async {}
+  @override
   Future<DeviceRole?> getDeviceRole() async => null;
   @override
   Future<void> setDeviceRole(DeviceRole role) async {}

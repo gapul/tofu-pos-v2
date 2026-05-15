@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/logging/app_logger.dart';
@@ -24,12 +26,37 @@ class DeviceEventsBackfill {
   final String _shopId;
   final Duration window;
 
+  /// 現在進行中の run。複数の呼び出し元（RoleStarter / RefreshFromServer / 役割毎の
+  /// 起動フック）が同じ backfill を同時に走らせると、drift の prepared statement
+  /// が同一 isolate 内で並列に reuse されるパスで NULL ポインタ参照が発生して
+  /// macOS Release ビルドが SIGSEGV で落ちる事象が観測された。
+  /// 同じ run を共有することで二重実行を avoid する。
+  Future<int>? _inFlight;
+
   /// 過去イベントを取得して [onEvent] に流す。
   ///
   /// 返り値: 正常に取り込めたイベント件数。
+  ///
+  /// 同時に複数の呼び出しがあった場合は、最初の呼び出しの future を共有して
+  /// 二重実行を防ぐ。これにより drift / native sqlite3 の prepared statement
+  /// race を回避する。
   Future<int> run({
     required Future<void> Function(TransportEvent) onEvent,
-  }) async {
+  }) {
+    final Future<int>? existing = _inFlight;
+    if (existing != null) {
+      return existing;
+    }
+    final Future<int> fut = _runInternal(onEvent);
+    _inFlight = fut;
+    return fut.whenComplete(() {
+      _inFlight = null;
+    });
+  }
+
+  Future<int> _runInternal(
+    Future<void> Function(TransportEvent) onEvent,
+  ) async {
     final DateTime since = DateTime.now().toUtc().subtract(window);
     try {
       final List<dynamic> rows = await _client

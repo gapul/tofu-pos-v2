@@ -11,6 +11,10 @@ abstract interface class SettingsRepository {
   Future<ShopId?> getShopId();
   Future<void> setShopId(ShopId shopId);
 
+  /// 店舗ID をクリア（ログアウト）。
+  /// ローカル DB / 整理券プール / 精算ログは破棄しない。
+  Future<void> clearShopId();
+
   Future<DeviceRole?> getDeviceRole();
   Future<void> setDeviceRole(DeviceRole role);
   Future<void> clearDeviceRole();

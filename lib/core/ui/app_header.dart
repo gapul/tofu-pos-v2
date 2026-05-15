@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/enums/device_role.dart';
 import '../../domain/enums/transport_mode.dart';
+import '../sync/peer_presence.dart';
 import '../../domain/value_objects/ticket_number.dart' as vo;
 import '../../providers/repository_providers.dart';
 import '../../providers/role_router_providers.dart';
@@ -102,6 +103,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
 
     final List<Widget> rightSide = <Widget>[
       if (showStatus) ..._statusIndicators(mode, warn),
+      if (showStatus) _PeerPresenceBadge(),
       _RefreshButton(),
       ...actions,
     ];
@@ -169,6 +171,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
 
     final List<Widget> rightSide = <Widget>[
       if (showStatus) ..._statusIndicators(mode, warn),
+      if (showStatus) _PeerPresenceBadge(),
       _RefreshButton(),
       ...actions,
     ];
@@ -331,6 +334,90 @@ class _RefreshButton extends ConsumerWidget {
       case null:
         break;
     }
+  }
+}
+
+/// 同一店舗内の接続中端末（役割別）をコンパクトに表示するバッジ。
+///
+/// レジ / キッチン / 呼び出し のアイコンを横並びで表示し、
+/// presence で見えている役割は brandPrimary、未接続は textDisabled で表示する。
+class _PeerPresenceBadge extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<PeerInfo>> peers = ref.watch(peersProvider);
+    final List<PeerInfo> list = peers.value ?? const <PeerInfo>[];
+    final Set<DeviceRole> active = list.map((p) => p.role).toSet();
+
+    int countOf(DeviceRole r) =>
+        list.where((p) => p.role == r).length;
+
+    final List<({DeviceRole role, IconData icon})> roles = <({DeviceRole role, IconData icon})>[
+      (role: DeviceRole.register, icon: Icons.point_of_sale),
+      (role: DeviceRole.kitchen, icon: Icons.restaurant),
+      (role: DeviceRole.calling, icon: Icons.campaign),
+    ];
+
+    return Tooltip(
+      message: list.isEmpty
+          ? '接続中の端末はありません'
+          : list
+              .map((p) => '${p.role.label}: ${p.deviceId.substring(0, p.deviceId.length.clamp(0, 6))}')
+              .join('\n'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: TofuTokens.space3,
+          vertical: TofuTokens.space2,
+        ),
+        decoration: BoxDecoration(
+          color: TofuTokens.bgSurface,
+          borderRadius: BorderRadius.circular(TofuTokens.radiusMd),
+          border: Border.all(color: TofuTokens.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            for (int i = 0; i < roles.length; i++) ...<Widget>[
+              if (i > 0) const SizedBox(width: TofuTokens.space2),
+              _RoleDot(
+                icon: roles[i].icon,
+                count: countOf(roles[i].role),
+                online: active.contains(roles[i].role),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleDot extends StatelessWidget {
+  const _RoleDot({
+    required this.icon,
+    required this.count,
+    required this.online,
+  });
+
+  final IconData icon;
+  final int count;
+  final bool online;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = online ? TofuTokens.brandPrimary : TofuTokens.textDisabled;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Icon(icon, size: 16, color: color),
+        if (count > 0) ...<Widget>[
+          const SizedBox(width: 2),
+          Text(
+            '$count',
+            style: TofuTextStyles.captionBold.copyWith(color: color),
+          ),
+        ],
+      ],
+    );
   }
 }
 

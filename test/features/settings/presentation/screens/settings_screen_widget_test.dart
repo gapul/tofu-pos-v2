@@ -29,6 +29,9 @@ class _FakeSettingsRepo implements SettingsRepository {
   Future<void> setShopId(ShopId shopId) async {}
 
   @override
+  Future<void> clearShopId() async {}
+
+  @override
   Future<DeviceRole?> getDeviceRole() async => DeviceRole.register;
   @override
   Future<void> setDeviceRole(DeviceRole role) async {}
@@ -108,10 +111,14 @@ void main() {
     expect(find.text('設定'), findsAtLeastNWidgets(1));
     // 新 UI では PaneTitle のセクション名で各カードを識別する。
     // 旧「端末」は _DeviceHeaderSection の「店舗ID: ...」サブテキストへ統合された。
-    expect(find.textContaining('店舗ID'), findsOneWidget);
+    expect(find.textContaining('店舗ID: '), findsOneWidget);
     expect(find.text('機能フラグ'), findsOneWidget);
     expect(find.text('通信モード'), findsOneWidget);
     expect(find.text('データエクスポート'), findsOneWidget);
-    expect(find.text('管理操作'), findsOneWidget);
+    // ログアウトボタンは常に表示される。
+    expect(find.text('ログアウト'), findsOneWidget);
+    // 開発者設定 (debug only) は ExpansionTile として表示される。
+    // 「管理操作」は折り畳まれているため、まだ可視ではない。
+    expect(find.text('開発者設定'), findsOneWidget);
   });
 }

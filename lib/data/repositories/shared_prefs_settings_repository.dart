@@ -47,6 +47,11 @@ class SharedPrefsSettingsRepository implements SettingsRepository {
   }
 
   @override
+  Future<void> clearShopId() async {
+    await _prefs.remove(_kShopId);
+  }
+
+  @override
   Future<DeviceRole?> getDeviceRole() async {
     final String? raw = _prefs.getString(_kDeviceRole);
     if (raw == null) {

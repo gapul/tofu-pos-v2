@@ -19,6 +19,11 @@ dependencies:
   # ローカルDB
   drift: ^2.20.2
   sqlite3: ^3.3.1
+  # 各プラットフォーム向けに新しい sqlite3 ネイティブをアプリにバンドルする。
+  # 未指定時は OS の system sqlite（特に macOS は古い）を使うことになり、
+  # prepared statement reuse パスの内部 race で SIGSEGV が観測されたため、
+  # ビルド成果物に同梱されたバージョンに統一して再現性を抑える。
+  sqlite3_flutter_libs: ^0.5.42
   path_provider: ^2.1.4
   path: ^1.9.0
 

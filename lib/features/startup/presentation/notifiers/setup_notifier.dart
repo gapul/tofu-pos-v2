@@ -66,6 +66,14 @@ class SetupNotifier extends AsyncNotifier<SetupState> {
     final SetupState current = state.value ?? SetupState.empty;
     state = AsyncData<SetupState>(current.copyWith(clearRole: true));
   }
+
+  /// ログアウト: 店舗ID をクリアし state を shopId=null にする。
+  /// 役割や機能フラグ等は保持される。
+  Future<void> clearShop() async {
+    await _repo.clearShopId();
+    final SetupState current = state.value ?? SetupState.empty;
+    state = AsyncData<SetupState>(current.copyWith(clearShop: true));
+  }
 }
 
 final AsyncNotifierProvider<SetupNotifier, SetupState> setupNotifierProvider =
