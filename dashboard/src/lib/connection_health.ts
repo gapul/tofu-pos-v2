@@ -11,8 +11,12 @@ export type HealthStatus =
   | { kind: 'unreachable'; detail: string }; // ネットワーク到達不可
 
 const URL_RE = /^https:\/\/[a-z0-9-]+\.supabase\.(co|in)\/?$/i;
-// JWT は base64url の 3 セグメント。anon key は eyJ で始まる。
+// Supabase は 2 形式の publishable key を発行する:
+//   - 旧 JWT 形式: eyJ で始まる base64url の 3 セグメント (例: eyJhbGc.xxx.yyy)
+//   - 新 publishable 形式 (2024〜): sb_publishable_<random>
 const JWT_RE = /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+const SB_PUBLISHABLE_RE = /^sb_publishable_[A-Za-z0-9_-]+$/;
+const SB_SECRET_RE = /^sb_secret_/;
 
 export function validateFormat(s: Settings): HealthStatus {
   if (!s.url || !s.key) return { kind: 'missing' };
@@ -27,10 +31,18 @@ export function validateFormat(s: Settings): HealthStatus {
       detail: `URL の形式が不正です: "${url}" (期待: https://xxxx.supabase.co)`,
     };
   }
-  if (!JWT_RE.test(key)) {
+  if (SB_SECRET_RE.test(key)) {
     return {
       kind: 'invalid_key',
-      detail: 'anon key の形式が不正です (JWT 形式 "eyJ...xxx.yyy.zzz" 必須)',
+      detail:
+        'secret key (sb_secret_*) が登録されています。フロントエンドには絶対に置かないでください。Project Settings → API → "Publishable" 側のキーを使ってください。',
+    };
+  }
+  if (!JWT_RE.test(key) && !SB_PUBLISHABLE_RE.test(key)) {
+    return {
+      kind: 'invalid_key',
+      detail:
+        'anon key の形式が不正です (期待: 旧 JWT "eyJ...xxx.yyy.zzz" または新 "sb_publishable_xxxxx")',
     };
   }
   return { kind: 'ok' };
