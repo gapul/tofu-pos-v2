@@ -91,7 +91,9 @@ class _KitchenScreenState extends ConsumerState<KitchenScreen>
       TopSnack.show(
         context,
         '提供完了',
-        duration: const Duration(seconds: 6),
+        // 2 秒で自動消去（仕様: 業務確認用のトースト。長く出して指で押下を強制
+        // しない。誤操作の取消は数秒以内に同 widget をタップする運用を想定）。
+        duration: const Duration(seconds: 2),
         actionLabel: '取り消し',
         onAction: () async {
           try {

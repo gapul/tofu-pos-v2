@@ -34,6 +34,57 @@ void main() {
     expect(saved.ticketNumber.value, 7);
   });
 
+  test(
+    'ingestCallNumber preserves existing status on backfill replay '
+    '(bug: called orders must not revert to pending)',
+    () async {
+      // 既に「呼び出し済 (called)」状態。
+      await repo.upsert(
+        CallingOrder(
+          orderId: 1,
+          ticketNumber: const TicketNumber(7),
+          status: CallingStatus.called,
+          receivedAt: DateTime(2026, 5, 7, 11),
+        ),
+      );
+      await usecase.ingestCallNumber(
+        CallNumberEvent(
+          shopId: 'shop',
+          eventId: 'e1',
+          occurredAt: DateTime(2026, 5, 7, 11),
+          orderId: 1,
+          ticketNumber: const TicketNumber(7),
+        ),
+      );
+      expect(
+        (await repo.findByOrderId(1))!.status,
+        CallingStatus.called,
+        reason: 'replay は called を pending に巻き戻してはならない',
+      );
+    },
+  );
+
+  test('ingestCallNumber preserves pickedUp status on backfill replay', () async {
+    await repo.upsert(
+      CallingOrder(
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+        status: CallingStatus.pickedUp,
+        receivedAt: DateTime(2026, 5, 7, 11),
+      ),
+    );
+    await usecase.ingestCallNumber(
+      CallNumberEvent(
+        shopId: 'shop',
+        eventId: 'e1',
+        occurredAt: DateTime(2026, 5, 7, 11),
+        orderId: 1,
+        ticketNumber: const TicketNumber(7),
+      ),
+    );
+    expect((await repo.findByOrderId(1))!.status, CallingStatus.pickedUp);
+  });
+
   test('ingestCancelled flips existing to cancelled', () async {
     await repo.upsert(
       CallingOrder(

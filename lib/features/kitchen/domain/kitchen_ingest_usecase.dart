@@ -35,22 +35,35 @@ class KitchenIngestUseCase {
   Future<void> dispose() => _alerts.close();
 
   /// OrderSubmittedEvent を取り込んで未調理状態で永続化。
+  ///
+  /// 既に同 `orderId` が存在する場合（backfill replay や Realtime の冪等性
+  /// 再受信）は、現在のステータス（done / cancelled 等）を保持したまま
+  /// itemsJson / ticketNumber のみ最新値で更新する。
+  /// 以前は無条件で `pending` 上書きしていたため、backfill 再生で
+  /// 「提供済」が「未調理」に戻る不具合があった（仕様書 §6.2 不変条件）。
   Future<void> ingestSubmitted(OrderSubmittedEvent ev) async {
-    await _repo.upsert(
-      KitchenOrder(
-        orderId: ev.orderId,
-        ticketNumber: ev.ticketNumber,
-        itemsJson: ev.itemsJson,
-        status: KitchenStatus.pending,
-        receivedAt: _now(),
-      ),
-    );
+    final KitchenOrder? existing = await _repo.findByOrderId(ev.orderId);
+    final KitchenOrder next = existing != null
+        ? existing.copyWith(
+            ticketNumber: ev.ticketNumber,
+            itemsJson: ev.itemsJson,
+            // status / receivedAt は既存値を保持
+          )
+        : KitchenOrder(
+            orderId: ev.orderId,
+            ticketNumber: ev.ticketNumber,
+            itemsJson: ev.itemsJson,
+            status: KitchenStatus.pending,
+            receivedAt: _now(),
+          );
+    await _repo.upsert(next);
     AppLogger.event(
       'kitchen',
       'ingest_submitted',
       fields: <String, Object?>{
         'order_id': ev.orderId,
         'ticket': ev.ticketNumber.value,
+        'preserved_status': existing?.status.name,
       },
     );
   }

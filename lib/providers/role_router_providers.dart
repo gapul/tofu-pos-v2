@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/config/env.dart';
+import '../core/logging/app_logger.dart';
 import '../core/sync/device_events_backfill.dart';
+import '../core/transport/supabase_transport.dart';
 import '../core/transport/transport.dart';
+import '../core/transport/transport_event.dart';
 import '../domain/enums/device_role.dart';
 import '../domain/value_objects/shop_id.dart';
 import '../features/calling/domain/calling_ingest_router.dart';
@@ -178,6 +183,11 @@ class RoleStarter {
   RoleStarter(this.ref);
   final Ref ref;
 
+  /// SupabaseTransport の subscribe 成功通知を購読しておき、Realtime 復帰
+  /// 直後に backfill を再走するためのハンドル。transport が invalidate
+  /// される度に張り直す必要があるので、前回の subscription は cancel する。
+  StreamSubscription<void>? _subscribedSub;
+
   /// 起動時に呼ぶ。役割が未設定なら何もしない。
   Future<void> start() async {
     final DeviceRole? role = await ref
@@ -186,6 +196,10 @@ class RoleStarter {
     if (role == null) {
       return;
     }
+    // 旧 transport を見ていた subscription を破棄。
+    await _subscribedSub?.cancel();
+    _subscribedSub = null;
+
     switch (role) {
       case DeviceRole.register:
         final ServedToCallRouter? r = await ref.read(
@@ -208,6 +222,7 @@ class RoleStarter {
         );
         if (c != null && bf != null) {
           await bf.run(onEvent: c.handleEvent);
+          _wireResubscribeBackfill(bf, c.handleEvent);
         }
       case DeviceRole.kitchen:
         final KitchenIngestRouter? r = await ref.read(
@@ -220,6 +235,7 @@ class RoleStarter {
         );
         if (r != null && b != null) {
           await b.run(onEvent: r.handleEvent);
+          _wireResubscribeBackfill(b, r.handleEvent);
         }
       case DeviceRole.calling:
         final CallingIngestRouter? r = await ref.read(
@@ -231,7 +247,53 @@ class RoleStarter {
         );
         if (r != null && b != null) {
           await b.run(onEvent: r.handleEvent);
+          _wireResubscribeBackfill(b, r.handleEvent);
         }
+    }
+  }
+
+  /// SupabaseTransport の `onSubscribed` を購読し、Realtime 復帰時に
+  /// backfill を再走させる。これにより「subscribe 成功**前**に
+  /// device_events へ insert された注文」も即時に取り込める。
+  ///
+  /// transport が Noop/LAN/BLE のときは何もしない（onSubscribed が無い）。
+  void _wireResubscribeBackfill(
+    DeviceEventsBackfill backfill,
+    Future<void> Function(TransportEvent) handle,
+  ) {
+    // transport は invalidate されるたびに作り替わる。最新を非同期で取り直す。
+    unawaited(_attachOnSubscribed(backfill, handle));
+  }
+
+  Future<void> _attachOnSubscribed(
+    DeviceEventsBackfill backfill,
+    Future<void> Function(TransportEvent) handle,
+  ) async {
+    try {
+      final Transport t = await ref.read(transportProvider.future);
+      if (t is! SupabaseTransport) return;
+      _subscribedSub = t.onSubscribed.listen((_) async {
+        try {
+          final int n = await backfill.run(onEvent: handle);
+          AppLogger.event(
+            'role_starter',
+            'backfill_on_resubscribe',
+            fields: <String, Object?>{'count': n},
+          );
+        } catch (e, st) {
+          AppLogger.w(
+            'RoleStarter: backfill on resubscribe failed',
+            error: e,
+            stackTrace: st,
+          );
+        }
+      });
+    } catch (e, st) {
+      AppLogger.w(
+        'RoleStarter: cannot wire onSubscribed listener',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 }

@@ -83,6 +83,69 @@ void main() {
     expect(after!.status, KitchenStatus.cancelled);
   });
 
+  test(
+    'ingestSubmitted preserves existing status on backfill replay '
+    '(bug: served orders must not revert to pending)',
+    () async {
+      // 既に提供済（done）になっている注文。
+      await repo.upsert(
+        KitchenOrder(
+          orderId: 1,
+          ticketNumber: const TicketNumber(7),
+          itemsJson: '[{"name":"yakisoba","qty":1}]',
+          status: KitchenStatus.done,
+          receivedAt: DateTime(2026, 5, 7, 11),
+        ),
+      );
+      // backfill が過去 24h の OrderSubmittedEvent を replay する。
+      await usecase.ingestSubmitted(
+        OrderSubmittedEvent(
+          shopId: 'shop',
+          eventId: 'e1',
+          occurredAt: DateTime(2026, 5, 7, 11),
+          orderId: 1,
+          ticketNumber: const TicketNumber(7),
+          itemsJson: '[{"name":"yakisoba","qty":1}]',
+        ),
+      );
+      final KitchenOrder? after = await repo.findByOrderId(1);
+      expect(
+        after!.status,
+        KitchenStatus.done,
+        reason: 'replay は done を pending に巻き戻してはならない',
+      );
+    },
+  );
+
+  test(
+    'ingestSubmitted preserves cancelled status on backfill replay',
+    () async {
+      await repo.upsert(
+        KitchenOrder(
+          orderId: 1,
+          ticketNumber: const TicketNumber(7),
+          itemsJson: '[]',
+          status: KitchenStatus.cancelled,
+          receivedAt: DateTime(2026, 5, 7, 11),
+        ),
+      );
+      await usecase.ingestSubmitted(
+        OrderSubmittedEvent(
+          shopId: 'shop',
+          eventId: 'e1',
+          occurredAt: DateTime(2026, 5, 7, 11),
+          orderId: 1,
+          ticketNumber: const TicketNumber(7),
+          itemsJson: '[]',
+        ),
+      );
+      expect(
+        (await repo.findByOrderId(1))!.status,
+        KitchenStatus.cancelled,
+      );
+    },
+  );
+
   test('ingestCancelled is no-op when order is unknown', () async {
     await usecase.ingestCancelled(
       OrderCancelledEvent(

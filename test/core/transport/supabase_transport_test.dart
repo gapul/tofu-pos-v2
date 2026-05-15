@@ -433,5 +433,20 @@ void main() {
         expect(transport.debugSelfIds(), contains('evt-after-disconnect'));
       },
     );
+
+    test(
+      'onSubscribed is a broadcast stream that supports listen before any '
+      'subscribe success (bug B: ingest router must be able to attach early)',
+      () async {
+        // 連続購読しても StateError が出ない（=broadcast）こと。
+        // subscribe 成功通知用にこの仕様が必要。
+        final s1 = transport.onSubscribed.listen((_) {});
+        final s2 = transport.onSubscribed.listen((_) {});
+        await s1.cancel();
+        await s2.cancel();
+        // 初期は未 subscribed。
+        expect(transport.isSubscribed, isFalse);
+      },
+    );
   });
 }

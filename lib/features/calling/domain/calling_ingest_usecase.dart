@@ -16,21 +16,33 @@ class CallingIngestUseCase {
   final DateTime Function() _now;
 
   /// 呼び出し依頼を未呼び出し状態で永続化。
+  ///
+  /// 既に同 `orderId` が存在する場合（backfill replay や Realtime の冪等性
+  /// 再受信）は、現在のステータス（called / pickedUp / cancelled 等）を
+  /// 保持したまま ticketNumber のみ最新値で更新する。
+  /// 以前は無条件で `pending` 上書きしていたため、backfill 再生で
+  /// 「呼び出し済」が「呼び出し前」に戻る不具合があった。
   Future<void> ingestCallNumber(CallNumberEvent ev) async {
-    await _repo.upsert(
-      CallingOrder(
-        orderId: ev.orderId,
-        ticketNumber: ev.ticketNumber,
-        status: CallingStatus.pending,
-        receivedAt: _now(),
-      ),
-    );
+    final CallingOrder? existing = await _repo.findByOrderId(ev.orderId);
+    final CallingOrder next = existing != null
+        ? existing.copyWith(
+            ticketNumber: ev.ticketNumber,
+            // status / receivedAt は既存値を保持
+          )
+        : CallingOrder(
+            orderId: ev.orderId,
+            ticketNumber: ev.ticketNumber,
+            status: CallingStatus.pending,
+            receivedAt: _now(),
+          );
+    await _repo.upsert(next);
     AppLogger.event(
       'calling',
       'ingest_call_number',
       fields: <String, Object?>{
         'order_id': ev.orderId,
         'ticket': ev.ticketNumber.value,
+        'preserved_status': existing?.status.name,
       },
     );
   }

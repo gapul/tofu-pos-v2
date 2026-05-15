@@ -52,15 +52,30 @@ class SupabaseTransport implements Transport {
   /// ことはあるが、それ以上は業務継続を優先して諦める（HTTP 経由の送信は動く）。
   static const Duration _subscribeTimeout = Duration(seconds: 5);
 
-  /// subscribe 失敗時に自動再試行する間隔。Wi-Fi の一時瞬断や Supabase 側
-  /// チャネルの timeout/closed をリカバリするための保険。
-  static const Duration _resubscribeDelay = Duration(seconds: 30);
+  /// subscribe 失敗時に自動再試行する初期間隔。Wi-Fi の一時瞬断や Supabase 側
+  /// チャネルの timeout/closed を素早くリカバリする。
+  /// 3 回失敗するごとに 2 倍に延ばし、`_resubscribeDelayMax` で頭打ちにする。
+  static const Duration _resubscribeDelayInitial = Duration(seconds: 3);
+  static const Duration _resubscribeDelayMax = Duration(seconds: 30);
 
   Timer? _resubscribeTimer;
   bool _disposed = false;
   bool _subscribed = false;
 
+  /// 連続した resubscribe 失敗カウント（成功で 0 に戻る）。
+  int _resubscribeAttempts = 0;
+
+  /// 「subscribe 成功」を通知する broadcast stream。
+  /// IngestRouter 側はこのイベントを受け取ったタイミングで backfill を
+  /// 再走させ、Realtime 購読開始**前**にサーバに insert されたイベントを
+  /// 取り込み直す。これにより Pull-to-Refresh しなくても新規注文が
+  /// キッチン/呼出端末に反映される。
+  StreamController<void> _subscribedEvents =
+      StreamController<void>.broadcast();
+  Stream<void> get onSubscribed => _subscribedEvents.stream;
+
   bool get isConnected => _channel != null;
+  bool get isSubscribed => _subscribed;
 
   @override
   Stream<TransportEvent> events() => _events.stream;
@@ -74,6 +89,9 @@ class SupabaseTransport implements Transport {
     // ここで必要なら新しい broadcast controller を作り直す。
     if (_events.isClosed) {
       _events = StreamController<TransportEvent>.broadcast();
+    }
+    if (_subscribedEvents.isClosed) {
+      _subscribedEvents = StreamController<void>.broadcast();
     }
 
     final Completer<void> ready = Completer<void>();
@@ -95,12 +113,19 @@ class SupabaseTransport implements Transport {
     ch.subscribe((status, [_]) {
       if (status == RealtimeSubscribeStatus.subscribed) {
         _subscribed = true;
+        _resubscribeAttempts = 0;
         if (!ready.isCompleted) ready.complete();
         AppLogger.event(
           'transport.supabase',
           'subscribe.ok',
           fields: <String, Object?>{'shop_id': shopId},
         );
+        // IngestRouter に通知 → backfill を再走（subscribe **後**到着の遅延
+        // 到達分も含めて取り込み直す）。controller が閉じている (dispose 後)
+        // 場合の add は ignore。
+        if (!_subscribedEvents.isClosed) {
+          _subscribedEvents.add(null);
+        }
       } else if (status == RealtimeSubscribeStatus.channelError ||
           status == RealtimeSubscribeStatus.closed ||
           status == RealtimeSubscribeStatus.timedOut) {
@@ -113,7 +138,7 @@ class SupabaseTransport implements Transport {
         _subscribed = false;
         AppLogger.w(
           'SupabaseTransport: channel status=$status (wasSubscribed=$wasSubscribed); '
-          'will resubscribe in ${_resubscribeDelay.inSeconds}s',
+          'will resubscribe (attempt ${_resubscribeAttempts + 1})',
         );
         Telemetry.instance.warn(
           'transport.supabase.subscribe.lost',
@@ -149,10 +174,23 @@ class SupabaseTransport implements Transport {
   }
 
   /// 一定遅延後に subscribe を張り直す。disconnect/dispose で停止。
+  ///
+  /// 連続失敗時は指数バックオフ:
+  ///   1..3 回目 → 3s, 4..6 回目 → 6s, 7..9 回目 → 12s, 以降 30s (頭打ち)
+  /// 3 回連続失敗するごとに 2 倍に伸ばすが、業務継続のため 30s で上限を打つ。
   void _scheduleResubscribe() {
     if (_disposed) return;
+    _resubscribeAttempts += 1;
+    final int doublings = (_resubscribeAttempts - 1) ~/ 3;
+    final int rawSeconds =
+        _resubscribeDelayInitial.inSeconds * (1 << doublings);
+    final Duration delay = Duration(
+      seconds: rawSeconds > _resubscribeDelayMax.inSeconds
+          ? _resubscribeDelayMax.inSeconds
+          : rawSeconds,
+    );
     _resubscribeTimer?.cancel();
-    _resubscribeTimer = Timer(_resubscribeDelay, () async {
+    _resubscribeTimer = Timer(delay, () async {
       if (_disposed) return;
       AppLogger.event(
         'transport.supabase',
@@ -204,6 +242,9 @@ class SupabaseTransport implements Transport {
     await disconnect();
     if (!_events.isClosed) {
       await _events.close();
+    }
+    if (!_subscribedEvents.isClosed) {
+      await _subscribedEvents.close();
     }
   }
 
