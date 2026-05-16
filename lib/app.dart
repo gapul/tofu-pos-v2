@@ -6,8 +6,10 @@ import 'core/config/env.dart';
 import 'core/config/supabase_bootstrap.dart';
 import 'core/router/app_router.dart';
 import 'core/startup/startup_pipeline.dart';
+import 'core/sync/cloud_target_reset.dart';
 import 'core/telemetry/telemetry.dart';
 import 'core/theme/app_theme.dart';
+import 'providers/database_providers.dart';
 import 'providers/repository_providers.dart';
 import 'providers/role_router_providers.dart';
 import 'providers/sync_providers.dart';
@@ -47,6 +49,16 @@ StartupPipeline buildStartupPipeline(WidgetRef ref) {
     const StartupStep(
       name: 'supabase.init',
       run: initializeSupabaseIfConfigured,
+    ),
+    StartupStep(
+      name: 'cloud_target.reset_if_changed',
+      // Supabase URL が前回起動から変わっていれば orders.sync_status を
+      // notSynced に戻す。新しい project に切り替えたあと既存注文を
+      // 再 push させるための一回限りの fix-up。
+      run: () async => CloudTargetReset(
+        ref.read(appDatabaseProvider),
+        ref.read(sharedPreferencesProvider),
+      ).runIfTargetChanged(),
     ),
     StartupStep(
       name: 'telemetry.init',

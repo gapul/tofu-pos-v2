@@ -66,3 +66,4 @@ test/**/failures/
 
 # Claude Code workspace
 .claude/
+/.wrangler/

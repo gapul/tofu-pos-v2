@@ -53,10 +53,13 @@ class MasterDataCloudSync {
 
   /// 起動時に呼ぶ。
   ///
-  /// 1. Supabase から商品マスタと釣銭スナップショットを pull
-  /// 2. 取得できた分でローカル DB を上書き (クラウド優先)
-  ///    - 0 件のときはローカル温存 (初回セットアップで誤って空にしないため)
-  /// 3. watch + 定期 push を開始
+  /// 1. ローカル DB に既存データがあれば pull はスキップ (push のみ走らせて
+  ///    cloud をローカルに追いつかせる)。
+  ///    既存端末の意図的な削除や手元のデータを cloud の古い snapshot で
+  ///    上書きしないための安全策。
+  /// 2. ローカルが完全に空のとき (新規端末 / shop 切替直後の purge 済)
+  ///    だけ cloud から pull → ローカル取込。デバイス交換シナリオ用。
+  /// 3. watch + 定期 push を開始。
   Future<void> start() async {
     if (_started) return;
     await _bootstrapFromCloud();
@@ -76,20 +79,36 @@ class MasterDataCloudSync {
   }
 
   Future<void> _bootstrapFromCloud() async {
-    // 商品マスタを pull → ローカル上書き
+    // 安全側に倒した bootstrap ポリシー:
+    //   - ローカルが空のとき (新端末 / 初回セットアップ) だけ pull → ローカル取込
+    //   - ローカルに既存データがあれば pull しない (誤って消さない)
+    // 「クラウド優先で常に上書き」だと既存端末でクラウド側の同期遅延ぶんが
+    // 反映されておらず、起動直後にローカルの未送信データが論理削除される
+    // 事故が起きる。代わりに push 側 (watch + periodic) が稼働してクラウドが
+    // ローカルに追いつく形にする。
     try {
-      final products = await _productClient.pull(shopId: _shopId);
-      if (products.isNotEmpty) {
-        await _productRepo.replaceAll(products);
-        AppLogger.event(
-          'sync',
-          'products_bootstrapped',
-          fields: <String, Object?>{'count': products.length},
-          level: AppLogLevel.info,
-        );
+      // includeDeleted: true で判定する。論理削除済みも「触ったことがある」
+      // 痕跡として扱い、cloud の古い snapshot で復活させない。
+      final localProducts = await _productRepo.findAll(includeDeleted: true);
+      if (localProducts.isEmpty) {
+        final cloud = await _productClient.pull(shopId: _shopId);
+        if (cloud.isNotEmpty) {
+          await _productRepo.replaceAll(cloud);
+          AppLogger.event(
+            'sync',
+            'products_bootstrapped',
+            fields: <String, Object?>{'count': cloud.length},
+            level: AppLogLevel.info,
+          );
+        } else {
+          AppLogger.i(
+            'MasterDataCloudSync: local & cloud both empty, nothing to bootstrap',
+          );
+        }
       } else {
         AppLogger.i(
-          'MasterDataCloudSync: cloud has 0 products, keeping local',
+          'MasterDataCloudSync: local has ${localProducts.length} products, '
+          'skipping product pull (push will reconcile cloud)',
         );
       }
     } catch (e, st) {
@@ -99,20 +118,28 @@ class MasterDataCloudSync {
         stackTrace: st,
       );
     }
-    // 釣銭スナップショットを pull → ローカル上書き
+    // 釣銭スナップショットも同様: ローカルが全 0 のときだけ pull で復元
     try {
-      final drawer = await _cashClient.pull(shopId: _shopId);
-      if (drawer != null) {
-        await _cashRepo.replace(drawer);
-        AppLogger.event(
-          'sync',
-          'cash_drawer_bootstrapped',
-          fields: <String, Object?>{'total_yen': drawer.totalAmount.yen},
-          level: AppLogLevel.info,
-        );
+      final localDrawer = await _cashRepo.get();
+      if (localDrawer.totalAmount.yen == 0) {
+        final cloud = await _cashClient.pull(shopId: _shopId);
+        if (cloud != null && cloud.totalAmount.yen > 0) {
+          await _cashRepo.replace(cloud);
+          AppLogger.event(
+            'sync',
+            'cash_drawer_bootstrapped',
+            fields: <String, Object?>{'total_yen': cloud.totalAmount.yen},
+            level: AppLogLevel.info,
+          );
+        } else {
+          AppLogger.i(
+            'MasterDataCloudSync: local & cloud cash both empty, nothing to bootstrap',
+          );
+        }
       } else {
         AppLogger.i(
-          'MasterDataCloudSync: cloud has no cash_drawer, keeping local',
+          'MasterDataCloudSync: local cash drawer has ${localDrawer.totalAmount.yen} yen, '
+          'skipping cash pull (push will reconcile cloud)',
         );
       }
     } catch (e, st) {

@@ -6,6 +6,7 @@ import '../../domain/entities/order_item.dart';
 import '../../domain/enums/order_status.dart';
 import '../../domain/value_objects/money.dart';
 import '../retry/retry_policy.dart';
+import '../telemetry/telemetry.dart';
 import 'cloud_sync_client.dart';
 
 /// Supabase 経由の注文同期実装（仕様書 §8）。
@@ -105,6 +106,18 @@ class SupabaseCloudSyncClient implements CloudSyncClient {
   @override
   Future<void> push(Order order, {required String shopId}) async {
     final List<Map<String, Object?>> rows = buildRows(order, shopId: shopId);
+    // 診断用: push 直前の payload サマリを残す。本番で sync.order.ok は
+    // 出るのに行が DB に届かない症状を切り分けるため、items / rows の長さを
+    // 記録する。書き込みロジックは変えない。
+    Telemetry.instance.event(
+      'sync.order.push_payload',
+      attrs: <String, Object?>{
+        'order_id': order.id,
+        'items_count': order.items.length,
+        'rows_count': rows.length,
+        'status': order.orderStatus.name,
+      },
+    );
     if (rows.isEmpty) {
       return;
     }

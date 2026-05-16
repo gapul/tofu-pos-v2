@@ -65,6 +65,12 @@ class SupabaseTransport implements Transport {
   /// 連続した resubscribe 失敗カウント（成功で 0 に戻る）。
   int _resubscribeAttempts = 0;
 
+  /// subscribe.lost テレメトリのレート制限用 (最後に発火したタイムスタンプ)。
+  /// supabase-flutter が closed 状態のコールバックを高頻度で繰り返し叩く
+  /// ことがあり、放置すると毎秒数千件の telemetry insert で Supabase DB
+  /// 自体が過負荷になる。1 秒以内の二重発火は飲み込む。
+  DateTime? _lastLostLoggedAt;
+
   /// 「subscribe 成功」を通知する broadcast stream。
   /// IngestRouter 側はこのイベントを受け取ったタイミングで backfill を
   /// 再走させ、Realtime 購読開始**前**にサーバに insert されたイベントを
@@ -136,18 +142,32 @@ class SupabaseTransport implements Transport {
         // スケジュールする。途中で disconnect/dispose されたら止まる。
         final bool wasSubscribed = _subscribed;
         _subscribed = false;
-        AppLogger.w(
-          'SupabaseTransport: channel status=$status (wasSubscribed=$wasSubscribed); '
-          'will resubscribe (attempt ${_resubscribeAttempts + 1})',
-        );
-        Telemetry.instance.warn(
-          'transport.supabase.subscribe.lost',
-          attrs: <String, Object?>{
-            'shop_id': shopId,
-            'status': status.toString(),
-            'was_subscribed': wasSubscribed,
-          },
-        );
+
+        // レート制限: 同じ closed 状態のコールバックが連続発火するケースを
+        // 検出し、1 秒以内の再発火は telemetry を出さない。これを怠ると
+        // 毎秒数千件の subscribe.lost insert で Supabase DB 全体が落ちる。
+        final DateTime now = DateTime.now();
+        final bool throttle =
+            _lastLostLoggedAt != null &&
+            now.difference(_lastLostLoggedAt!) < const Duration(seconds: 1);
+
+        if (!throttle) {
+          _lastLostLoggedAt = now;
+          AppLogger.w(
+            'SupabaseTransport: channel status=$status (wasSubscribed=$wasSubscribed); '
+            'will resubscribe (attempt ${_resubscribeAttempts + 1})',
+          );
+          Telemetry.instance.warn(
+            'transport.supabase.subscribe.lost',
+            attrs: <String, Object?>{
+              'shop_id': shopId,
+              'status': status.toString(),
+              'was_subscribed': wasSubscribed,
+            },
+          );
+        }
+        // resubscribe スケジュール自体は内部で 1 タイマーしか持たないので
+        // 連続呼びでも問題ない。
         _scheduleResubscribe();
       }
     });
